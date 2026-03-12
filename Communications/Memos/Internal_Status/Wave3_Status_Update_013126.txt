@@ -1,0 +1,53 @@
+Hi Ran,
+
+As promised, here's an update on the next wave of survey invitations.
+
+Wave 3 Summary: 125 total contacts
+- 8 of your students who haven't responded yet
+- 8 of Joel's students who haven't responded yet
+- 109 new academic descendants collected from Q12a responses
+
+---
+
+Your students still outstanding (8):
+Assaf Eilat, Christopher Paik, Marshall Mo, Hugh Wu, Lavar Edmonds, Nadeem Karmali, Rebecca Dizon-Ross, Zach Freitas-Groff
+
+Joel's students still outstanding (8):
+Ben Chabot, James Dowey, Kelly Gail Strada, Thomas Geraghty, Avner Greif, Carl Hallmann, Pavel Jelnov, Peter Meyer
+
+---
+
+New descendants from survey responses (109):
+These are PhD students listed by respondents in Q12a. The largest groups include:
+- Santiago Perez's students (19)
+- John Nye's students (11)
+- Noel Johnson's students (8)
+- Arthur van Benthem's students (8)
+- Fabio Braggion's students (6)
+- Michela Giorcelli's students (5)
+
+Plus smaller groups from 26 other advisors.
+
+---
+
+Missing emails (4):
+I wasn't able to locate email addresses for:
+- Werner Troesken (John Nye's student) — appears to be deceased
+- Timothy Wilson (Isabelle Sin's student)
+- Julia Sampson (Heather Williams's student)
+- Roozbeh Faghihi Moghadam (Santiago Perez's student)
+
+---
+
+I've attached a CSV with all 125 contacts and their emails. As before, you can copy the entire email column and paste it into the BCC line.
+
+Let me know if you'd like any changes before sending.
+
+Jensen
+
+
+--
+T. M. Jensen Ahokovi | Predoctoral Research Fellow
+Stanford Institute for Economic Policy Research (SIEPR)
+Stanford GSB Initiative for Business, Taxation, and Society (STAX Lab)
+tahokovi@stanford.edu | tahokovi.github.io

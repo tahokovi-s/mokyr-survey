@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Claude Code / Playwright
+.claude/
+.playwright-mcp/
+
+# Data — contains PII (names, emails of survey respondents)
+Data/Raw/
+Data/Cleaned/
+Data/Contact_Lists/
+Data/Derived/
+
+# Logs — may contain respondent info
+Logs/
+
+# Output — generated artifacts (large HTML files)
+Output/

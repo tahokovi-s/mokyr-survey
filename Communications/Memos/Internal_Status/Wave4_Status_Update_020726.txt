@@ -1,0 +1,61 @@
+Hi Ran,
+
+Here's the Wave 4 update. This wave is entirely re-invitations to non-respondents from previous waves -- no new Q12a students were added, since all 6 respondents we picked up since Wave 3 answered Q12 = No.
+
+Wave 4 Summary: 112 total contacts
+- 4 of your students who haven't responded yet
+- 9 of Joel's students who haven't responded yet
+- 99 other descendants (grandchildren/great-grandchildren) who haven't responded yet
+
+---
+
+Your students still outstanding (4):
+Assaf Eilat, Christopher Paik, Nadeem Karmali, Rebecca Dizon-Ross
+
+Joel's students still outstanding (9):
+Avner Greif, Ben Chabot, Carl Hallmann, Davis Kedrosky*, Kelly Gail Strada, Kripa Freitas*, Pavel Jelnov, Peter Meyer, Thomas Geraghty
+
+*Davis Kedrosky (82%) and Kripa Freitas (94%) both started the survey but never finished. They're included here so they get another chance to complete it.
+
+---
+
+Since Wave 3, the following people from your and Joel's lists have responded:
+- Your students: Hugh Wu, Lavar Edmonds, Marshall Mo, Zach Freitas-Groff
+- Joel's students: James Dowey, Netanel Ben-Porath
+
+---
+
+I've attached the CSV with all 112 contacts and their emails. As before, you can copy the entire email column and paste it into the BCC line.
+
+I've also included a short draft reminder email below that you can copy and paste when you're ready to send. Just fill in the deadline and survey link.
+
+Let me know if you'd like any changes before sending.
+
+Jensen
+
+
+--
+T. M. Jensen Ahokovi | Predoctoral Research Fellow
+Stanford Institute for Economic Policy Research (SIEPR)
+Stanford GSB Initiative for Business, Taxation, and Society (STAX Lab)
+tahokovi@stanford.edu | tahokovi.github.io
+
+
+================================================================================
+DRAFT SURVEY INVITATION EMAIL (for Ran to send to Wave 4 recipients)
+================================================================================
+
+Subject: Reminder: Joel Mokyr Academic Genealogy Survey
+
+Dear colleague,
+
+This is a friendly reminder about the Joel Mokyr Academic Genealogy Survey. We are mapping the intellectual family tree of Joel Mokyr's students, students' students, and beyond.
+
+If you haven't yet had a chance to complete the survey, we would greatly appreciate your response by [DEADLINE]. It takes about 5 minutes.
+
+[SURVEY LINK]
+
+Thank you for your time.
+
+Best,
+Ran Abramitzky

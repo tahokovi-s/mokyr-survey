@@ -1,0 +1,78 @@
+Hi Ran,
+
+Here's where things stand on the survey as of February 22.
+
+Current count: 229 respondents — up from 217 when we sent Wave 4 on February 9, so 12 more people have come in since then.
+
+---
+
+Still missing (known contacts): 94 out of the 112 people we contacted in Wave 4 have not yet responded. Broken down:
+
+Your students still outstanding (3):
+  Assaf Eilat, Nadeem Karmali, Rebecca Dizon-Ross
+
+(Christopher Paik responded since Wave 4.)
+
+Joel's students still outstanding (7):
+  Ben Chabot, Carl Hallmann, Davis Kedrosky, Kelly Gail Strada, Kripa Freitas, Peter Meyer, Thomas Geraghty
+
+(Avner Greif we can add manually on the backend.)
+
+I noticed in the data that Davis and Kripa had both started the survey but didn't finish, so I sent them direct emails — haven't heard back yet.
+
+(Pavel Jelnov responded since Wave 4.)
+
+Other descendants (83): students of our respondents who were identified via Q12a and contacted in Wave 4. Full list attached.
+
+---
+
+Broader "still missing" picture:
+
+Across 45 advisors who listed their PhD students, respondents have reported a total of 199 students. Of those 199:
+  - 93 have already taken the survey (47%)
+  - 61 have an email on file and haven't responded — candidates for a follow-up reminder
+  - 45 were listed without any contact email — but I've since recovered emails for 40 of the 45.
+
+So the "known missing" universe is roughly 94 contacted non-respondents + 26 Q12a students who have reachable emails but were never contacted in any prior wave + 5 still-unreachable names (one of whom is Werner Troesken, whose students we can add manually on the backend) = ~120 people we know about but don't yet have a response from.
+
+The most likely explanation for the non-response among the 94 is stale contact information. Many of the emails we have on file are institutional addresses from the PhD-granting university — for students who have since graduated and moved on, these may be addresses they no longer check regularly (or at all). This is corroborated by the fact that a number of the Wave 4 emails bounced. For those cases, Mi and I would need to do a targeted pass to track down current contact information — searching department pages, Google Scholar profiles, and personal websites. What would otherwise be a very tedious task is now more manageable with agentic AI workflows, so we could do this relatively quickly if you think it's worth the effort.
+
+On top of that, there are unknown unknowns: the 94 people who haven't responded yet may themselves have supervised PhD students we haven't identified. Based on the pattern so far (~4.4 students per advisor who listed students), each additional responding advisor could add a few more names to the network. This part of the missing universe is a moving target.
+
+---
+
+Summary:
+  - 229 confirmed respondents
+  - ~94 contacted people who haven't replied (Wave 4 non-respondents)
+  - ~26 Q12a-reported students with valid emails who haven't been contacted in any prior wave
+  - ~5 names in our network still without a reachable email (down from 45 after contact list cross-referencing and web research)
+  - Unknown number of descendants of non-respondents
+
+I have a running list of ~120 people (94 Wave 4 non-respondents + 26 newly reachable Q12a students) that we could send a follow-up email to whenever you'd like. That said, given that a portion of the Wave 4 emails bounced, it's probably worth Mi and I first doing a pass to find current addresses for those people before we send anything — otherwise we'd just be hitting the same dead ends again.
+
+---
+
+One more thing: I've put together a proof-of-concept interactive visualization of the intellectual family tree, attached as mokyr-genealogy-022226.html. To view it, just open the file in any browser — no internet connection or special software needed, it's fully self-contained.
+
+What it shows: all 229 respondents plus the ~91 PhD students they reported in Q12a, laid out as a directed genealogy network rooted at Joel. Nodes are color-coded by generation (gold = Joel, blue = direct students, green = grandstudents, orange = great-grandstudents), with larger circles for people who have themselves supervised students.
+
+A few things you can do with it:
+  - Hover over any node to see the person's name, generation, PhD institution, and current employer
+  - Drag nodes around to untangle clusters
+  - Zoom and pan freely
+  - Use the search box to jump straight to a specific person
+  - Toggle "Show uncontacted students" to see the Q12a-reported names we haven't yet heard from
+
+This is just a first pass to see what the data looks like in network form. The underlying data is what we have right now — there are still coverage gaps from non-respondents, and the connections rely on people accurately filling in their Q11 advisor fields, so take the exact structure with some caution for now. The goal was simply to get something concrete so we can discuss what the final deliverable should look like.
+
+The natural next steps would be to layer in the descriptive analyses you brought up before: research field distributions across generations, institutional affiliations, geographic spread, career trajectories, and so on. Happy to start on any of those whenever you think the data is in good enough shape.
+
+Best,
+Jensen
+
+
+--
+T. M. Jensen Ahokovi | Predoctoral Research Fellow
+Stanford Institute for Economic Policy Research (SIEPR)
+Stanford GSB Initiative for Business, Taxation, and Society (STAX Lab)
+tahokovi@stanford.edu | tahokovi.github.io
