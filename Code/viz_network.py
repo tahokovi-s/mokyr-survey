@@ -10,6 +10,8 @@ import json
 import sys
 import hashlib
 import argparse
+import re
+from datetime import datetime
 from pathlib import Path
 try:
     from urllib.request import urlopen, Request
@@ -18,7 +20,8 @@ except ImportError:
     urlopen = None
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_DATE = "022226"
+_NODES_DATE_RE = re.compile(r"^Network_Nodes_(\d{6})\.csv$")
+_EDGES_DATE_RE = re.compile(r"^Network_Edges_(\d{6})\.csv$")
 
 D3_URL    = "https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"
 # SHA-256 of d3.min.js v7.9.0 from cdnjs.  Verified against CDN on first run.
@@ -28,6 +31,61 @@ D3_SHA256 = "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539"
 
 def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _latest_matching_date(base_dir: Path, pattern: re.Pattern[str]) -> str | None:
+    matches = []
+    for path in base_dir.iterdir():
+        match = pattern.match(path.name)
+        if not match:
+            continue
+        matches.append(match.group(1))
+    if not matches:
+        return None
+    return max(matches, key=lambda token: datetime.strptime(token, "%m%d%y"))
+
+
+def _extract_date_token(path_str: str | None) -> str | None:
+    if not path_str:
+        return None
+    match = re.search(r"(\d{6})", Path(path_str).name)
+    return match.group(1) if match else None
+
+
+def _resolve_viz_date(date_arg: str | None, nodes_arg: str | None, edges_arg: str | None) -> str:
+    if date_arg:
+        return date_arg
+
+    explicit_dates = {
+        token for token in (
+            _extract_date_token(nodes_arg),
+            _extract_date_token(edges_arg),
+        )
+        if token
+    }
+    if len(explicit_dates) > 1:
+        sys.exit(
+            "ERROR: --nodes and --edges imply different dates. "
+            "Pass --date explicitly or provide aligned inputs."
+        )
+    if explicit_dates:
+        return explicit_dates.pop()
+
+    derived_dir = PROJECT_ROOT / "Data" / "Derived"
+    latest_nodes = _latest_matching_date(derived_dir, _NODES_DATE_RE)
+    latest_edges = _latest_matching_date(derived_dir, _EDGES_DATE_RE)
+    if not latest_nodes or not latest_edges:
+        sys.exit(
+            "ERROR: Could not infer a default date from network inputs. "
+            "Pass --date explicitly."
+        )
+    if latest_nodes != latest_edges:
+        sys.exit(
+            "ERROR: Latest node and edge files have different dates "
+            f"({latest_nodes} vs {latest_edges}). Pass --date or explicit paths."
+        )
+    print(f"INFO: Using latest common network date: {latest_nodes}")
+    return latest_nodes
 
 
 def _fetch_d3(d3_path=None):
@@ -481,8 +539,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate self-contained Mokyr genealogy HTML visualization"
     )
-    parser.add_argument('--date', default=DEFAULT_DATE,
-                        help="Date suffix matching network CSV filenames (MMDDYY)")
+    parser.add_argument('--date', default=None,
+                        help="Date suffix matching network CSV filenames (MMDDYY, defaults to latest common node/edge date)")
     parser.add_argument('--output', default=None,
                         help="Output HTML path (default: Output/mokyr-genealogy-{date}.html)")
     parser.add_argument('--d3-path', default=None,
@@ -493,7 +551,7 @@ def main():
                         help="Override path to Network_Edges CSV")
     args = parser.parse_args()
 
-    date = args.date
+    date = _resolve_viz_date(args.date, args.nodes, args.edges)
     nodes_csv  = PROJECT_ROOT / (args.nodes or f"Data/Derived/Network_Nodes_{date}.csv")
     edges_csv  = PROJECT_ROOT / (args.edges or f"Data/Derived/Network_Edges_{date}.csv")
     output_path = PROJECT_ROOT / (args.output or f"Output/mokyr-genealogy-{date}.html")

@@ -13,11 +13,15 @@ import re
 import sys
 import difflib
 import argparse
+import unicodedata
+from datetime import datetime
 from pathlib import Path
 from collections import defaultdict, Counter
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_DATE = "022226"
+
+_CLEANED_DATE_RE = re.compile(r"^Mokyr_Survey_Responses_(\d{6})_Cleaned\.csv$")
+_Q12A_DATE_RE = re.compile(r"^Advisors_and_Reported_Students_(\d{6})\.csv$")
 
 
 def normalize_email(email: str) -> str:
@@ -29,6 +33,60 @@ def split_emails(raw_email: str) -> list[str]:
     """Split a possibly semicolon-delimited email string into individual emails."""
     parts = re.split(r'[;\s]+', raw_email or '')
     return [normalize_email(part) for part in parts if '@' in normalize_email(part)]
+
+
+def _latest_matching_date(base_dir: Path, pattern: re.Pattern[str]) -> str | None:
+    matches = []
+    for path in base_dir.iterdir():
+        match = pattern.match(path.name)
+        if not match:
+            continue
+        matches.append(match.group(1))
+    if not matches:
+        return None
+    return max(matches, key=lambda token: datetime.strptime(token, "%m%d%y"))
+
+
+def _extract_date_token(path_str: str | None) -> str | None:
+    if not path_str:
+        return None
+    match = re.search(r"(\d{6})", Path(path_str).name)
+    return match.group(1) if match else None
+
+
+def _resolve_build_date(date_arg: str | None, cleaned_arg: str | None, q12a_arg: str | None) -> str:
+    if date_arg:
+        return date_arg
+
+    explicit_dates = {
+        token for token in (
+            _extract_date_token(cleaned_arg),
+            _extract_date_token(q12a_arg),
+        )
+        if token
+    }
+    if len(explicit_dates) > 1:
+        sys.exit(
+            "ERROR: --cleaned and --q12a imply different dates. "
+            "Pass --date explicitly or provide aligned inputs."
+        )
+    if explicit_dates:
+        return explicit_dates.pop()
+
+    latest_cleaned = _latest_matching_date(PROJECT_ROOT / "Data" / "Cleaned", _CLEANED_DATE_RE)
+    latest_q12a = _latest_matching_date(PROJECT_ROOT / "Data" / "Derived", _Q12A_DATE_RE)
+    if not latest_cleaned or not latest_q12a:
+        sys.exit(
+            "ERROR: Could not infer a default date from cleaned/Q12a inputs. "
+            "Pass --date explicitly."
+        )
+    if latest_cleaned != latest_q12a:
+        sys.exit(
+            "ERROR: Latest cleaned and Q12a files have different dates "
+            f"({latest_cleaned} vs {latest_q12a}). Pass --date or explicit paths."
+        )
+    print(f"INFO: Using latest common cleaned/Q12a date: {latest_cleaned}")
+    return latest_cleaned
 
 # ---------------------------------------------------------------------------
 # Institution canonicalization
@@ -603,6 +661,13 @@ RESPONDENT_DEDUP = {
     "R_1xg9ade2GWkIjO9": "R_12xBe57KfXWy6uB",  # Carolyn Tuttle: discard -> keep
 }
 
+# Curated manual/respondent duplicate matches for verified identity merges.
+MANUAL_RESPONDENT_DEDUP = {
+    ("carl", "hallmann"): "R_2eK0hmgM4y2gCXr",
+    ("peter", "meyer"): "R_1IE5Y4BmXmFwwbe",
+    ("thomas", "geraghty"): "R_1KE1sbrmfVgvF1B",
+}
+
 
 def _lookup_email_recovery(student_name, node_id, email_recovery):
     """Look up recovered email by (name, node_id) then by name alone."""
@@ -619,6 +684,19 @@ def _lookup_email_recovery(student_name, node_id, email_recovery):
     return result
 
 
+def _norm_person_part(value: str) -> str:
+    value = clean_token(value)
+    value = unicodedata.normalize("NFKD", value)
+    value = "".join(ch for ch in value if not unicodedata.combining(ch))
+    value = value.lower().replace('"', ' ').replace("'", ' ')
+    value = re.sub(r"[^a-z0-9]+", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _person_name_key(first_name: str, last_name: str) -> tuple[str, str]:
+    return (_norm_person_part(first_name), _norm_person_part(last_name))
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -626,8 +704,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="Build Mokyr genealogy network node/edge CSVs"
     )
-    parser.add_argument('--date', default=DEFAULT_DATE,
-                        help="Date suffix for output filenames (MMDDYY)")
+    parser.add_argument('--date', default=None,
+                        help="Date suffix for output filenames (MMDDYY, defaults to latest common cleaned/Q12a date)")
     parser.add_argument('--cleaned',
                         default=None,
                         help="Path to cleaned CSV (default: Data/Cleaned/Mokyr_Survey_Responses_{date}_Cleaned.csv)")
@@ -642,7 +720,7 @@ def main():
                         help="Path to manual nodes CSV (optional)")
     args = parser.parse_args()
 
-    date = args.date
+    date = _resolve_build_date(args.date, args.cleaned, args.q12a)
     cleaned_path = PROJECT_ROOT / (args.cleaned or f"Data/Cleaned/Mokyr_Survey_Responses_{date}_Cleaned.csv")
     q12a_path    = PROJECT_ROOT / (args.q12a    or f"Data/Derived/Advisors_and_Reported_Students_{date}.csv")
     email_recovery_path = PROJECT_ROOT / args.email_recovery if args.email_recovery else None
@@ -723,7 +801,7 @@ def main():
             'q12':     row[col['Q12']].strip(),
         }
         if email:
-            email_to_rid[email.lower()] = rid
+            email_to_rid[normalize_email(email)] = rid
         name_key = (first.lower(), last.lower())
         if name_key in name_to_rid:
             name_to_rid[name_key] = None  # ambiguous
@@ -748,15 +826,17 @@ def main():
     # -------------------------------------------------------------------------
     # Step B: Parse Q8 → generation
     # -------------------------------------------------------------------------
-    gen_by_rid = {}
+    raw_gen_by_rid = {}
+    pretopo_gen_by_rid = {}
     for rid, r in respondents.items():
+        raw_gen, flag = parse_q8_generation(r['q8'])
+        raw_gen_by_rid[rid] = raw_gen
         if rid in Q8_GENERATION_OVERRIDES:
             gen = Q8_GENERATION_OVERRIDES[rid]
             print(f"  INFO Q8 override: {r['first']} {r['last']} ({rid}) -> Gen {gen}")
-            gen_by_rid[rid] = gen
-            continue
-        gen, flag = parse_q8_generation(r['q8'])
-        gen_by_rid[rid] = gen
+            pretopo_gen_by_rid[rid] = gen
+        else:
+            pretopo_gen_by_rid[rid] = raw_gen
         if flag:
             print(f"  WARN non-adjacent multi-gen Q8: {r['first']} {r['last']} ({rid}): {r['q8']!r}")
 
@@ -820,7 +900,7 @@ def main():
         return None
 
     for rid, r in respondents.items():
-        gen = gen_by_rid[rid]
+        gen = pretopo_gen_by_rid[rid]
         if gen is None:
             continue
 
@@ -884,6 +964,7 @@ def main():
         'us_state': 'Illinois',
         'generation': 0,
         'generation_q8': 0,
+        'generation_q8_raw': 0,
         'has_students': True,
         'is_respondent': False,
     }
@@ -903,8 +984,9 @@ def main():
             'phd_year': r['q10'],
             'country': r['q6'],
             'us_state': r['q6a'],
-            'generation': gen_by_rid[rid],
-            'generation_q8': gen_by_rid[rid],
+            'generation': pretopo_gen_by_rid[rid],
+            'generation_q8': pretopo_gen_by_rid[rid],
+            'generation_q8_raw': raw_gen_by_rid[rid],
             'has_students': r['q12'].strip().lower() in ('yes', '1', 'true'),
             'is_respondent': True,
         }
@@ -1054,6 +1136,7 @@ def main():
                         'us_state': '',
                         'generation': student_gen,
                         'generation_q8': None,
+                        'generation_q8_raw': None,
                         'has_students': False,
                         'is_respondent': False,
                     }
@@ -1070,11 +1153,13 @@ def main():
             manual_rows = list(csv.DictReader(f))
         print(f"  {len(manual_rows)} manual node entries")
 
-        # Build lookup for existing nodes by (first_lower, last_lower)
+        # Build lookup for existing respondent nodes by normalized exact name.
         existing_name_nodes = {}
         for nid, n in nodes.items():
-            nkey = (n['first_name'].lower(), n['last_name'].lower())
-            existing_name_nodes.setdefault(nkey, []).append(nid)
+            if not n.get('is_respondent'):
+                continue
+            existing_name_nodes.setdefault(
+                _person_name_key(n['first_name'], n['last_name']), []).append(nid)
 
         for mrow in manual_rows:
             mfirst = mrow['first_name'].strip()
@@ -1084,26 +1169,37 @@ def main():
             mgen   = mrow['generation'].strip()
             mgen   = int(mgen) if mgen else None
 
-            # Check if node already exists (by name + email)
-            mkey = (mfirst.lower(), mlast.lower())
+            # Check if node already exists (curated duplicate, exact email, or exact normalized name).
+            mkey = _person_name_key(mfirst, mlast)
             found_nid = None
-            if mkey in existing_name_nodes:
-                for candidate_nid in existing_name_nodes[mkey]:
-                    cn = nodes[candidate_nid]
-                    if memail and cn['email'] and cn['email'].lower() == memail.lower():
-                        found_nid = candidate_nid
-                        break
-                    if not cn['email'] or not memail:
-                        found_nid = candidate_nid
-                        break
-            # Also check email_to_rid
+            match_reason = None
+            curated_rid = MANUAL_RESPONDENT_DEDUP.get(mkey)
+            if curated_rid and f"R-{curated_rid}" in nodes:
+                found_nid = f"R-{curated_rid}"
+                match_reason = 'curated_match'
+
             if found_nid is None and memail:
-                erid = email_to_rid.get(memail.lower())
+                normalized_manual_email = normalize_email(memail)
+                for nid, n in nodes.items():
+                    if not n.get('is_respondent') or not n.get('email'):
+                        continue
+                    if normalize_email(n['email']) == normalized_manual_email:
+                        found_nid = nid
+                        match_reason = 'exact_email'
+                        break
+            if found_nid is None and memail:
+                erid = email_to_rid.get(normalize_email(memail))
                 if erid:
                     found_nid = f"R-{erid}"
+                    match_reason = 'respondent_email_lookup'
+            if found_nid is None:
+                candidate_ids = existing_name_nodes.get(mkey, [])
+                if candidate_ids:
+                    found_nid = candidate_ids[0]
+                    match_reason = 'exact_name'
 
             if found_nid:
-                print(f"  SKIP manual node {mfirst} {mlast}: already exists as {found_nid}")
+                print(f"  SKIP manual node {mfirst} {mlast}: already exists as {found_nid} ({match_reason})")
                 continue
 
             # Validate advisor_source
@@ -1142,6 +1238,7 @@ def main():
                 'us_state': '',
                 'generation': mgen,
                 'generation_q8': None,
+                'generation_q8_raw': None,
                 'has_students': False,
                 'is_respondent': False,
             }
@@ -1258,7 +1355,7 @@ def main():
         'phd_institution_raw', 'phd_institution_canon',
         'current_employer_raw', 'current_employer_canon',
         'phd_year', 'country', 'us_state',
-        'generation', 'generation_q8', 'has_students', 'is_respondent',
+        'generation', 'generation_q8', 'generation_q8_raw', 'has_students', 'is_respondent',
     ]
     EDGE_COLS = ['source_id', 'target_id', 'edge_type', 'confidence']
     UNRESOLVED_COLS = ['source_id', 'target_id', 'reason', 'raw_q11', 'respondent', 'gen', 'note']
