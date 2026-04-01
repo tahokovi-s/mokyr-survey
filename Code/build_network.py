@@ -462,6 +462,8 @@ INSTITUTION_CANON = {
     "chinese university of hong kong, shenzhen": "Chinese University of Hong Kong, Shenzhen",
     # Tsinghua
     "tsinghua university": "Tsinghua University",
+    "school of social sciences, tsinghua university": "Tsinghua University, School of Social Sciences",
+    "institute of economics, school of social sciences, tsinghua university": "Tsinghua University, School of Social Sciences",
     # UNC Wilmington
     "unc wilmington": "University of North Carolina Wilmington",
     "university of north carolina wilmington": "University of North Carolina Wilmington",
@@ -669,6 +671,13 @@ def tokenize_q11(q11_val: str) -> list:
 Q8_GENERATION_OVERRIDES = {
     "R_7vrtdVnraeOr681": 2,  # Santiago Perez (Q11="Ran Abramitzky")
     "R_7rSYUx2xrPi8nia": 1,  # Netanel Ben-Porath (Q11="Joel himself!")
+}
+
+# Curated respondent metadata overrides from strong post-survey verification.
+RESPONDENT_METADATA_OVERRIDES = {
+    "R_9i4H75l7IKGKK6n": {
+        "q5_text": "Institute of Economics, School of Social Sciences, Tsinghua University",
+    },
 }
 
 # Q12a student name misspellings.
@@ -891,6 +900,11 @@ def main():
         first = row[col['Q1']].strip()
         last  = row[col['Q2']].strip()
         email = row[col['Q3']].strip()
+        if not email and email_recovery:
+            recovered_email = _lookup_email_recovery(f"{first} {last}", f"R-{rid}", email_recovery)
+            if recovered_email:
+                email = recovered_email
+                print(f"  INFO respondent email recovery: {first} {last} ({rid}) -> {email}")
         respondents[rid] = {
             'first':   first,
             'last':    last,
@@ -904,6 +918,9 @@ def main():
             'q11':     row[col['Q11']].strip(),
             'q12':     row[col['Q12']].strip(),
         }
+        if rid in RESPONDENT_METADATA_OVERRIDES:
+            respondents[rid].update(RESPONDENT_METADATA_OVERRIDES[rid])
+            print(f"  INFO respondent metadata override: {first} {last} ({rid})")
         if email:
             email_to_rid[normalize_email(email)] = rid
         name_key = _person_name_key(first, last)

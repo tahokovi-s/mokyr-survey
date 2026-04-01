@@ -31,6 +31,7 @@ FILE_PATTERNS = {
     "nodes": re.compile(r"^Network_Nodes_(\d{6})\.csv$"),
     "edges": re.compile(r"^Network_Edges_(\d{6})\.csv$"),
     "audit": re.compile(r"^Gen2_Student_Capture_Audit_(\d{6})\.csv$"),
+    "recovery_findings": re.compile(r"^Gen2_EmptyQ12a_Public_Recovery_Findings_(\d{6})\.csv$"),
 }
 
 AUDIT_FIELDNAMES = [
@@ -75,6 +76,8 @@ GAP_FIELDNAMES = [
     "incident_edge_count",
     "manual_student_edge_count",
     "has_manual_students",
+    "public_recovery_status",
+    "public_recovery_student_count",
     "followup_priority",
     "notes",
 ]
@@ -225,10 +228,53 @@ def build_advisor_universe(cleaned_rows: list[dict], nodes_rows: list[dict]) -> 
     return advisors
 
 
+def sanitize_recovery_finding_row(row: dict) -> dict:
+    sanitized = {key: (row.get(key, "") or "").strip() for key in row.keys()}
+    advisor_status = sanitized.get("advisor_status", "")
+    student_name = sanitized.get("student_name", "")
+    notes = sanitized.get("notes", "")
+    public_email = sanitized.get("public_email", "")
+
+    if advisor_status in {"no_public_evidence_found", "unresolved"} and not student_name and not notes and public_email:
+        sanitized["notes"] = public_email
+        sanitized["public_email"] = ""
+
+    return sanitized
+
+
+def load_recovery_findings(path: Path | None) -> list[dict]:
+    if not path or not path.exists():
+        return []
+    return [sanitize_recovery_finding_row(row) for row in load_csv(path)]
+
+
+def build_recovery_lookup(findings_rows: list[dict]) -> dict[str, dict]:
+    grouped = defaultdict(list)
+    for row in findings_rows:
+        advisor_name = row.get("advisor_name", "").strip()
+        if advisor_name:
+            grouped[advisor_name].append(row)
+
+    lookup = {}
+    for advisor_name, rows in grouped.items():
+        status = next((row.get("advisor_status", "").strip() for row in rows if row.get("advisor_status", "").strip()), "")
+        student_rows = [row for row in rows if row.get("student_name", "").strip()]
+        advisor_notes = next((row.get("notes", "").strip() for row in rows if row.get("notes", "").strip() and not row.get("student_name", "").strip()), "")
+        lookup[advisor_name] = {
+            "advisor_status": status,
+            "student_rows": student_rows,
+            "student_count": len(student_rows),
+            "advisor_notes": advisor_notes,
+            "rows": rows,
+        }
+    return lookup
+
+
 def build_gap_rows(
     advisors: list[dict],
     q12a_rows: list[dict],
     edges_rows: list[dict],
+    recovery_lookup: dict[str, dict] | None = None,
 ) -> list[dict]:
     q12a_counts = Counter(
         (
@@ -253,6 +299,7 @@ def build_gap_rows(
 
     rows = []
     for advisor in advisors:
+        recovery = (recovery_lookup or {}).get(advisor["advisor_name"], {})
         derived_count = q12a_counts.get(
             (normalize_name(advisor["advisor_first_name"]), normalize_name(advisor["advisor_last_name"])),
             0,
@@ -263,13 +310,32 @@ def build_gap_rows(
         manual_count = manual_outgoing_counts.get(advisor["advisor_node_id"], 0)
         incident_count = incident_counts.get(advisor["advisor_node_id"], 0)
         outgoing_count = outgoing_counts.get(advisor["advisor_node_id"], 0)
-        if manual_count > 0:
-            priority = "low"
+        public_recovery_status = recovery.get("advisor_status", "")
+        public_recovery_student_count = recovery.get("student_count", 0)
+
+        if public_recovery_status == "confirmed_students_found":
+            priority = "none"
+            notes = (
+                f"Public recovery confirmed {public_recovery_student_count} student(s); "
+                "branch is now supplemented in the current network."
+            )
+        elif public_recovery_status == "no_public_evidence_found":
+            priority = "none"
+            notes = recovery.get("advisor_notes", "") or "No public evidence of PhD students found during the branch-recovery pass."
+        elif public_recovery_status == "unresolved":
+            priority = "high"
+            notes = recovery.get("advisor_notes", "") or "Public recovery pass remains unresolved for this blank-Q12a branch."
+        elif manual_count > 0:
+            public_recovery_status = "already_supplemented"
+            public_recovery_student_count = manual_count
+            priority = "none"
             notes = f"Q12=Yes with blank raw/derived Q12a, but {manual_count} manual student edges already supplement the branch."
         elif incident_count == 0:
+            public_recovery_status = "needs_public_recovery"
             priority = "high"
             notes = "Q12=Yes with blank raw/derived Q12a and zero incident edges; isolate for advisor and student recovery."
         else:
+            public_recovery_status = "needs_public_recovery"
             priority = "medium"
             notes = "Q12=Yes with blank raw/derived Q12a and no student roster captured yet."
         rows.append(
@@ -284,6 +350,8 @@ def build_gap_rows(
                 "incident_edge_count": incident_count,
                 "manual_student_edge_count": manual_count,
                 "has_manual_students": "yes" if manual_count else "no",
+                "public_recovery_status": public_recovery_status,
+                "public_recovery_student_count": public_recovery_student_count,
                 "followup_priority": priority,
                 "notes": notes,
             }
@@ -291,9 +359,73 @@ def build_gap_rows(
     return rows
 
 
-def build_recovery_rows(gap_rows: list[dict]) -> list[dict]:
+def build_recovery_rows(gap_rows: list[dict], recovery_lookup: dict[str, dict], nodes_rows: list[dict]) -> list[dict]:
+    nodes_by_id = {row["node_id"]: row for row in nodes_rows}
+    nodes_by_name = defaultdict(list)
+    nodes_by_email = defaultdict(list)
+    for node in nodes_rows:
+        full = normalize_name(full_name(node.get("first_name", ""), node.get("last_name", "")))
+        if full:
+            nodes_by_name[full].append(node)
+        email = normalize_email(node.get("email", ""))
+        if email:
+            nodes_by_email[email].append(node)
+
     rows = []
     for gap in gap_rows:
+        advisor_name = gap["advisor_name"]
+        recovery = recovery_lookup.get(advisor_name)
+        if recovery:
+            recovery_status = recovery.get("advisor_status", "")
+            student_count = recovery.get("student_count", 0)
+            if recovery_status == "confirmed_students_found":
+                for finding in recovery.get("student_rows", []):
+                    student_name = finding.get("student_name", "").strip()
+                    public_email = normalize_email(finding.get("public_email", ""))
+                    matches = []
+                    if public_email:
+                        matches.extend(nodes_by_email.get(public_email, []))
+                    if not matches:
+                        matches.extend(nodes_by_name.get(normalize_name(student_name), []))
+                    node_match = matches[0]["node_id"] if len(matches) == 1 else ""
+                    notes = finding.get("notes", "").strip()
+                    captured_suffix = f"Captured in current network as {node_match}."
+                    if node_match and captured_suffix not in notes:
+                        notes = f"{notes} {captured_suffix}".strip()
+                    rows.append(
+                        {
+                            "advisor_node_id": gap["advisor_node_id"],
+                            "advisor_name": advisor_name,
+                            "recovery_status": recovery_status,
+                            "public_students_found": str(student_count),
+                            "student_name": student_name,
+                            "relationship_type": finding.get("relationship_type", "").strip(),
+                            "source_url": finding.get("source_1_url", "").strip(),
+                            "source_strength": finding.get("evidence_strength", "").strip(),
+                            "recommended_network_action": "none" if node_match else (finding.get("recommended_action", "").strip() or "add_to_network"),
+                            "notes": notes,
+                        }
+                    )
+                continue
+
+            notes = recovery.get("advisor_notes", "") or gap["notes"]
+            recommended_action = "none" if recovery_status == "no_public_evidence_found" else "investigate_public_sources"
+            rows.append(
+                {
+                    "advisor_node_id": gap["advisor_node_id"],
+                    "advisor_name": advisor_name,
+                    "recovery_status": recovery_status,
+                    "public_students_found": str(student_count),
+                    "student_name": "",
+                    "relationship_type": "",
+                    "source_url": "",
+                    "source_strength": "",
+                    "recommended_network_action": recommended_action,
+                    "notes": notes,
+                }
+            )
+            continue
+
         manual_count = int(gap.get("manual_student_edge_count", 0) or 0)
         if manual_count > 0:
             recovery_status = "already_supplemented"
@@ -536,6 +668,7 @@ def write_summary(
     audit_rows: list[dict],
     advisor_summary_rows: list[dict],
     gap_rows: list[dict],
+    recovery_rows: list[dict],
     validation_rows: list[dict],
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -543,9 +676,16 @@ def write_summary(
     raw_listed_students = sum(row["listed_student_count_raw"] for row in advisor_summary_rows)
     derived_listed_students = sum(row["listed_student_count_derived"] for row in advisor_summary_rows)
     supplemental_students = sum(row["supplemental_manual_student_count"] for row in advisor_summary_rows)
-    unresolved_gap_rows = [row for row in gap_rows if row.get("has_manual_students") != "yes"]
+    unresolved_gap_rows = [row for row in gap_rows if row.get("public_recovery_status") in {"needs_public_recovery", "unresolved"}]
     variant_rows = [row for row in audit_rows if row.get("capture_status") == "captured_variant"]
     issue_counts = Counter(row["severity"] for row in validation_rows)
+    recovery_status_by_advisor = {}
+    for row in recovery_rows:
+        advisor_name = row.get("advisor_name", "").strip()
+        recovery_status = row.get("recovery_status", "").strip()
+        if advisor_name and advisor_name not in recovery_status_by_advisor and recovery_status:
+            recovery_status_by_advisor[advisor_name] = recovery_status
+    recovery_status_counts = Counter(recovery_status_by_advisor.values())
 
     status_label = "PASS"
     if issue_counts.get("high"):
@@ -571,9 +711,9 @@ def write_summary(
         f"- **Missing from network:** {status_counts.get('missing_from_network', 0)}",
         f"- **Captured under wrong advisor:** {status_counts.get('captured_wrong_advisor', 0)}",
         f"- **Needs manual review:** {status_counts.get('needs_manual_review', 0)}",
-        f"- **Empty-Q12a advisors:** {len(gap_rows)} total (`already_supplemented`: {len(gap_rows) - len(unresolved_gap_rows)}, unresolved follow-up: {len(unresolved_gap_rows)})",
+        f"- **Empty-Q12a advisors:** {len(gap_rows)} total (`confirmed_students_found`: {recovery_status_counts.get('confirmed_students_found', 0)}, `no_public_evidence_found`: {recovery_status_counts.get('no_public_evidence_found', 0)}, `unresolved`: {recovery_status_counts.get('unresolved', 0)}, `already_supplemented`: {recovery_status_counts.get('already_supplemented', 0)}, unresolved follow-up: {len(unresolved_gap_rows)})",
         "",
-        "**Bottom line:** Every student explicitly listed in raw or derived Q12a is captured in the current network. The remaining follow-up work is branch recovery for empty-Q12a advisors, not missing listed students.",
+        "**Bottom line:** Every student explicitly listed in raw or derived Q12a is captured in the current network. The empty-Q12a branch work is now narrowed to report-only no-evidence cases plus any advisors still explicitly marked unresolved.",
         "",
         "## Advisor-Level Counts",
         "",
@@ -627,8 +767,8 @@ def write_summary(
 
     lines.extend(["", "## Empty Q12a Advisor Follow-Up Queue", ""])
     if gap_rows:
-        lines.append("| Advisor | Priority | Manual Students | Outgoing Edges | Incident Edges | Notes |")
-        lines.append("|---|---|---:|---:|---:|---|")
+        lines.append("| Advisor | Recovery Status | Public Students | Priority | Manual Students | Outgoing Edges | Incident Edges | Notes |")
+        lines.append("|---|---|---:|---|---:|---:|---:|---|")
         for row in gap_rows:
             lines.append(
                 "| "
@@ -636,6 +776,8 @@ def write_summary(
                     str(value)
                     for value in [
                         row["advisor_name"],
+                        row["public_recovery_status"],
+                        row["public_recovery_student_count"],
                         row["followup_priority"],
                         row["manual_student_edge_count"],
                         row["outgoing_edge_count"],
@@ -670,6 +812,7 @@ def main() -> None:
     parser.add_argument("--nodes", help="Path to network nodes CSV")
     parser.add_argument("--edges", help="Path to network edges CSV")
     parser.add_argument("--audit", help="Path to Gen2 audit CSV")
+    parser.add_argument("--recovery-findings", help="Path to Gen2 empty-Q12a public recovery findings CSV")
     args = parser.parse_args()
 
     date_token = args.date or datetime.now().strftime("%m%d%y")
@@ -678,17 +821,20 @@ def main() -> None:
     nodes_path = resolve_path(args.nodes, "nodes", PROJECT_ROOT / "Data" / "Derived")
     edges_path = resolve_path(args.edges, "edges", PROJECT_ROOT / "Data" / "Derived")
     audit_path = resolve_path(args.audit, "audit", PROJECT_ROOT / "Data" / "Derived")
+    recovery_findings_path = resolve_path(args.recovery_findings, "recovery_findings", PROJECT_ROOT / "Data" / "Derived") if args.recovery_findings else None
 
     cleaned_rows = load_csv(cleaned_path)
     q12a_rows = load_csv(q12a_path)
     nodes_rows = load_csv(nodes_path)
     edges_rows = load_csv(edges_path)
     audit_rows = load_csv(audit_path)
+    recovery_findings_rows = load_recovery_findings(recovery_findings_path)
 
     validation_rows = []
     advisors = build_advisor_universe(cleaned_rows, nodes_rows)
-    gap_rows = build_gap_rows(advisors, q12a_rows, edges_rows)
-    recovery_rows = build_recovery_rows(gap_rows)
+    recovery_lookup = build_recovery_lookup(recovery_findings_rows)
+    gap_rows = build_gap_rows(advisors, q12a_rows, edges_rows, recovery_lookup)
+    recovery_rows = build_recovery_rows(gap_rows, recovery_lookup, nodes_rows)
     sanitized_audit_rows = sanitize_audit_rows(audit_rows, nodes_rows, edges_rows, validation_rows)
 
     gap_advisors = {row["advisor_name"] for row in gap_rows}
@@ -750,7 +896,7 @@ def main() -> None:
     write_csv(validation_out, VALIDATION_FIELDNAMES, validation_rows)
     write_csv(gap_out, GAP_FIELDNAMES, gap_rows)
     write_csv(recovery_out, RECOVERY_FIELDNAMES, recovery_rows)
-    write_summary(summary_out, date_token, sanitized_audit_rows, advisor_summary_rows, gap_rows, validation_rows)
+    write_summary(summary_out, date_token, sanitized_audit_rows, advisor_summary_rows, gap_rows, recovery_rows, validation_rows)
 
     print(f"Sanitized audit rows: {len(sanitized_audit_rows)}")
     print(f"Gap advisors: {len(gap_rows)}")

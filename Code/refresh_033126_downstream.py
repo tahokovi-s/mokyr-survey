@@ -56,6 +56,16 @@ FILE_SPECS = {
         "Gen2_Student_Capture_Audit_{date}.csv",
         re.compile(r"^Gen2_Student_Capture_Audit_(\d{6})\.csv$"),
     ),
+    "gen2_recovery_findings": (
+        PROJECT_ROOT / "Data" / "Derived",
+        "Gen2_EmptyQ12a_Public_Recovery_Findings_{date}.csv",
+        re.compile(r"^Gen2_EmptyQ12a_Public_Recovery_Findings_(\d{6})\.csv$"),
+    ),
+    "gen3_verification_findings": (
+        PROJECT_ROOT / "Data" / "Derived",
+        "Gen3_Public_Student_Verification_Findings_{date}.csv",
+        re.compile(r"^Gen3_Public_Student_Verification_Findings_(\d{6})\.csv$"),
+    ),
 }
 
 
@@ -159,6 +169,8 @@ def main() -> None:
     parser.add_argument("--manual-provenance", help="Override manual provenance input path")
     parser.add_argument("--audit", help="Override Gen1 audit CSV path")
     parser.add_argument("--gen2-audit", help="Override Gen2 capture audit CSV path")
+    parser.add_argument("--gen2-recovery-findings", help="Override Gen2 empty-Q12a public recovery findings CSV path")
+    parser.add_argument("--gen3-verification-findings", help="Override Gen3 public student verification findings CSV path")
     parser.add_argument("--d3-path", help="Local d3.min.js path for viz rebuild")
     parser.add_argument("--current-raw", help="Optional current raw Qualtrics export for outreach refresh")
     parser.add_argument("--baseline-raw", help="Optional baseline raw Qualtrics export for outreach refresh")
@@ -175,6 +187,8 @@ def main() -> None:
     manual_provenance = resolve_compatible_input("manual_provenance", date_token, args.manual_provenance, required=False, allow_fallback=False)
     audit = resolve_compatible_input("audit", date_token, args.audit, required=False, allow_fallback=False)
     gen2_audit = resolve_compatible_input("gen2_audit", date_token, args.gen2_audit, required=False, allow_fallback=False)
+    gen2_recovery_findings = resolve_compatible_input("gen2_recovery_findings", date_token, args.gen2_recovery_findings, required=False, allow_fallback=False)
+    gen3_verification_findings = resolve_compatible_input("gen3_verification_findings", date_token, args.gen3_verification_findings, required=False, allow_fallback=False)
 
     nodes = PROJECT_ROOT / "Data" / "Derived" / f"Network_Nodes_{date_token}.csv"
     edges = PROJECT_ROOT / "Data" / "Derived" / f"Network_Edges_{date_token}.csv"
@@ -199,6 +213,10 @@ def main() -> None:
         required_scripts.append(PROJECT_ROOT / "Code" / "validate_gen1_audit.py")
     if gen2_audit:
         required_scripts.append(PROJECT_ROOT / "Code" / "validate_gen2_capture_audit.py")
+    if gen2_recovery_findings:
+        required_scripts.append(PROJECT_ROOT / "Code" / "render_gen2_empty_q12a_public_recovery.py")
+    if gen3_verification_findings:
+        required_scripts.append(PROJECT_ROOT / "Code" / "validate_gen3_public_student_verification.py")
     if args.current_raw and args.baseline_raw:
         required_scripts.append(PROJECT_ROOT / "Code" / "check_outreach_responses.py")
     require_existing_paths(required_scripts)
@@ -250,6 +268,33 @@ def main() -> None:
     ]
     run_step("build_master_list", master_cmd)
 
+    if gen2_recovery_findings:
+        render_gen2_recovery_cmd = [
+            sys.executable,
+            "Code/render_gen2_empty_q12a_public_recovery.py",
+            "--date", date_token,
+            "--findings", str(gen2_recovery_findings.relative_to(PROJECT_ROOT)),
+            "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
+        ]
+        run_step("render_gen2_empty_q12a_public_recovery", render_gen2_recovery_cmd)
+    else:
+        print("\n=== render_gen2_empty_q12a_public_recovery ===")
+        print("Skipping: Gen2 empty-Q12a public recovery findings input not available for this date.")
+
+    if gen3_verification_findings:
+        validate_gen3_cmd = [
+            sys.executable,
+            "Code/validate_gen3_public_student_verification.py",
+            "--date", date_token,
+            "--findings", str(gen3_verification_findings.relative_to(PROJECT_ROOT)),
+            "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
+            "--edges", str(edges.relative_to(PROJECT_ROOT)),
+        ]
+        run_step("validate_gen3_public_student_verification", validate_gen3_cmd)
+    else:
+        print("\n=== validate_gen3_public_student_verification ===")
+        print("Skipping: Gen3 public student verification findings input not available for this date.")
+
     outstanding_cmd = [
         sys.executable,
         "Code/build_outstanding_lists.py",
@@ -298,6 +343,7 @@ def main() -> None:
             "--edges", str(edges.relative_to(PROJECT_ROOT)),
             "--audit", str(gen2_audit.relative_to(PROJECT_ROOT)),
         ]
+        append_path_arg(validate_gen2_cmd, "--recovery-findings", gen2_recovery_findings)
         run_step("validate_gen2_capture_audit", validate_gen2_cmd)
     else:
         print("\n=== validate_gen2_capture_audit ===")
@@ -338,6 +384,11 @@ def main() -> None:
         PROJECT_ROOT / "Data" / "Derived" / f"Gen2_Advisor_Q12_Gaps_{date_token}.csv",
         PROJECT_ROOT / "Data" / "Derived" / f"Gen2_Q12a_Recovery_Audit_{date_token}.csv",
         PROJECT_ROOT / "Data" / "Derived" / f"Gen2_Student_Capture_Summary_{date_token}.md",
+        PROJECT_ROOT / "Data" / "Derived" / f"Gen2_EmptyQ12a_Public_Recovery_Findings_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Gen2_EmptyQ12a_Public_Recovery_Report_{date_token}.md",
+        PROJECT_ROOT / "Data" / "Derived" / f"Gen3_Student_Verification_Audit_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Gen3_Student_Verification_Validation_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Gen3_Public_Student_Verification_Report_{date_token}.md",
     ]:
         print(output.relative_to(PROJECT_ROOT))
 
