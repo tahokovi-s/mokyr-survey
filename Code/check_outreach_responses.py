@@ -15,31 +15,17 @@ Outputs:
 import argparse
 import csv
 import re
-import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+try:
+    from name_normalization import normalize_person_text
+except ImportError:
+    from Code.name_normalization import normalize_person_text
 
-TRANSLIT_MAP = str.maketrans({
-    "ø": "o",
-    "Ø": "O",
-    "ı": "i",
-    "İ": "I",
-    "ß": "ss",
-    "æ": "ae",
-    "Æ": "AE",
-    "œ": "oe",
-    "Œ": "OE",
-    "ð": "d",
-    "Ð": "D",
-    "þ": "th",
-    "Þ": "Th",
-    "ł": "l",
-    "Ł": "L",
-})
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 NICKNAME_EQUIVALENTS = {
     "tom": "thomas",
@@ -123,12 +109,7 @@ def extract_date_tag(path):
 
 
 def normalize_text(text):
-    text = (text or "").translate(TRANSLIT_MAP)
-    text = unicodedata.normalize("NFKD", text)
-    text = "".join(ch for ch in text if not unicodedata.combining(ch))
-    text = text.lower().replace('"', " ").replace("'", " ")
-    text = re.sub(r"[^a-z0-9]+", " ", text)
-    return re.sub(r"\s+", " ", text).strip()
+    return normalize_person_text(text)
 
 
 def normalize_tokens(text):

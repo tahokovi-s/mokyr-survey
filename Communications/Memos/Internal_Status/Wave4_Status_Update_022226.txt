@@ -61,7 +61,7 @@ A few things you can do with it:
   - Drag nodes around to untangle clusters
   - Zoom and pan freely
   - Use the search box to jump straight to a specific person
-  - Toggle "Show uncontacted students" to see the Q12a-reported names we haven't yet heard from
+  - Toggle "Show manually-added respondents" to see the Q12a-reported names currently included in the working draft
 
 This is just a first pass to see what the data looks like in network form. The underlying data is what we have right now — there are still coverage gaps from non-respondents, and the connections rely on people accurately filling in their Q11 advisor fields, so take the exact structure with some caution for now. The goal was simply to get something concrete so we can discuss what the final deliverable should look like.
 

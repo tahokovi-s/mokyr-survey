@@ -13,14 +13,19 @@ Merges data from:
 Usage:
     python3 Code/build_master_list.py [--date 030226]
 
+Defaults:
+    - Network_Nodes / Network_Edges use the requested --date exactly
+    - Q12a / cleaned survey prefer the requested --date, else fall back to the
+      latest compatible snapshot not newer than --date
+
 Output:
     Data/Derived/Master_Contact_List_{date}.csv
 """
 
 import argparse
 import csv
-import sys
 import re
+from datetime import datetime
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -60,6 +65,42 @@ def clean_contact_email(raw_email):
     return emails[0] if emails else ""
 
 
+def parse_date_token(token):
+    """Parse MMDDYY tokens used in dated CSV filenames."""
+    return datetime.strptime(token, "%m%d%y")
+
+
+def resolve_versioned_default(base_dir, prefix, suffix, requested_date):
+    """Resolve a dated CSV, falling back to the latest compatible snapshot."""
+    exact = base_dir / f"{prefix}{requested_date}{suffix}"
+    if exact.exists():
+        return exact, requested_date, "exact"
+
+    requested_dt = parse_date_token(requested_date)
+    candidates = []
+    for path in base_dir.glob(f"{prefix}*{suffix}"):
+        name = path.name
+        if not (name.startswith(prefix) and name.endswith(suffix)):
+            continue
+        token = name[len(prefix):-len(suffix)]
+        if len(token) != 6 or not token.isdigit():
+            continue
+        try:
+            token_dt = parse_date_token(token)
+        except ValueError:
+            continue
+        if token_dt <= requested_dt:
+            candidates.append((token_dt, token, path))
+
+    if not candidates:
+        raise FileNotFoundError(
+            f"No compatible input found for {prefix}*{suffix} at or before {requested_date}"
+        )
+
+    _, token, path = max(candidates)
+    return path, token, "fallback"
+
+
 def main():
     parser = argparse.ArgumentParser(description="Build master contact list CSV")
     parser.add_argument(
@@ -77,11 +118,11 @@ def main():
     )
     parser.add_argument(
         "--q12a",
-        help="Path to Advisors_and_Reported_Students CSV (default: auto from --date)",
+        help="Path to Advisors_and_Reported_Students CSV (default: exact --date, else latest <= --date)",
     )
     parser.add_argument(
         "--cleaned",
-        help="Path to cleaned survey CSV (default: auto from --date)",
+        help="Path to cleaned survey CSV (default: exact --date, else latest <= --date)",
     )
     parser.add_argument(
         "--output",
@@ -94,17 +135,33 @@ def main():
     contact_dir = PROJECT_ROOT / "Data" / "Contact_Lists"
     cleaned_dir = PROJECT_ROOT / "Data" / "Cleaned"
 
-    # Input files default to the 022226 dataset (the latest available).
-    # Override with --nodes, --edges, --q12a, --cleaned for newer exports.
-    input_date = "022226"
-    nodes_path = Path(args.nodes) if args.nodes else derived / f"Network_Nodes_{input_date}.csv"
-    edges_path = Path(args.edges) if args.edges else derived / f"Network_Edges_{input_date}.csv"
-    q12a_path = Path(args.q12a) if args.q12a else derived / f"Advisors_and_Reported_Students_{input_date}.csv"
-    cleaned_path = (
-        Path(args.cleaned)
-        if args.cleaned
-        else cleaned_dir / f"Mokyr_Survey_Responses_{input_date}_Cleaned.csv"
-    )
+    # Network snapshots are date-pinned; primary survey inputs may lag behind a
+    # newer auxiliary/network snapshot, so they fall back to the latest
+    # compatible dated file when an exact match is unavailable.
+    nodes_path = Path(args.nodes) if args.nodes else derived / f"Network_Nodes_{date}.csv"
+    edges_path = Path(args.edges) if args.edges else derived / f"Network_Edges_{date}.csv"
+    if args.q12a:
+        q12a_path = Path(args.q12a)
+        q12a_mode = "explicit"
+        q12a_date = None
+    else:
+        q12a_path, q12a_date, q12a_mode = resolve_versioned_default(
+            derived,
+            "Advisors_and_Reported_Students_",
+            ".csv",
+            date,
+        )
+    if args.cleaned:
+        cleaned_path = Path(args.cleaned)
+        cleaned_mode = "explicit"
+        cleaned_date = None
+    else:
+        cleaned_path, cleaned_date, cleaned_mode = resolve_versioned_default(
+            cleaned_dir,
+            "Mokyr_Survey_Responses_",
+            "_Cleaned.csv",
+            date,
+        )
     output_path = (
         Path(args.output)
         if args.output
@@ -121,10 +178,14 @@ def main():
     print(f"  {len(edges)} edges loaded")
 
     print(f"Loading Q12a from {q12a_path}")
+    if q12a_mode == "fallback":
+        print(f"  Requested date {date} has no Q12a file; using {q12a_date} instead")
     q12a_rows = load_csv(q12a_path)
     print(f"  {len(q12a_rows)} Q12a rows loaded")
 
     print(f"Loading cleaned survey from {cleaned_path}")
+    if cleaned_mode == "fallback":
+        print(f"  Requested date {date} has no cleaned survey file; using {cleaned_date} instead")
     cleaned = load_csv(cleaned_path)
     print(f"  {len(cleaned)} survey responses loaded")
 
@@ -272,6 +333,7 @@ def main():
             "advisor": advisor_str,
             "phd_institution": n.get("phd_institution_canon", ""),
             "current_employer": n.get("current_employer_canon", ""),
+            "email_network": n.get("email", ""),
             "email_survey": survey_email_by_nid.get(nid, ""),
             "email_q12a": q12a_email_by_nid.get(nid, ""),
             "email_contact_list": contact_email_by_nid.get(nid, ""),
@@ -305,6 +367,7 @@ def main():
         "advisor",
         "phd_institution",
         "current_employer",
+        "email_network",
         "email_survey",
         "email_q12a",
         "email_contact_list",
@@ -324,13 +387,14 @@ def main():
     # --- Summary statistics ---
     total = len(output_rows)
     responded = sum(1 for r in output_rows if r["responded"] == 1)
+    has_network_email = sum(1 for r in output_rows if r["email_network"])
     has_survey_email = sum(1 for r in output_rows if r["email_survey"])
     has_q12a_email = sum(1 for r in output_rows if r["email_q12a"])
     has_contact_email = sum(1 for r in output_rows if r["email_contact_list"])
     has_any_email = sum(
         1
         for r in output_rows
-        if r["email_survey"] or r["email_q12a"] or r["email_contact_list"]
+        if r["email_network"] or r["email_survey"] or r["email_q12a"] or r["email_contact_list"]
     )
     has_advisor = sum(1 for r in output_rows if r["advisor"])
     has_generation = sum(1 for r in output_rows if r["generation"] != "")
@@ -349,6 +413,7 @@ def main():
     print(f"Non-respondents:         {total - responded}")
     print(f"")
     print(f"Email coverage:")
+    print(f"  email_network:         {has_network_email} ({100*has_network_email/total:.1f}%)")
     print(f"  email_survey (Q3):     {has_survey_email} ({100*has_survey_email/total:.1f}%)")
     print(f"  email_q12a:            {has_q12a_email} ({100*has_q12a_email/total:.1f}%)")
     print(f"  email_contact_list:    {has_contact_email} ({100*has_contact_email/total:.1f}%)")

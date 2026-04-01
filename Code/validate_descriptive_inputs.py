@@ -12,12 +12,19 @@ Outputs:
 import argparse
 import csv
 import re
-import unicodedata
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from build_network import MANUAL_RESPONDENT_DEDUP
+try:
+    from name_normalization import normalize_person_text, person_name_key as shared_person_name_key
+except ImportError:
+    from Code.name_normalization import normalize_person_text, person_name_key as shared_person_name_key
+
+try:
+    from build_network import MANUAL_RESPONDENT_DEDUP, STUDENT_NAME_ALIASES
+except ImportError:
+    from Code.build_network import MANUAL_RESPONDENT_DEDUP, STUDENT_NAME_ALIASES
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -46,6 +53,10 @@ FILE_PATTERNS = {
         PROJECT_ROOT / "Data" / "Derived",
         re.compile(r"^Manual_Nodes_(\d{6})\.csv$"),
     ),
+    "manual_edges": (
+        PROJECT_ROOT / "Data" / "Derived",
+        re.compile(r"^Manual_Edges_(\d{6})\.csv$"),
+    ),
     "email_recovery": (
         PROJECT_ROOT / "Data" / "Derived",
         re.compile(r"^Email_Recovery_(\d{6})\.csv$"),
@@ -53,7 +64,7 @@ FILE_PATTERNS = {
 }
 
 PRIMARY_INPUT_LABELS = ["cleaned", "q12a", "nodes", "edges", "unresolved"]
-AUXILIARY_INPUT_LABELS = ["manual_nodes", "email_recovery"]
+AUXILIARY_INPUT_LABELS = ["manual_nodes", "manual_edges", "email_recovery"]
 INPUT_LABELS = PRIMARY_INPUT_LABELS + AUXILIARY_INPUT_LABELS
 PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 
@@ -82,18 +93,15 @@ def normalize_email(value: str) -> str:
 
 
 def normalize_name_part(value: str) -> str:
-    value = (value or "").strip()
-    value = unicodedata.normalize("NFKD", value)
-    value = "".join(ch for ch in value if not unicodedata.combining(ch))
-    value = value.lower().replace("\u2019", "'").replace("\u02bc", "'")
-    value = re.sub(r"\([^)]*\)", " ", value)
-    value = value.replace('"', " ").replace("'", " ")
-    value = re.sub(r"[^a-z0-9]+", " ", value)
-    return re.sub(r"\s+", " ", value).strip()
+    return normalize_person_text(value)
 
 
 def person_name_key(first_name: str, last_name: str) -> tuple[str, str]:
-    return (normalize_name_part(first_name), normalize_name_part(last_name))
+    return shared_person_name_key(first_name, last_name)
+
+
+def full_name_key(first_name: str, last_name: str) -> str:
+    return normalize_person_text(" ".join(part for part in (first_name, last_name) if part))
 
 
 def parse_mmddyy(token: str) -> datetime:
@@ -188,11 +196,18 @@ def build_duplicate_candidate_rows(nodes_rows: list[dict], edges_rows: list[dict
         row for row in nodes_rows
         if row.get("node_id", "").startswith("M-")
     ]
+    q12a_nodes = [
+        row for row in nodes_rows
+        if row.get("node_id", "").startswith("S-")
+    ]
 
     respondent_name_to_ids = defaultdict(list)
+    respondent_full_name_to_ids = defaultdict(list)
     respondent_email_to_ids = defaultdict(list)
     for node_id, row in respondent_nodes.items():
-        respondent_name_to_ids[person_name_key(row.get("first_name", ""), row.get("last_name", ""))].append(node_id)
+        name_key = person_name_key(row.get("first_name", ""), row.get("last_name", ""))
+        respondent_name_to_ids[name_key].append(node_id)
+        respondent_full_name_to_ids[full_name_key(row.get("first_name", ""), row.get("last_name", ""))].append(node_id)
         email = normalize_email(row.get("email", ""))
         if email:
             respondent_email_to_ids[email].append(node_id)
@@ -211,60 +226,85 @@ def build_duplicate_candidate_rows(nodes_rows: list[dict], edges_rows: list[dict
 
     rows = []
     duplicate_manual_nodes = set()
-    for manual in manual_nodes:
-        reasons_by_respondent = defaultdict(set)
-        manual_id = manual["node_id"]
-        manual_name_key = person_name_key(manual.get("first_name", ""), manual.get("last_name", ""))
-        manual_email = normalize_email(manual.get("email", ""))
+    duplicate_q12a_nodes = set()
 
-        curated_rid = MANUAL_RESPONDENT_DEDUP.get(manual_name_key)
-        if curated_rid:
-            curated_node_id = f"R-{curated_rid}"
-            if curated_node_id in respondent_nodes:
-                reasons_by_respondent[curated_node_id].add("curated_match")
+    def append_duplicates(candidate_rows: list[dict], node_kind: str) -> None:
+        for candidate in candidate_rows:
+            reasons_by_respondent = defaultdict(set)
+            candidate_id = candidate["node_id"]
+            candidate_name_key = person_name_key(candidate.get("first_name", ""), candidate.get("last_name", ""))
+            candidate_full_name = full_name_key(candidate.get("first_name", ""), candidate.get("last_name", ""))
+            candidate_email = normalize_email(candidate.get("email", ""))
 
-        if manual_email:
-            for respondent_id in respondent_email_to_ids.get(manual_email, []):
-                reasons_by_respondent[respondent_id].add("exact_email")
+            if node_kind == "manual":
+                curated_rid = MANUAL_RESPONDENT_DEDUP.get(candidate_name_key)
+                if curated_rid:
+                    curated_node_id = f"R-{curated_rid}"
+                    if curated_node_id in respondent_nodes:
+                        reasons_by_respondent[curated_node_id].add("curated_match")
 
-        for respondent_id in respondent_name_to_ids.get(manual_name_key, []):
-            reasons_by_respondent[respondent_id].add("exact_name")
+            aliased_name_key = STUDENT_NAME_ALIASES.get(candidate_name_key)
+            if aliased_name_key and aliased_name_key != candidate_name_key:
+                for respondent_id in respondent_name_to_ids.get(aliased_name_key, []):
+                    reasons_by_respondent[respondent_id].add("curated_alias")
 
-        for respondent_id, reasons in sorted(reasons_by_respondent.items()):
-            duplicate_manual_nodes.add(manual_id)
-            respondent = respondent_nodes[respondent_id]
-            rows.append(
-                {
-                    "record_type": "duplicate_person_candidate",
-                    "response_id": respondent_id.removeprefix("R-"),
-                    "node_id": manual_id,
-                    "matched_node_id": respondent_id,
-                    "first_name": manual.get("first_name", "").strip(),
-                    "last_name": manual.get("last_name", "").strip(),
-                    "coverage_status": "duplicate_person_candidate",
-                    "coverage_reason": "; ".join(sorted(reasons)),
-                    "matched_same_name_node_ids": respondent_id,
-                    "matched_same_name_count": 1,
-                    "advisor_entries_in_q12a": "",
-                    "q12": "",
-                    "q8": "",
-                    "q11": "",
-                    "edge_rows_for_node": incident_edge_counts.get(manual_id, 0),
-                    "matched_edge_rows": incident_edge_counts.get(respondent_id, 0),
-                    "root_edge_rows_for_node": root_edge_counts.get(manual_id, 0),
-                    "detail": f"respondent={respondent.get('first_name', '').strip()} {respondent.get('last_name', '').strip()}".strip(),
-                    "note": (
-                        f"manual_email={manual.get('email', '').strip()}; "
-                        f"respondent_email={respondent.get('email', '').strip()}"
-                    ),
-                }
-            )
+            if candidate_email:
+                for respondent_id in respondent_email_to_ids.get(candidate_email, []):
+                    reasons_by_respondent[respondent_id].add("exact_email")
+
+            for respondent_id in respondent_name_to_ids.get(candidate_name_key, []):
+                reasons_by_respondent[respondent_id].add("exact_name")
+
+            if candidate_full_name:
+                for respondent_id in respondent_full_name_to_ids.get(candidate_full_name, []):
+                    reasons_by_respondent[respondent_id].add("exact_full_name")
+
+            for respondent_id, reasons in sorted(reasons_by_respondent.items()):
+                if node_kind == "manual":
+                    duplicate_manual_nodes.add(candidate_id)
+                else:
+                    duplicate_q12a_nodes.add(candidate_id)
+                respondent = respondent_nodes[respondent_id]
+                rows.append(
+                    {
+                        "record_type": "duplicate_person_candidate",
+                        "response_id": respondent_id.removeprefix("R-"),
+                        "node_id": candidate_id,
+                        "matched_node_id": respondent_id,
+                        "first_name": candidate.get("first_name", "").strip(),
+                        "last_name": candidate.get("last_name", "").strip(),
+                        "coverage_status": "duplicate_person_candidate",
+                        "coverage_reason": "; ".join(sorted(reasons)),
+                        "matched_same_name_node_ids": respondent_id,
+                        "matched_same_name_count": 1,
+                        "advisor_entries_in_q12a": "",
+                        "q12": "",
+                        "q8": "",
+                        "q11": "",
+                        "edge_rows_for_node": incident_edge_counts.get(candidate_id, 0),
+                        "matched_edge_rows": incident_edge_counts.get(respondent_id, 0),
+                        "root_edge_rows_for_node": root_edge_counts.get(candidate_id, 0),
+                        "detail": (
+                            f"node_kind={node_kind}; "
+                            f"respondent={respondent.get('first_name', '').strip()} {respondent.get('last_name', '').strip()}"
+                        ).strip(),
+                        "note": (
+                            f"candidate_email={candidate.get('email', '').strip()}; "
+                            f"respondent_email={respondent.get('email', '').strip()}"
+                        ),
+                    }
+                )
+
+    append_duplicates(manual_nodes, "manual")
+    append_duplicates(q12a_nodes, "q12a")
 
     summary = {
         "duplicate_person_candidate_count": len(rows),
         "duplicate_manual_node_count": len(duplicate_manual_nodes),
         "duplicate_manual_edge_count": sum(incident_edge_counts.get(node_id, 0) for node_id in duplicate_manual_nodes),
         "duplicate_manual_root_edge_count": sum(root_edge_counts.get(node_id, 0) for node_id in duplicate_manual_nodes),
+        "duplicate_q12a_node_count": len(duplicate_q12a_nodes),
+        "duplicate_q12a_edge_count": sum(incident_edge_counts.get(node_id, 0) for node_id in duplicate_q12a_nodes),
     }
     return rows, summary
 
@@ -283,6 +323,25 @@ def build_coverage_rows(
     respondent_name_to_ids = defaultdict(list)
     for node_id, node in respondent_nodes.items():
         respondent_name_to_ids[person_name_key(node["first_name"], node["last_name"])].append(node_id)
+    incident_edge_counts = Counter()
+    outgoing_student_edge_counts = Counter()
+    outgoing_unique_student_relationships = defaultdict(set)
+    for edge in edges_rows:
+        source_id = edge.get("source_id", "").strip()
+        target_id = edge.get("target_id", "").strip()
+        edge_type = edge.get("edge_type", "").strip()
+        if source_id:
+            incident_edge_counts[source_id] += 1
+        if target_id:
+            incident_edge_counts[target_id] += 1
+        if (
+            source_id.startswith("R-")
+            and target_id
+            and target_id != "JM-ROOT"
+            and edge_type in {"advisor", "q12a", "manual"}
+        ):
+            outgoing_student_edge_counts[source_id] += 1
+            outgoing_unique_student_relationships[source_id].add(target_id)
 
     q12a_advisor_counts = Counter(
         (
@@ -298,6 +357,10 @@ def build_coverage_rows(
     explained_missing = 0
     q12_yes_total = 0
     q12_yes_without_q12a = 0
+    isolated_respondent_count = 0
+    isolated_q12_yes_respondent_count = 0
+    q12_yes_zero_outgoing_student_edge_count = 0
+    q12a_student_edge_gap_count = 0
 
     for row in cleaned_rows:
         response_id = row.get("ResponseId", "").strip()
@@ -315,6 +378,8 @@ def build_coverage_rows(
 
         advisor_entries_in_q12a = q12a_advisor_counts.get(key, 0)
         q12_yes = normalize_text(row.get("Q12", "")) == "yes"
+        outgoing_student_edges = outgoing_student_edge_counts.get(node_id, 0)
+        outgoing_unique_students = len(outgoing_unique_student_relationships.get(node_id, set()))
         if q12_yes:
             q12_yes_total += 1
             if advisor_entries_in_q12a == 0:
@@ -343,6 +408,86 @@ def build_coverage_rows(
                 "note": "",
             }
         )
+
+        if in_network and incident_edge_counts.get(node_id, 0) == 0:
+            isolated_respondent_count += 1
+            if q12_yes:
+                isolated_q12_yes_respondent_count += 1
+            rows.append(
+                {
+                    "record_type": "isolated_respondent",
+                    "response_id": response_id,
+                    "node_id": node_id,
+                    "matched_node_id": "",
+                    "first_name": row.get("Q1", "").strip(),
+                    "last_name": row.get("Q2", "").strip(),
+                    "coverage_status": "isolated_respondent",
+                    "coverage_reason": "zero_incident_edges",
+                    "matched_same_name_node_ids": "",
+                    "matched_same_name_count": 0,
+                    "advisor_entries_in_q12a": advisor_entries_in_q12a,
+                    "q12": row.get("Q12", "").strip(),
+                    "q8": row.get("Q8", "").strip(),
+                    "q11": row.get("Q11", "").strip(),
+                    "edge_rows_for_node": 0,
+                    "matched_edge_rows": "",
+                    "root_edge_rows_for_node": "",
+                    "detail": "",
+                    "note": "Respondent has zero incident edges in the current network snapshot.",
+                }
+            )
+
+        if in_network and q12_yes and outgoing_unique_students == 0:
+            q12_yes_zero_outgoing_student_edge_count += 1
+            rows.append(
+                {
+                    "record_type": "q12_yes_no_student_edges",
+                    "response_id": response_id,
+                    "node_id": node_id,
+                    "matched_node_id": "",
+                    "first_name": row.get("Q1", "").strip(),
+                    "last_name": row.get("Q2", "").strip(),
+                    "coverage_status": "q12_yes_no_student_edges",
+                    "coverage_reason": "zero_outgoing_student_edges",
+                    "matched_same_name_node_ids": "",
+                    "matched_same_name_count": 0,
+                    "advisor_entries_in_q12a": advisor_entries_in_q12a,
+                    "q12": row.get("Q12", "").strip(),
+                    "q8": row.get("Q8", "").strip(),
+                    "q11": row.get("Q11", "").strip(),
+                    "edge_rows_for_node": outgoing_student_edges,
+                    "matched_edge_rows": outgoing_unique_students,
+                    "root_edge_rows_for_node": "",
+                    "detail": f"derived_q12a_rows={advisor_entries_in_q12a}",
+                    "note": "Respondent reported having students but has zero outgoing student relationships in the current network snapshot.",
+                }
+            )
+
+        if in_network and advisor_entries_in_q12a > outgoing_unique_students:
+            q12a_student_edge_gap_count += 1
+            rows.append(
+                {
+                    "record_type": "q12a_student_edge_gap",
+                    "response_id": response_id,
+                    "node_id": node_id,
+                    "matched_node_id": "",
+                    "first_name": row.get("Q1", "").strip(),
+                    "last_name": row.get("Q2", "").strip(),
+                    "coverage_status": "q12a_student_edge_gap",
+                    "coverage_reason": "derived_q12a_exceeds_outgoing_relationships",
+                    "matched_same_name_node_ids": "",
+                    "matched_same_name_count": 0,
+                    "advisor_entries_in_q12a": advisor_entries_in_q12a,
+                    "q12": row.get("Q12", "").strip(),
+                    "q8": row.get("Q8", "").strip(),
+                    "q11": row.get("Q11", "").strip(),
+                    "edge_rows_for_node": outgoing_student_edges,
+                    "matched_edge_rows": outgoing_unique_students,
+                    "root_edge_rows_for_node": "",
+                    "detail": f"expected={advisor_entries_in_q12a}; actual_unique_student_relationships={outgoing_unique_students}",
+                    "note": "Derived Q12a roster is larger than the set of outgoing student relationships attached to this respondent.",
+                }
+            )
 
     q12a_orphan_count = 0
     for (first_name, last_name), advisor_rows in sorted(q12a_advisor_counts.items()):
@@ -383,6 +528,7 @@ def build_coverage_rows(
         "cleaned_rows": len(cleaned_rows),
         "network_nodes_total": len(nodes_rows),
         "network_edges_total": len(edges_rows),
+        "network_unique_relationships_total": len({(edge.get("source_id", "").strip(), edge.get("target_id", "").strip()) for edge in edges_rows if edge.get("source_id", "").strip() and edge.get("target_id", "").strip()}),
         "network_respondent_nodes": len(respondent_nodes),
         "cleaned_present": cleaned_present,
         "cleaned_missing": cleaned_missing,
@@ -390,6 +536,10 @@ def build_coverage_rows(
         "unexplained_missing": cleaned_missing - explained_missing,
         "q12_yes_total": q12_yes_total,
         "q12_yes_without_q12a": q12_yes_without_q12a,
+        "isolated_respondent_count": isolated_respondent_count,
+        "isolated_q12_yes_respondent_count": isolated_q12_yes_respondent_count,
+        "q12_yes_zero_outgoing_student_edge_count": q12_yes_zero_outgoing_student_edge_count,
+        "q12a_student_edge_gap_count": q12a_student_edge_gap_count,
         "q12a_unique_advisors": len(q12a_advisor_counts),
         "q12a_orphan_advisors": q12a_orphan_count,
         **duplicate_summary,
@@ -398,10 +548,13 @@ def build_coverage_rows(
         key=lambda row: (
             {
                 "duplicate_person_candidate": 0,
-                "cleaned_respondent": 1,
-                "q12a_advisor": 2,
+                "isolated_respondent": 1,
+                "q12_yes_no_student_edges": 2,
+                "q12a_student_edge_gap": 3,
+                "cleaned_respondent": 4,
+                "q12a_advisor": 5,
             }.get(row["record_type"], 9),
-            row["coverage_status"] not in {"missing_from_network", "duplicate_person_candidate", "orphan_q12a_advisor"},
+            row["coverage_status"] not in {"missing_from_network", "duplicate_person_candidate", "orphan_q12a_advisor", "q12_yes_no_student_edges", "q12a_student_edge_gap"},
             row["last_name"],
             row["first_name"],
         )
@@ -726,6 +879,9 @@ def readiness_status(coverage_summary: dict, generation_summary: dict, canon_sum
         or coverage_summary["unexplained_missing"] > 0
         or coverage_summary["q12a_orphan_advisors"] > 0
         or coverage_summary["q12_yes_without_q12a"] > 0
+        or coverage_summary["isolated_q12_yes_respondent_count"] > 0
+        or coverage_summary["q12_yes_zero_outgoing_student_edge_count"] > 0
+        or coverage_summary["q12a_student_edge_gap_count"] > 0
         or coverage_summary["duplicate_person_candidate_count"] > 0
         or bool(date_summary["stale_auxiliary_labels"])
     ):
@@ -803,9 +959,21 @@ def write_summary(
         and normalize_text(row.get("q12", "")) == "yes"
         and str(row.get("advisor_entries_in_q12a", "")) == "0"
     ]
+    q12_no_student_edge_rows = [
+        row for row in coverage_rows
+        if row["record_type"] == "q12_yes_no_student_edges"
+    ]
+    q12a_edge_gap_rows = [
+        row for row in coverage_rows
+        if row["record_type"] == "q12a_student_edge_gap"
+    ]
     duplicate_rows = [
         row for row in coverage_rows
         if row["record_type"] == "duplicate_person_candidate"
+    ]
+    isolated_rows = [
+        row for row in coverage_rows
+        if row["record_type"] == "isolated_respondent"
     ]
     unmapped_phd = [
         row for row in canon_rows
@@ -846,18 +1014,25 @@ def write_summary(
             f"- Cleaned respondents in scope: {coverage_summary['cleaned_rows']}\n"
             f"- Network nodes total: {coverage_summary['network_nodes_total']}\n"
             f"- Network edges total: {coverage_summary['network_edges_total']}\n"
+            f"- Unique source-target relationships: {coverage_summary['network_unique_relationships_total']}\n"
             f"- Network respondent nodes: {coverage_summary['network_respondent_nodes']}\n"
             f"- Missing cleaned respondents from network: {coverage_summary['cleaned_missing']}\n"
             f"- Explained missing respondents: {coverage_summary['explained_missing']}\n"
             f"- Unexplained missing respondents: {coverage_summary['unexplained_missing']}\n"
             f"- Q12=Yes respondents: {coverage_summary['q12_yes_total']}\n"
             f"- Q12=Yes respondents with no Q12a advisor rows: {coverage_summary['q12_yes_without_q12a']}\n"
+            f"- Isolated respondents (zero incident edges): {coverage_summary['isolated_respondent_count']}\n"
+            f"- Isolated Q12=Yes respondents: {coverage_summary['isolated_q12_yes_respondent_count']}\n"
+            f"- Q12=Yes respondents with zero outgoing student relationships: {coverage_summary['q12_yes_zero_outgoing_student_edge_count']}\n"
+            f"- Advisors where derived Q12a exceeds outgoing student relationships: {coverage_summary['q12a_student_edge_gap_count']}\n"
             f"- Unique Q12a advisors: {coverage_summary['q12a_unique_advisors']}\n"
             f"- Orphan Q12a advisors (no respondent-node name match): {coverage_summary['q12a_orphan_advisors']}\n"
             f"- Duplicate-person candidate pairs: {coverage_summary['duplicate_person_candidate_count']}\n"
             f"- Duplicate manual nodes implicated: {coverage_summary['duplicate_manual_node_count']}\n"
             f"- Edge rows attached to duplicate manual nodes: {coverage_summary['duplicate_manual_edge_count']}\n"
             f"- Root edges attached to duplicate manual nodes: {coverage_summary['duplicate_manual_root_edge_count']}\n"
+            f"- Duplicate Q12a nodes implicated: {coverage_summary['duplicate_q12a_node_count']}\n"
+            f"- Edge rows attached to duplicate Q12a nodes: {coverage_summary['duplicate_q12a_edge_count']}\n"
         )
         if not statuses["primary_dates_aligned"]:
             f.write("- Primary inputs are date-misaligned.\n")
@@ -873,6 +1048,21 @@ def write_summary(
         if q12_gap_rows:
             f.write("Q12 completeness gaps to inspect first:\n")
             for line in top_issue_lines(q12_gap_rows, limit=8):
+                f.write(f"{line}\n")
+            f.write("\n")
+        if q12_no_student_edge_rows:
+            f.write("Q12=Yes respondents with zero outgoing student relationships:\n")
+            for line in top_issue_lines(q12_no_student_edge_rows, limit=8):
+                f.write(f"{line}\n")
+            f.write("\n")
+        if q12a_edge_gap_rows:
+            f.write("Q12a-to-edge mismatches to inspect first:\n")
+            for line in top_issue_lines(q12a_edge_gap_rows, limit=8):
+                f.write(f"{line}\n")
+            f.write("\n")
+        if isolated_rows:
+            f.write("Isolated respondents to inspect first:\n")
+            for line in top_issue_lines(isolated_rows, limit=8):
                 f.write(f"{line}\n")
             f.write("\n")
         if missing_coverage:
@@ -936,6 +1126,13 @@ def write_summary(
         if coverage_summary["duplicate_person_candidate_count"] > 0:
             f.write("- Inputs are not ready for whole-tree descriptives until duplicate person-nodes are resolved.\n")
             f.write("- Avoid reporting total nodes, total edges, or subtree sizes from the current network snapshot.\n")
+        elif (
+            coverage_summary["isolated_q12_yes_respondent_count"] > 0
+            or coverage_summary["q12_yes_zero_outgoing_student_edge_count"] > 0
+            or coverage_summary["q12a_student_edge_gap_count"] > 0
+        ):
+            f.write("- Inputs need follow-up for isolated Q12=Yes respondents before treating student coverage as complete.\n")
+            f.write("- Resolve or explicitly document zero-edge and zero-outgoing-student respondents before relying on advisor-level subtree counts.\n")
         elif statuses["overall"] == "PASS":
             f.write("- Inputs are aligned enough to begin descriptives.\n")
         else:
@@ -952,6 +1149,7 @@ def main() -> None:
     parser.add_argument("--edges", help="Path to Network_Edges CSV (defaults to latest available)")
     parser.add_argument("--unresolved", help="Path to Unresolved_Edges CSV (defaults to latest available)")
     parser.add_argument("--manual-nodes", help="Path to Manual_Nodes CSV used in the build")
+    parser.add_argument("--manual-edges", help="Path to Manual_Edges CSV used in the build")
     parser.add_argument("--email-recovery", help="Path to Email_Recovery CSV used in the build")
     parser.add_argument(
         "--output-date",
@@ -966,6 +1164,7 @@ def main() -> None:
         "edges": resolve_path(args.edges, "edges"),
         "unresolved": resolve_path(args.unresolved, "unresolved"),
         "manual_nodes": resolve_optional_path(args.manual_nodes),
+        "manual_edges": resolve_optional_path(args.manual_edges),
         "email_recovery": resolve_optional_path(args.email_recovery),
     }
     for label, path in input_paths.items():

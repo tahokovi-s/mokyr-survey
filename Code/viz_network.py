@@ -34,6 +34,8 @@ def _sha256_hex(data: bytes) -> str:
 
 
 def _latest_matching_date(base_dir: Path, pattern: re.Pattern[str]) -> str | None:
+    if not base_dir.exists():
+        sys.exit(f"ERROR: Expected directory not found while inferring latest date: {base_dir}")
     matches = []
     for path in base_dir.iterdir():
         match = pattern.match(path.name)
@@ -252,13 +254,13 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   <h2>Mokyr Genealogy Network</h2>
   <input id="search" type="text" placeholder="Search by name…">
   <label>
-    <input type="checkbox" id="showQ12a"> Show uncontacted students
+    <input type="checkbox" id="showQ12a"> Show non-respondent nodes
   </label>
   <label>
     <input type="checkbox" id="showLabels" checked> Show name labels
   </label>
   <label>
-    <input type="checkbox" id="showMedium" checked> Show medium-confidence edges
+    <input type="checkbox" id="showMedium" checked> Show medium-confidence links
   </label>
 </div>
 
@@ -269,7 +271,7 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   <div class="legend-item"><div class="legend-dot" style="background:#50c878"></div> Gen 2</div>
   <div class="legend-item"><div class="legend-dot" style="background:#ff8c42"></div> Gen 3</div>
   <div class="legend-item"><div class="legend-dot" style="background:#aaa"></div> Gen 4+ or unknown</div>
-  <div class="legend-item"><div class="legend-dot dashed"></div> Uncontacted student</div>
+  <div class="legend-item"><div class="legend-dot dashed"></div> Non-respondent node</div>
 </div>
 
 <div id="stats">
@@ -469,7 +471,7 @@ function showTooltip(event, d) {{
   if (d.institution) lines.push('PhD: ' + d.institution + (d.phd_year ? ' (' + d.phd_year + ')' : ''));
   if (d.employer)    lines.push('At: ' + d.employer);
   if (d.country)     lines.push(d.country);
-  if (!d.is_respondent && d.id !== 'JM-ROOT') lines.push('[uncontacted student]');
+  if (!d.is_respondent && d.id !== 'JM-ROOT') lines.push('[non-respondent node]');
 
   lines.forEach((line, i) => {{
     const div = document.createElement('div');

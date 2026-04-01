@@ -6,6 +6,18 @@ Outputs:
   Data/Derived/Network_Nodes_{date}.csv
   Data/Derived/Network_Edges_{date}.csv
   Data/Derived/Unresolved_Edges_{date}.csv
+  Data/Derived/Network_Discrepancies_{date}.csv
+
+Optional curated inputs:
+  Data/Derived/Manual_Nodes_{date}.csv
+  Data/Derived/Manual_Edges_{date}.csv
+
+Manual_Nodes supports the legacy minimal schema:
+  first_name,last_name,email,advisor_source,generation
+
+It also accepts optional enrichment columns used to backfill node metadata:
+  phd_institution_raw,phd_institution_canon,current_employer_raw,
+  current_employer_canon,phd_year,country,us_state
 """
 
 import csv
@@ -13,10 +25,14 @@ import re
 import sys
 import difflib
 import argparse
-import unicodedata
 from datetime import datetime
 from pathlib import Path
 from collections import defaultdict, Counter
+
+try:
+    from name_normalization import normalize_person_text, person_name_key
+except ImportError:
+    from Code.name_normalization import normalize_person_text, person_name_key
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -36,6 +52,8 @@ def split_emails(raw_email: str) -> list[str]:
 
 
 def _latest_matching_date(base_dir: Path, pattern: re.Pattern[str]) -> str | None:
+    if not base_dir.exists():
+        sys.exit(f"ERROR: Expected directory not found while inferring latest date: {base_dir}")
     matches = []
     for path in base_dir.iterdir():
         match = pattern.match(path.name)
@@ -522,60 +540,73 @@ def canon_institution(raw: str) -> str:
 # ---------------------------------------------------------------------------
 # Q8 generation parsing
 # ---------------------------------------------------------------------------
-def parse_q8_generation(q8_val: str):
-    """Return (generation: int|None, flag: bool).
+def parse_q8_generation(q8_val: str) -> dict:
+    """Classify Q8 into generation evidence and review flags.
 
-    flag=True if non-adjacent multi-gen choices selected.
+    Committee membership alone is not treated as direct-advisee evidence.
+    Mixed committee + indirect cases are left for manual review rather than
+    auto-assigned from Q8.
     """
+    result = {
+        'generation': None,
+        'raw_generation': None,
+        'flag': False,
+        'has_direct': False,
+        'has_committee': False,
+        'has_indirect': False,
+        'requires_manual_review': False,
+    }
     if not q8_val or not q8_val.strip():
-        return None, False
+        return result
 
-    gen_candidates = set()
+    raw_candidates = set()
+    effective_candidates = set()
+
     for choice in q8_val.split(","):
         choice = choice.strip().lower()
         # Normalize apostrophes (straight vs. Unicode curly/modifier)
         choice = choice.replace("\u2019", "'").replace("\u02bc", "'")
         # Most-specific-first order
         if "advisor's advisor" in choice:                          # gen 3
-            gen_candidates.add(3)
+            raw_candidates.add(3)
+            effective_candidates.add(3)
+            result['has_indirect'] = True
         elif "of my phd advisor" in choice:                        # gen 2
-            gen_candidates.add(2)
+            raw_candidates.add(2)
+            effective_candidates.add(2)
+            result['has_indirect'] = True
         elif "advisor of my advisor" in choice:                    # gen 2
-            gen_candidates.add(2)
+            raw_candidates.add(2)
+            effective_candidates.add(2)
+            result['has_indirect'] = True
         elif "multiple of my advisors" in choice:                  # gen 2 variant
-            gen_candidates.add(2)
-        elif "member of my dissertation committee" in choice:      # gen 1 by user convention
-            gen_candidates.add(1)
+            raw_candidates.add(2)
+            effective_candidates.add(2)
+            result['has_indirect'] = True
+        elif "member of my dissertation committee" in choice:
+            raw_candidates.add(1)
+            result['has_committee'] = True
         elif "my phd advisor" in choice or "is my advisor" in choice:  # gen 1
-            gen_candidates.add(1)
-        # committee-only, "other/i'm not sure", numeric codes → no gen contribution
+            raw_candidates.add(1)
+            effective_candidates.add(1)
+            result['has_direct'] = True
+        # committee-only, "other/i'm not sure", numeric codes → no effective gen contribution
 
-    if not gen_candidates:
-        return None, False
+    if raw_candidates:
+        result['raw_generation'] = min(raw_candidates)
+        result['flag'] = (max(raw_candidates) - min(raw_candidates)) > 1
 
-    gen = min(gen_candidates)
-    flag = (max(gen_candidates) - min(gen_candidates)) > 1
-    return gen, flag
+    result['requires_manual_review'] = (
+        result['has_committee'] and result['has_indirect'] and not result['has_direct']
+    )
+    if not result['requires_manual_review'] and effective_candidates:
+        result['generation'] = min(effective_candidates)
 
-
-# ---------------------------------------------------------------------------
-# Q11 name tokenization + matching helpers
-# ---------------------------------------------------------------------------
-_HONORIFICS = re.compile(r'\b(dr\.?|prof\.?|professor)\s*', re.IGNORECASE)
-_PARENTHETICAL = re.compile(r'\s*\([^)]*\)')
-_TRAILING_PUNCT = re.compile(r'[\s.,;:?!]+$')
-
-
-def clean_token(token: str) -> str:
-    """Strip parentheticals, honorifics, trailing punctuation."""
-    token = _PARENTHETICAL.sub('', token)
-    token = _HONORIFICS.sub('', token)
-    token = _TRAILING_PUNCT.sub('', token)
-    return token.strip()
+    return result
 
 
 def norm_name(s: str) -> str:
-    return s.strip().lower()
+    return normalize_person_text(s)
 
 
 def is_mokyr_alias(token: str) -> bool:
@@ -641,19 +672,37 @@ Q8_GENERATION_OVERRIDES = {
 }
 
 # Q12a student name misspellings.
-STUDENT_NAME_CORRECTIONS = {
+_STUDENT_NAME_CORRECTIONS_RAW = {
     "Pawel Charsz": "Pawel Charasz",
 }
 
+STUDENT_NAME_CORRECTIONS = {
+    normalize_person_text(source_name): target_name
+    for source_name, target_name in _STUDENT_NAME_CORRECTIONS_RAW.items()
+}
+
 # Q12a student name aliases — map partial name to canonical respondent name.
+_STUDENT_NAME_ALIASES_RAW = {
+    ("Gian", "Pinna"): ("Gian Marco", "Pinna"),
+    ("Ben", "Broman"): ("Benjamin", "Broman"),
+    ("Juan", "Gonzalez Blanco"): ("Juan", "González"),
+    ("Burkett", "Evans"): ("Burke", "Evans"),
+    ("Geoff", "Clark"): ("Geoff", "Clarke"),
+}
+
 STUDENT_NAME_ALIASES = {
-    ("gian", "pinna"): ("gian marco", "pinna"),
-    ("ben", "broman"): ("benjamin", "broman"),
+    person_name_key(source_first, source_last): person_name_key(target_first, target_last)
+    for (source_first, source_last), (target_first, target_last) in _STUDENT_NAME_ALIASES_RAW.items()
 }
 
 # Explicit S-node merge rules for duplicate Q12a students.
+_SNODE_MERGE_RAW = {
+    ("Anne", "Blas"): "merge",
+}
+
 SNODE_MERGE = {
-    ("anne", "blas"): "merge",
+    person_name_key(first_name, last_name): action
+    for (first_name, last_name), action in _SNODE_MERGE_RAW.items()
 }
 
 # Respondent dedup — discard duplicate ResponseIds (keep the other entry).
@@ -662,39 +711,89 @@ RESPONDENT_DEDUP = {
 }
 
 # Curated manual/respondent duplicate matches for verified identity merges.
+_MANUAL_RESPONDENT_DEDUP_RAW = {
+    ("Carl", "Hallmann"): "R_2eK0hmgM4y2gCXr",
+    ("Jon", "Hartley"): "R_11MnENdbOxOicDt",
+    ("Peter", "Meyer"): "R_1IE5Y4BmXmFwwbe",
+    ("Thomas", "Geraghty"): "R_1KE1sbrmfVgvF1B",
+}
+
 MANUAL_RESPONDENT_DEDUP = {
-    ("carl", "hallmann"): "R_2eK0hmgM4y2gCXr",
-    ("peter", "meyer"): "R_1IE5Y4BmXmFwwbe",
-    ("thomas", "geraghty"): "R_1KE1sbrmfVgvF1B",
+    person_name_key(first_name, last_name): rid
+    for (first_name, last_name), rid in _MANUAL_RESPONDENT_DEDUP_RAW.items()
 }
 
 
 def _lookup_email_recovery(student_name, node_id, email_recovery):
     """Look up recovered email by (name, node_id) then by name alone."""
-    name_lower = student_name.strip().lower()
+    name_key = normalize_person_text(student_name)
     # Try compound key first
-    result = email_recovery.get((name_lower, node_id))
+    result = email_recovery.get((name_key, node_id))
     if result:
         return result
     # Fall back to name-only key (None = ambiguous, skip)
-    result = email_recovery.get(name_lower)
-    if result is None and name_lower in email_recovery:
+    result = email_recovery.get(name_key)
+    if result is None and name_key in email_recovery:
         print(f"  WARN: ambiguous email recovery for {student_name!r}, skipping")
         return None
     return result
 
 
-def _norm_person_part(value: str) -> str:
-    value = clean_token(value)
-    value = unicodedata.normalize("NFKD", value)
-    value = "".join(ch for ch in value if not unicodedata.combining(ch))
-    value = value.lower().replace('"', ' ').replace("'", ' ')
-    value = re.sub(r"[^a-z0-9]+", " ", value)
-    return re.sub(r"\s+", " ", value).strip()
-
-
 def _person_name_key(first_name: str, last_name: str) -> tuple[str, str]:
-    return (_norm_person_part(first_name), _norm_person_part(last_name))
+    return person_name_key(first_name, last_name)
+
+
+def _full_name_key(first_name: str, last_name: str) -> str:
+    return " ".join(part for part in (first_name, last_name) if part).strip()
+
+
+def _student_name_candidate_keys(student_name: str) -> list[tuple[str, str]]:
+    parts = [part for part in student_name.split() if part]
+    if len(parts) < 2:
+        return []
+
+    candidate_keys = []
+    seen = set()
+    split_points = []
+    for index in (1, 2, len(parts) - 1):
+        if 0 < index < len(parts) and index not in split_points:
+            split_points.append(index)
+
+    for index in split_points:
+        first_name = " ".join(parts[:index])
+        last_name = " ".join(parts[index:])
+        if not first_name or not last_name:
+            continue
+        name_key = _person_name_key(first_name, last_name)
+        aliased_key = STUDENT_NAME_ALIASES.get(name_key, name_key)
+        if aliased_key in seen:
+            continue
+        seen.add(aliased_key)
+        candidate_keys.append(aliased_key)
+
+    return candidate_keys
+
+
+def is_committee_only_q11(text: str) -> bool:
+    normalized = norm_name(text)
+    if "committee" not in normalized:
+        return False
+    if "not the chair" in normalized or "not chair" in normalized or "not my advisor" in normalized:
+        return True
+    return (
+        "on my dissertation committee" in normalized
+        or "on my committee" in normalized
+        or "member of my dissertation committee" in normalized
+    )
+
+
+def is_other_unsure_q8(text: str) -> bool:
+    raw = (text or "").strip().lower().replace("\u2019", "'").replace("\u02bc", "'")
+    normalized = norm_name(text)
+    return (
+        ("other/" in raw and "not sure" in raw)
+        or ("other" in normalized and "not sure" in normalized)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -718,6 +817,9 @@ def main():
     parser.add_argument('--manual-nodes',
                         default=None,
                         help="Path to manual nodes CSV (optional)")
+    parser.add_argument('--manual-edges',
+                        default=None,
+                        help="Path to manual edges CSV (optional)")
     args = parser.parse_args()
 
     date = _resolve_build_date(args.date, args.cleaned, args.q12a)
@@ -725,12 +827,14 @@ def main():
     q12a_path    = PROJECT_ROOT / (args.q12a    or f"Data/Derived/Advisors_and_Reported_Students_{date}.csv")
     email_recovery_path = PROJECT_ROOT / args.email_recovery if args.email_recovery else None
     manual_nodes_path   = PROJECT_ROOT / args.manual_nodes   if args.manual_nodes   else None
+    manual_edges_path   = PROJECT_ROOT / args.manual_edges   if args.manual_edges   else None
     nodes_out      = PROJECT_ROOT / f"Data/Derived/Network_Nodes_{date}.csv"
     edges_out      = PROJECT_ROOT / f"Data/Derived/Network_Edges_{date}.csv"
     unresolved_out = PROJECT_ROOT / f"Data/Derived/Unresolved_Edges_{date}.csv"
+    discrepancy_out = PROJECT_ROOT / f"Data/Derived/Network_Discrepancies_{date}.csv"
 
     # Load email recovery data (optional)
-    email_recovery = {}  # (name_lower,) -> email  OR  (name_lower, node_id) -> email
+    email_recovery = {}  # normalized full name -> email  OR  (normalized full name, node_id) -> email
     if email_recovery_path and email_recovery_path.exists():
         print(f"Loading email recovery: {email_recovery_path}")
         with open(email_recovery_path, newline='', encoding='utf-8') as f:
@@ -738,7 +842,7 @@ def main():
                 recovered = erow.get('recovered_email', '').strip()
                 if not recovered:
                     continue
-                name = erow.get('name', '').strip().lower()
+                name = normalize_person_text(erow.get('name', ''))
                 nid  = erow.get('node_id', '').strip()
                 if nid:
                     email_recovery[(name, nid)] = recovered
@@ -775,7 +879,7 @@ def main():
     _SENTINEL = object()
     respondents = {}    # ResponseId -> dict
     email_to_rid = {}   # email.lower() -> ResponseId
-    name_to_rid = {}    # (first_lower, last_lower) -> ResponseId | None (None=ambiguous)
+    name_to_rid = {}    # normalized (first_name, last_name) -> ResponseId | None (None=ambiguous)
 
     for row in respondent_rows:
         rid = row[col['ResponseId']].strip()
@@ -802,7 +906,7 @@ def main():
         }
         if email:
             email_to_rid[normalize_email(email)] = rid
-        name_key = (first.lower(), last.lower())
+        name_key = _person_name_key(first, last)
         if name_key in name_to_rid:
             name_to_rid[name_key] = None  # ambiguous
         else:
@@ -819,25 +923,45 @@ def main():
 
     # Full-name lookup (only unambiguous entries)
     name_lookup = {}  # norm("first last") -> ResponseId
-    for (fl, ll), rid in name_to_rid.items():
+    for (first_key, last_key), rid in name_to_rid.items():
         if rid is not None:
-            name_lookup[f"{fl} {ll}"] = rid
+            full_key = _full_name_key(first_key, last_key)
+            if full_key:
+                name_lookup[full_key] = rid
 
     # -------------------------------------------------------------------------
     # Step B: Parse Q8 → generation
     # -------------------------------------------------------------------------
     raw_gen_by_rid = {}
     pretopo_gen_by_rid = {}
+    q8_analysis_by_rid = {}
+    unresolved_edges = []   # list of dicts
     for rid, r in respondents.items():
-        raw_gen, flag = parse_q8_generation(r['q8'])
+        q8_analysis = parse_q8_generation(r['q8'])
+        q8_analysis_by_rid[rid] = q8_analysis
+        raw_gen = q8_analysis['raw_generation']
         raw_gen_by_rid[rid] = raw_gen
+        if q8_analysis['requires_manual_review']:
+            print(f"  INFO Q8 manual review: {r['first']} {r['last']} ({rid}) -> mixed committee + indirect")
+            pretopo_gen_by_rid[rid] = None
+            unresolved_edges.append({
+                'source_id': None, 'target_id': f"R-{rid}",
+                'reason': 'manual_review_q8_committee_indirect',
+                'raw_q11': r['q11'],
+                'respondent': f"{r['first']} {r['last']}",
+                'gen': raw_gen,
+                'note': r['q8'],
+            })
+            if q8_analysis['flag']:
+                print(f"  WARN non-adjacent multi-gen Q8: {r['first']} {r['last']} ({rid}): {r['q8']!r}")
+            continue
         if rid in Q8_GENERATION_OVERRIDES:
             gen = Q8_GENERATION_OVERRIDES[rid]
             print(f"  INFO Q8 override: {r['first']} {r['last']} ({rid}) -> Gen {gen}")
             pretopo_gen_by_rid[rid] = gen
         else:
-            pretopo_gen_by_rid[rid] = raw_gen
-        if flag:
+            pretopo_gen_by_rid[rid] = q8_analysis['generation']
+        if q8_analysis['flag']:
             print(f"  WARN non-adjacent multi-gen Q8: {r['first']} {r['last']} ({rid}): {r['q8']!r}")
 
     # -------------------------------------------------------------------------
@@ -857,14 +981,12 @@ def main():
     # Step D: Q11 advisor name matching
     # -------------------------------------------------------------------------
     advisor_by_rid  = {}    # ResponseId -> list of (source_id, confidence, note)
-    unresolved_edges = []   # list of dicts
 
     def _match_token(token, rid, r, gen):
         """Try to resolve one name token.  Returns source_id or None (logs unresolved)."""
-        cleaned = clean_token(token)
-        if not cleaned:
+        cn = norm_name(token)
+        if not cn:
             return None
-        cn = norm_name(cleaned)
 
         # Mokyr alias: must contain both 'joel' and 'mokyr'
         if is_mokyr_alias(cn):
@@ -900,8 +1022,10 @@ def main():
         return None
 
     for rid, r in respondents.items():
+        q8_analysis = q8_analysis_by_rid[rid]
         gen = pretopo_gen_by_rid[rid]
-        if gen is None:
+        q8_other_unsure = is_other_unsure_q8(r['q8'])
+        if gen is None and not q8_other_unsure:
             continue
 
         if gen == 1:
@@ -926,7 +1050,18 @@ def main():
             advisor_by_rid[rid] = [('JM-ROOT', 'high', 'mokyr_alias_full')]
             continue
         if full_norm in name_lookup:
-            advisor_by_rid[rid] = [(f"R-{name_lookup[full_norm]}", 'high', 'exact_full')]
+            note = 'exact_full'
+            if q8_other_unsure:
+                note = 'q11_resolved_from_other_unsure'
+            advisor_by_rid[rid] = [(f"R-{name_lookup[full_norm]}", 'high', note)]
+            continue
+        if is_committee_only_q11(q11):
+            unresolved_edges.append({
+                'source_id': None, 'target_id': f"R-{rid}",
+                'reason': 'unresolved_q11_committee_only', 'raw_q11': q11,
+                'respondent': f"{r['first']} {r['last']}", 'gen': gen,
+                'note': '',
+            })
             continue
 
         # Split into tokens
@@ -934,15 +1069,16 @@ def main():
         for tok in tokens:
             src = _match_token(tok, rid, r, gen)
             if src is not None:
-                conf = 'medium' if 'fuzzy' in tok else 'high'
-                # Re-derive confidence by checking if full cn was exact
-                cleaned = clean_token(tok)
-                cn = norm_name(cleaned) if cleaned else ''
+                # Re-derive confidence by checking if the normalized token was exact.
+                cn = norm_name(tok)
                 if cn in name_lookup or is_mokyr_alias(cn):
                     conf = 'high'
                 else:
                     conf = 'medium'
-                advisor_by_rid.setdefault(rid, []).append((src, conf, f'token:{tok!r}'))
+                note = f'token:{tok!r}'
+                if q8_other_unsure:
+                    note = f'q11_resolved_from_other_unsure:{tok!r}'
+                advisor_by_rid.setdefault(rid, []).append((src, conf, note))
 
     # -------------------------------------------------------------------------
     # Step E: Build node table
@@ -1000,14 +1136,20 @@ def main():
     # Group Q12a rows by advisor name
     advisor_groups = defaultdict(list)
     for row in q12a_rows:
-        key = (row['Advisor_FirstName'].strip().lower(),
-               row['Advisor_LastName'].strip().lower())
+        key = _person_name_key(row['Advisor_FirstName'], row['Advisor_LastName'])
         advisor_groups[key].append(row)
 
     q12a_edge_triples = []  # (source_id, target_id, confidence)
     s_counter = defaultdict(int)  # source_id -> count for unique S- IDs
 
     for (adv_fl, adv_ll), student_rows in advisor_groups.items():
+        advisor_label = " ".join(
+            part for part in (
+                student_rows[0].get('Advisor_FirstName', '').strip(),
+                student_rows[0].get('Advisor_LastName', '').strip(),
+            )
+            if part
+        )
         # Resolve advisor → source_id
         adv_rid = name_to_rid.get((adv_fl, adv_ll), _SENTINEL)
         if adv_rid is _SENTINEL:
@@ -1023,8 +1165,8 @@ def main():
                 unresolved_edges.append({
                     'source_id': None, 'target_id': f"Q12a-{adv_fl}-{adv_ll}",
                     'reason': 'unresolved_q12a_advisor',
-                    'raw_q11': f"{adv_fl} {adv_ll}",
-                    'respondent': f"{adv_fl} {adv_ll}", 'gen': None, 'note': '',
+                    'raw_q11': advisor_label,
+                    'respondent': advisor_label, 'gen': None, 'note': '',
                 })
                 continue
 
@@ -1033,8 +1175,8 @@ def main():
             unresolved_edges.append({
                 'source_id': None, 'target_id': f"Q12a-{adv_fl}-{adv_ll}",
                 'reason': 'ambiguous_q12a_advisor',
-                'raw_q11': f"{adv_fl} {adv_ll}",
-                'respondent': f"{adv_fl} {adv_ll}", 'gen': None, 'note': '',
+                'raw_q11': advisor_label,
+                'respondent': advisor_label, 'gen': None, 'note': '',
             })
             continue
 
@@ -1047,8 +1189,9 @@ def main():
             primary_student_email = student_emails[0] if student_emails else ''
 
             # Apply name corrections (misspellings)
-            if student_name in STUDENT_NAME_CORRECTIONS:
-                corrected = STUDENT_NAME_CORRECTIONS[student_name]
+            correction_key = normalize_person_text(student_name)
+            if correction_key in STUDENT_NAME_CORRECTIONS:
+                corrected = STUDENT_NAME_CORRECTIONS[correction_key]
                 print(f"  INFO name correction: {student_name!r} -> {corrected!r}")
                 student_name = corrected
 
@@ -1060,32 +1203,37 @@ def main():
                     if student_rid is not None:
                         break
             if student_rid is None and student_name:
-                parts = student_name.split()
-                if len(parts) >= 2:
-                    skey = (parts[0].lower(), parts[-1].lower())
-                    # Apply name aliases before matching
-                    skey = STUDENT_NAME_ALIASES.get(skey, skey)
-                    val = name_to_rid.get(skey, _SENTINEL)
-                    if val is not _SENTINEL and val is not None:
+                student_full_norm = norm_name(student_name)
+                if student_full_norm in name_lookup:
+                    student_rid = name_lookup[student_full_norm]
+                else:
+                    for skey in _student_name_candidate_keys(student_name):
+                        val = name_to_rid.get(skey, _SENTINEL)
+                        if val is _SENTINEL:
+                            continue
+                        if val is None:
+                            break
                         student_rid = val
+                        break
                     # If ambiguous (val is None) or not found: create new node
 
             if student_rid is not None:
                 target_id = f"R-{student_rid}"
+                existing = nodes.get(target_id)
+                if existing and not existing.get('email') and primary_student_email:
+                    existing['email'] = primary_student_email
             else:
                 # Check SNODE_MERGE: reuse existing S-node if rule exists
                 sparts = student_name.split() if student_name else []
-                s_first = sparts[0].lower() if sparts else ''
-                s_last  = ' '.join(sparts[1:]).lower() if len(sparts) > 1 else ''
-                merge_key = (s_first, s_last)
+                s_first = sparts[0] if sparts else ''
+                s_last  = ' '.join(sparts[1:]) if len(sparts) > 1 else ''
+                merge_key = _person_name_key(s_first, s_last)
 
                 merged = False
                 if merge_key in SNODE_MERGE:
                     # Find existing S-node with this name
                     for nid, n in nodes.items():
-                        if (nid.startswith('S-')
-                                and n['first_name'].lower() == s_first
-                                and n['last_name'].lower() == s_last):
+                        if nid.startswith('S-') and _person_name_key(n['first_name'], n['last_name']) == merge_key:
                             target_id = nid
                             # Backfill empty fields
                             backfilled = []
@@ -1164,10 +1312,22 @@ def main():
         for mrow in manual_rows:
             mfirst = mrow['first_name'].strip()
             mlast  = mrow['last_name'].strip()
-            memail = mrow['email'].strip()
+            memail = mrow.get('email', '').strip()
             madv   = mrow['advisor_source'].strip()
             mgen   = mrow['generation'].strip()
             mgen   = int(mgen) if mgen else None
+            mphd_raw = mrow.get('phd_institution_raw', '').strip()
+            mphd_canon = mrow.get('phd_institution_canon', '').strip()
+            memp_raw = mrow.get('current_employer_raw', '').strip()
+            memp_canon = mrow.get('current_employer_canon', '').strip()
+            mphd_year = mrow.get('phd_year', '').strip()
+            mcountry = mrow.get('country', '').strip()
+            mstate = mrow.get('us_state', '').strip()
+
+            if mphd_raw and not mphd_canon:
+                mphd_canon = canon_institution(mphd_raw) or mphd_raw
+            if memp_raw and not memp_canon:
+                memp_canon = canon_institution(memp_raw) or memp_raw
 
             # Check if node already exists (curated duplicate, exact email, or exact normalized name).
             mkey = _person_name_key(mfirst, mlast)
@@ -1229,13 +1389,13 @@ def main():
                 'first_name': mfirst,
                 'last_name': mlast,
                 'email': memail,
-                'phd_institution_raw': '',
-                'phd_institution_canon': '',
-                'current_employer_raw': '',
-                'current_employer_canon': '',
-                'phd_year': '',
-                'country': '',
-                'us_state': '',
+                'phd_institution_raw': mphd_raw,
+                'phd_institution_canon': mphd_canon,
+                'current_employer_raw': memp_raw,
+                'current_employer_canon': memp_canon,
+                'phd_year': mphd_year,
+                'country': mcountry,
+                'us_state': mstate,
                 'generation': mgen,
                 'generation_q8': None,
                 'generation_q8_raw': None,
@@ -1248,6 +1408,46 @@ def main():
         print(f"  Created {len(manual_edge_triples)} manual nodes\n")
     elif manual_nodes_path:
         print(f"  WARN: manual nodes file not found: {manual_nodes_path}\n")
+
+    # -------------------------------------------------------------------------
+    # Step E3: Load curated manual edges (optional)
+    # -------------------------------------------------------------------------
+    if manual_edges_path and manual_edges_path.exists():
+        print(f"Loading manual edges: {manual_edges_path}")
+        with open(manual_edges_path, newline='', encoding='utf-8') as f:
+            manual_edge_rows = list(csv.DictReader(f))
+        print(f"  {len(manual_edge_rows)} manual edge entries")
+        existing_manual_edge_count = len(manual_edge_triples)
+
+        for row in manual_edge_rows:
+            src = row.get('source_id', '').strip()
+            tgt = row.get('target_id', '').strip()
+            etype = row.get('edge_type', '').strip() or 'manual'
+            conf = row.get('confidence', '').strip() or 'high'
+            reason = row.get('reason', '').strip()
+
+            if not src or not tgt:
+                print(f"  WARN: skipping manual edge with blank endpoint: {row}")
+                continue
+            if src not in nodes or tgt not in nodes:
+                print(f"  WARN: manual edge {src} -> {tgt} references missing node(s), skipping")
+                unresolved_edges.append({
+                    'source_id': src,
+                    'target_id': tgt,
+                    'reason': 'unresolved_manual_edge',
+                    'raw_q11': '',
+                    'respondent': '',
+                    'gen': None,
+                    'note': reason,
+                })
+                continue
+
+            manual_edge_triples.append((src, tgt, conf, etype))
+
+        loaded_manual_edges = len(manual_edge_triples) - existing_manual_edge_count
+        print(f"  Loaded {loaded_manual_edges} curated manual edges\n")
+    elif manual_edges_path:
+        print(f"  WARN: manual edges file not found: {manual_edges_path}\n")
 
     # -------------------------------------------------------------------------
     # Step F: Build edge list + cycle detection + generation consistency
@@ -1265,8 +1465,13 @@ def main():
         raw_edges.append((src, tgt, 'q12a', conf))
 
     # Manual-node edges
-    for (src, tgt, conf) in manual_edge_triples:
-        raw_edges.append((src, tgt, 'manual', conf))
+    for edge in manual_edge_triples:
+        if len(edge) == 3:
+            src, tgt, conf = edge
+            etype = 'manual'
+        else:
+            src, tgt, conf, etype = edge
+        raw_edges.append((src, tgt, etype, conf))
 
     # Deduplicate edges
     seen_edges = set()
@@ -1348,7 +1553,103 @@ def main():
                 changed = True
 
     # -------------------------------------------------------------------------
-    # Step G: Write outputs + report
+    # Step G: Build discrepancy report
+    # -------------------------------------------------------------------------
+    discrepancy_rows = []
+    for rid, r in respondents.items():
+        node_id = f"R-{rid}"
+        node = nodes[node_id]
+        q8_analysis = q8_analysis_by_rid[rid]
+        final_generation = node['generation']
+        override_generation = Q8_GENERATION_OVERRIDES.get(rid)
+        is_direct = q8_analysis['has_direct'] or override_generation == 1
+
+        if q8_analysis['requires_manual_review']:
+            discrepancy_rows.append({
+                'response_id': rid,
+                'node_id': node_id,
+                'category': 'manual_review_q8_committee_indirect',
+                'first_name': r['first'],
+                'last_name': r['last'],
+                'raw_q8': r['q8'],
+                'raw_q11': r['q11'],
+                'raw_q12': r['q12'],
+                'generation_q8': node.get('generation_q8', ''),
+                'generation_q8_raw': node.get('generation_q8_raw', ''),
+                'final_generation': final_generation,
+                'note': 'Review mixed committee + indirect raw relationship before curating a direct link.',
+            })
+
+        if is_other_unsure_q8(r['q8']) and final_generation in (None, ''):
+            discrepancy_rows.append({
+                'response_id': rid,
+                'node_id': node_id,
+                'category': 'other_unsure_unassigned',
+                'first_name': r['first'],
+                'last_name': r['last'],
+                'raw_q8': r['q8'],
+                'raw_q11': r['q11'],
+                'raw_q12': r['q12'],
+                'generation_q8': node.get('generation_q8', ''),
+                'generation_q8_raw': node.get('generation_q8_raw', ''),
+                'final_generation': final_generation,
+                'note': 'Q8 was Other/unsure and topology could not assign a final generation from available edges.',
+            })
+
+        if is_direct and final_generation != 1:
+            discrepancy_rows.append({
+                'response_id': rid,
+                'node_id': node_id,
+                'category': 'direct_q8_missing_gen1',
+                'first_name': r['first'],
+                'last_name': r['last'],
+                'raw_q8': r['q8'],
+                'raw_q11': r['q11'],
+                'raw_q12': r['q12'],
+                'generation_q8': node.get('generation_q8', ''),
+                'generation_q8_raw': node.get('generation_q8_raw', ''),
+                'final_generation': final_generation,
+                'note': 'Respondent reported a direct Mokyr relationship but did not finish in generation 1.',
+            })
+        elif not is_direct and final_generation == 1:
+            discrepancy_rows.append({
+                'response_id': rid,
+                'node_id': node_id,
+                'category': 'gen1_without_direct_q8',
+                'first_name': r['first'],
+                'last_name': r['last'],
+                'raw_q8': r['q8'],
+                'raw_q11': r['q11'],
+                'raw_q12': r['q12'],
+                'generation_q8': node.get('generation_q8', ''),
+                'generation_q8_raw': node.get('generation_q8_raw', ''),
+                'final_generation': final_generation,
+                'note': 'Respondent remains generation 1 without direct raw Q8 evidence.',
+            })
+        elif (
+            not q8_analysis['requires_manual_review']
+            and q8_analysis['has_committee']
+            and not q8_analysis['has_direct']
+            and not q8_analysis['has_indirect']
+            and final_generation in (None, '')
+        ):
+            discrepancy_rows.append({
+                'response_id': rid,
+                'node_id': node_id,
+                'category': 'committee_only_unassigned',
+                'first_name': r['first'],
+                'last_name': r['last'],
+                'raw_q8': r['q8'],
+                'raw_q11': r['q11'],
+                'raw_q12': r['q12'],
+                'generation_q8': node.get('generation_q8', ''),
+                'generation_q8_raw': node.get('generation_q8_raw', ''),
+                'final_generation': final_generation,
+                'note': 'Committee-only raw relationship no longer implies a Joel edge.',
+            })
+
+    # -------------------------------------------------------------------------
+    # Step H: Write outputs + report
     # -------------------------------------------------------------------------
     NODE_COLS = [
         'node_id', 'first_name', 'last_name', 'email',
@@ -1359,11 +1660,34 @@ def main():
     ]
     EDGE_COLS = ['source_id', 'target_id', 'edge_type', 'confidence']
     UNRESOLVED_COLS = ['source_id', 'target_id', 'reason', 'raw_q11', 'respondent', 'gen', 'note']
+    DISCREPANCY_COLS = [
+        'response_id', 'node_id', 'category', 'first_name', 'last_name',
+        'raw_q8', 'raw_q11', 'raw_q12',
+        'generation_q8', 'generation_q8_raw', 'final_generation', 'note',
+    ]
+
+    node_rows = sorted(nodes.values(), key=lambda row: row['node_id'])
+    clean_edges.sort(key=lambda row: (row[0], row[1], row[2], row[3]))
+    unresolved_edges.sort(
+        key=lambda row: (
+            row.get('target_id', ''),
+            row.get('source_id', ''),
+            row.get('reason', ''),
+            row.get('raw_q11', ''),
+        )
+    )
+    discrepancy_rows.sort(
+        key=lambda row: (
+            row.get('response_id', ''),
+            row.get('category', ''),
+            row.get('node_id', ''),
+        )
+    )
 
     with open(nodes_out, 'w', newline='', encoding='utf-8') as f:
         w = csv.DictWriter(f, fieldnames=NODE_COLS)
         w.writeheader()
-        for n in nodes.values():
+        for n in node_rows:
             w.writerow({k: n.get(k, '') for k in NODE_COLS})
 
     with open(edges_out, 'w', newline='', encoding='utf-8') as f:
@@ -1378,6 +1702,12 @@ def main():
         for u in unresolved_edges:
             w.writerow({k: u.get(k, '') for k in UNRESOLVED_COLS})
 
+    with open(discrepancy_out, 'w', newline='', encoding='utf-8') as f:
+        w = csv.DictWriter(f, fieldnames=DISCREPANCY_COLS)
+        w.writeheader()
+        for row in discrepancy_rows:
+            w.writerow({k: row.get(k, '') for k in DISCREPANCY_COLS})
+
     # Summary
     n_respondent = sum(1 for n in nodes.values() if n['is_respondent'])
     n_q12a_only  = sum(1 for n in nodes.values() if not n['is_respondent'] and n['node_id'] != 'JM-ROOT')
@@ -1387,6 +1717,7 @@ def main():
     print(f"  Nodes : {len(nodes)} total  ({n_respondent} respondents, {n_q12a_only} Q12a-only, 1 root)")
     print(f"  Edges : {len(clean_edges)} total  ({dict(conf_counts)})")
     print(f"  Unresolved : {len(unresolved_edges)}")
+    print(f"  Discrepancies : {len(discrepancy_rows)}")
 
     print(f"\n  Canon misses (PhD institution): {len(canon_misses_phd)}")
     for m in sorted(canon_misses_phd):
@@ -1399,6 +1730,7 @@ def main():
     print(f"  {nodes_out}")
     print(f"  {edges_out}")
     print(f"  {unresolved_out}")
+    print(f"  {discrepancy_out}")
 
 
 if __name__ == '__main__':
