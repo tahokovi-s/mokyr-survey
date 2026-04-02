@@ -27,5 +27,5 @@ Communications/
 
 - Bounce PDFs may share similar subject lines but have different checksums; all are kept.
 - Date suffixes on incoming PDFs were inferred from filesystem timestamps where filenames lacked explicit dates.
-- Generated reports are written by `Code/check_outreach_responses.py` into `Reports/Generated/`.
+- Generated reports are written by `Code/Outreach/check_outreach_responses.py` into `Reports/Generated/`.
 - Migration manifest: `Logs/Communications_Reorg_031226/Communications_Reorg_Manifest_031226.csv`.

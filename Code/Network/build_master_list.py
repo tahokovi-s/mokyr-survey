@@ -11,7 +11,7 @@ Merges data from:
   - Cleaned survey responses (email_survey from Q3)
 
 Usage:
-    python3 Code/build_master_list.py [--date 030226]
+    python3 Code/Network/build_master_list.py [--date 030226]
 
 Defaults:
     - Network_Nodes / Network_Edges use the requested --date exactly
@@ -28,7 +28,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def load_csv(path):

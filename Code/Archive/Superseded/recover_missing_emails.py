@@ -7,7 +7,7 @@ emails for students with no email on file.
 Output: Data/Derived/Advisors_and_Reported_Students_{date}_Enriched.csv
 
 Usage:
-    python3 Code/recover_missing_emails.py [--date 022226]
+    python3 Code/Archive/Superseded/recover_missing_emails.py [--date 022226]
 """
 
 import argparse
@@ -15,7 +15,7 @@ import csv
 import difflib
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 WAVE_FILES = [
     ("Data/Contact_Lists/Mokyr_Survey_Wave2.csv", "Wave2"),

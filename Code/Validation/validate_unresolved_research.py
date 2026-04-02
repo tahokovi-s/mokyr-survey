@@ -13,7 +13,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 FILE_PATTERNS = {
     "findings": re.compile(r"^Gen1_Unresolved_Research_Findings_(\d{6})\.csv$"),

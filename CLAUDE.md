@@ -19,8 +19,14 @@ The pipeline: **Qualtrics export → Raw CSV → Cleaning script → Cleaned CSV
 ```
 Mokyr Survey/
 ├── CLAUDE.md                       # This file
-├── Code/                           # All scripts
-│   └── clean_survey.py             # Main cleaning pipeline (CLI)
+├── Code/                           # All scripts (see Code/README.md)
+│   ├── Shared/                     # Shared helpers (name_normalization)
+│   ├── Survey/                     # Cleaning + Q12a parsing
+│   ├── Network/                    # Node/edge build, viz, master list
+│   ├── Validation/                 # Audit, verification, rendering
+│   ├── Outreach/                   # Response tracking
+│   ├── Orchestration/              # Pipeline driver (refresh_downstream)
+│   └── Archive/                    # Historical one-off scripts
 ├── Data/
 │   ├── Raw/                        # Unmodified Qualtrics exports (*_Raw.csv)
 │   ├── Cleaned/                    # Output of cleaning pipeline (*_Cleaned.csv)
@@ -62,15 +68,15 @@ Qualtrics metadata occupies columns 0–16 (StartDate, EndDate, Status, IPAddres
 
 ```bash
 # Basic: clean a new raw export (auto-outputs to Data/Cleaned/)
-python Code/clean_survey.py --input Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv
+python Code/Survey/clean_survey.py --input Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv
 
 # With baseline protection (preserves respondents from a prior wave)
-python Code/clean_survey.py \
+python Code/Survey/clean_survey.py \
   --input Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv \
   --baseline Data/Raw/Mokyr_Survey_Responses_013026_Raw.csv
 
 # Custom output path
-python Code/clean_survey.py \
+python Code/Survey/clean_survey.py \
   --input Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv \
   --output Data/Cleaned/custom_name.csv
 ```
@@ -95,14 +101,14 @@ When `--baseline` is provided, the script loads a previous raw export and builds
 
 ```bash
 # Full pipeline: parse Q12a from raw + generate Wave 4
-python3 Code/parse_q12a.py \
+python3 Code/Survey/parse_q12a.py \
   --raw Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv \
   --cleaned Data/Cleaned/Mokyr_Survey_Responses_020726_Cleaned.csv \
   --wave2 Data/Contact_Lists/Mokyr_Survey_Wave2.csv \
   --wave3 Data/Contact_Lists/Mokyr_Survey_Wave3.csv
 
 # Just parse Q12a (no wave generation)
-python3 Code/parse_q12a.py \
+python3 Code/Survey/parse_q12a.py \
   --raw Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv \
   --cleaned Data/Cleaned/Mokyr_Survey_Responses_020726_Cleaned.csv \
   --parse-only
@@ -121,7 +127,7 @@ python3 Code/parse_q12a.py \
 ### New Qualtrics Export Arrived
 1. Download from Qualtrics, name it `Mokyr_Survey_Responses_MMDDYY_Raw.csv`
 2. Place in `Data/Raw/`
-3. Run: `python Code/clean_survey.py --input Data/Raw/Mokyr_Survey_Responses_MMDDYY_Raw.csv --baseline Data/Raw/<previous_raw>.csv`
+3. Run: `python Code/Survey/clean_survey.py --input Data/Raw/Mokyr_Survey_Responses_MMDDYY_Raw.csv --baseline Data/Raw/<previous_raw>.csv`
 4. Check `Logs/Mokyr_Survey_Duplicates.csv` for any issues
 5. Review cleaning statistics printed to stdout
 
@@ -133,7 +139,7 @@ python3 Code/parse_q12a.py \
 ### Analysis
 Place output figures and tables in `Output/`.
 
-## Key Constants (in clean_survey.py)
+## Key Constants (in Code/Survey/clean_survey.py)
 
 - **Column indices** (auto-discovered from header, fallback defaults): Q1→17, Q2→18, Q3→19, ResponseId→8, Status→2, Finished→6, Progress→4
 - **LEGITIMATE_SHORT_NAMES**: Real 2-letter names that should not be flagged as gibberish (e.g., `or`, `hu`, `wu`, `yi`, `xu`)

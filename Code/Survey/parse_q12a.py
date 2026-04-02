@@ -10,14 +10,14 @@ Part B: Generate Wave 4 contacts (previous non-respondents + new Q12a students).
 
 Usage:
     # Full pipeline: parse Q12a + generate Wave 4
-    python3 Code/parse_q12a.py \
+    python3 Code/Survey/parse_q12a.py \
       --raw Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv \
       --cleaned Data/Cleaned/Mokyr_Survey_Responses_020726_Cleaned.csv \
       --wave2 Data/Contact_Lists/Mokyr_Survey_Wave2.csv \
       --wave3 Data/Contact_Lists/Mokyr_Survey_Wave3.csv
 
     # Just parse Q12a (no wave generation)
-    python3 Code/parse_q12a.py \
+    python3 Code/Survey/parse_q12a.py \
       --raw Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv \
       --cleaned Data/Cleaned/Mokyr_Survey_Responses_020726_Cleaned.csv \
       --parse-only
@@ -30,7 +30,7 @@ import re
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # ---------------------------------------------------------------------------
 # Constants

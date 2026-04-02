@@ -10,16 +10,15 @@ Outputs:
 import argparse
 import csv
 import re
+import sys
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
-try:
-    from build_network import MANUAL_RESPONDENT_DEDUP
-except ImportError:
-    from Code.build_network import MANUAL_RESPONDENT_DEDUP
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "Code"))
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from Network.build_network import MANUAL_RESPONDENT_DEDUP
 
 FILE_PATTERNS = {
     "first_generation": (

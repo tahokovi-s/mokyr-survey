@@ -22,12 +22,10 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
-try:
-    from name_normalization import normalize_person_text
-except ImportError:
-    from Code.name_normalization import normalize_person_text
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "Code"))
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from Shared.name_normalization import normalize_person_text
 
 FILE_PATTERNS = {
     "findings": re.compile(r"^Gen3_Public_Student_Verification_Findings_(\d{6})\.csv$"),

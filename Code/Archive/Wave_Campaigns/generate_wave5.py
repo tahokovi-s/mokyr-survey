@@ -7,7 +7,7 @@ advisors who responded after Wave 4 was sent, or whose emails were recently
 recovered in the enriched Q12a file).
 
 Usage:
-    python3 Code/generate_wave5.py \
+    python3 Code/Archive/Wave_Campaigns/generate_wave5.py \
       --enriched Data/Derived/Advisors_and_Reported_Students_022226_Enriched.csv \
       --cleaned  Data/Cleaned/Mokyr_Survey_Responses_022226_Cleaned.csv \
       --wave2    Data/Contact_Lists/Mokyr_Survey_Wave2.csv \
@@ -22,7 +22,7 @@ import re
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 # ---------------------------------------------------------------------------
 # Helpers (duplicated from parse_q12a.py to keep this script self-contained)

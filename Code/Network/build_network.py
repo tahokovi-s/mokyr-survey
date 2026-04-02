@@ -29,12 +29,10 @@ from datetime import datetime
 from pathlib import Path
 from collections import defaultdict, Counter
 
-try:
-    from name_normalization import normalize_person_text, person_name_key
-except ImportError:
-    from Code.name_normalization import normalize_person_text, person_name_key
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "Code"))
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from Shared.name_normalization import normalize_person_text, person_name_key
 
 _CLEANED_DATE_RE = re.compile(r"^Mokyr_Survey_Responses_(\d{6})_Cleaned\.csv$")
 _Q12A_DATE_RE = re.compile(r"^Advisors_and_Reported_Students_(\d{6})\.csv$")

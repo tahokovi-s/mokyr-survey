@@ -13,7 +13,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 FILE_SPECS = {
     "cleaned": (
@@ -202,26 +202,26 @@ def main() -> None:
     html = PROJECT_ROOT / "Output" / f"mokyr-genealogy-{date_token}.html"
 
     required_scripts = [
-        PROJECT_ROOT / "Code" / "build_network.py",
-        PROJECT_ROOT / "Code" / "validate_descriptive_inputs.py",
-        PROJECT_ROOT / "Code" / "describe_first_generation.py",
-        PROJECT_ROOT / "Code" / "build_master_list.py",
-        PROJECT_ROOT / "Code" / "build_outstanding_lists.py",
-        PROJECT_ROOT / "Code" / "viz_network.py",
+        PROJECT_ROOT / "Code" / "Network" / "build_network.py",
+        PROJECT_ROOT / "Code" / "Validation" / "validate_descriptive_inputs.py",
+        PROJECT_ROOT / "Code" / "Network" / "describe_first_generation.py",
+        PROJECT_ROOT / "Code" / "Network" / "build_master_list.py",
+        PROJECT_ROOT / "Code" / "Network" / "build_outstanding_lists.py",
+        PROJECT_ROOT / "Code" / "Network" / "viz_network.py",
     ]
     if audit and manual_provenance:
-        required_scripts.append(PROJECT_ROOT / "Code" / "validate_gen1_audit.py")
+        required_scripts.append(PROJECT_ROOT / "Code" / "Validation" / "validate_gen1_audit.py")
     if gen2_audit:
-        required_scripts.append(PROJECT_ROOT / "Code" / "validate_gen2_capture_audit.py")
+        required_scripts.append(PROJECT_ROOT / "Code" / "Validation" / "validate_gen2_capture_audit.py")
     if gen2_recovery_findings:
-        required_scripts.append(PROJECT_ROOT / "Code" / "render_gen2_empty_q12a_public_recovery.py")
+        required_scripts.append(PROJECT_ROOT / "Code" / "Validation" / "render_gen2_empty_q12a_public_recovery.py")
     if gen3_verification_findings:
-        required_scripts.append(PROJECT_ROOT / "Code" / "validate_gen3_public_student_verification.py")
+        required_scripts.append(PROJECT_ROOT / "Code" / "Validation" / "validate_gen3_public_student_verification.py")
     if args.current_raw and args.baseline_raw:
-        required_scripts.append(PROJECT_ROOT / "Code" / "check_outreach_responses.py")
+        required_scripts.append(PROJECT_ROOT / "Code" / "Outreach" / "check_outreach_responses.py")
     require_existing_paths(required_scripts)
 
-    build_network_cmd = [sys.executable, "Code/build_network.py", "--date", date_token]
+    build_network_cmd = [sys.executable, "Code/Network/build_network.py", "--date", date_token]
     append_path_arg(build_network_cmd, "--cleaned", cleaned)
     append_path_arg(build_network_cmd, "--q12a", q12a)
     append_path_arg(build_network_cmd, "--email-recovery", email_recovery)
@@ -231,7 +231,7 @@ def main() -> None:
 
     validate_inputs_cmd = [
         sys.executable,
-        "Code/validate_descriptive_inputs.py",
+        "Code/Validation/validate_descriptive_inputs.py",
         "--cleaned", str(cleaned.relative_to(PROJECT_ROOT)),
         "--q12a", str(q12a.relative_to(PROJECT_ROOT)),
         "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
@@ -246,7 +246,7 @@ def main() -> None:
 
     describe_cmd = [
         sys.executable,
-        "Code/describe_first_generation.py",
+        "Code/Network/describe_first_generation.py",
         "--date", date_token,
         "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
         "--edges", str(edges.relative_to(PROJECT_ROOT)),
@@ -259,7 +259,7 @@ def main() -> None:
 
     master_cmd = [
         sys.executable,
-        "Code/build_master_list.py",
+        "Code/Network/build_master_list.py",
         "--date", date_token,
         "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
         "--edges", str(edges.relative_to(PROJECT_ROOT)),
@@ -271,7 +271,7 @@ def main() -> None:
     if gen2_recovery_findings:
         render_gen2_recovery_cmd = [
             sys.executable,
-            "Code/render_gen2_empty_q12a_public_recovery.py",
+            "Code/Validation/render_gen2_empty_q12a_public_recovery.py",
             "--date", date_token,
             "--findings", str(gen2_recovery_findings.relative_to(PROJECT_ROOT)),
             "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
@@ -284,7 +284,7 @@ def main() -> None:
     if gen3_verification_findings:
         validate_gen3_cmd = [
             sys.executable,
-            "Code/validate_gen3_public_student_verification.py",
+            "Code/Validation/validate_gen3_public_student_verification.py",
             "--date", date_token,
             "--findings", str(gen3_verification_findings.relative_to(PROJECT_ROOT)),
             "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
@@ -297,7 +297,7 @@ def main() -> None:
 
     outstanding_cmd = [
         sys.executable,
-        "Code/build_outstanding_lists.py",
+        "Code/Network/build_outstanding_lists.py",
         "--date", date_token,
         "--master", str(master.relative_to(PROJECT_ROOT)),
     ]
@@ -306,7 +306,7 @@ def main() -> None:
     d3_path = resolve_project_path(args.d3_path) if args.d3_path else extract_d3_from_existing_html(date_token)
     viz_cmd = [
         sys.executable,
-        "Code/viz_network.py",
+        "Code/Network/viz_network.py",
         "--date", date_token,
         "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
         "--edges", str(edges.relative_to(PROJECT_ROOT)),
@@ -317,7 +317,7 @@ def main() -> None:
     if audit and manual_provenance:
         validate_audit_cmd = [
             sys.executable,
-            "Code/validate_gen1_audit.py",
+            "Code/Validation/validate_gen1_audit.py",
             "--date", date_token,
             "--first-generation", str(first_generation.relative_to(PROJECT_ROOT)),
             "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
@@ -335,7 +335,7 @@ def main() -> None:
     if gen2_audit:
         validate_gen2_cmd = [
             sys.executable,
-            "Code/validate_gen2_capture_audit.py",
+            "Code/Validation/validate_gen2_capture_audit.py",
             "--date", date_token,
             "--cleaned", str(cleaned.relative_to(PROJECT_ROOT)),
             "--q12a", str(q12a.relative_to(PROJECT_ROOT)),
@@ -352,7 +352,7 @@ def main() -> None:
     if args.current_raw and args.baseline_raw:
         outreach_cmd = [
             sys.executable,
-            "Code/check_outreach_responses.py",
+            "Code/Outreach/check_outreach_responses.py",
             "--current-raw", str(resolve_project_path(args.current_raw).relative_to(PROJECT_ROOT)),
             "--baseline-raw", str(resolve_project_path(args.baseline_raw).relative_to(PROJECT_ROOT)),
         ]

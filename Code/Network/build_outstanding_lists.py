@@ -14,7 +14,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 MASTER_PATTERN = re.compile(r"^Master_Contact_List_(\d{6})\.csv$")
 
 EMAIL_FIELDS = [

@@ -15,17 +15,16 @@ Outputs:
 import argparse
 import csv
 import re
+import sys
 from collections import Counter
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from pathlib import Path
 
-try:
-    from name_normalization import normalize_person_text
-except ImportError:
-    from Code.name_normalization import normalize_person_text
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "Code"))
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from Shared.name_normalization import normalize_person_text
 
 NICKNAME_EQUIVALENTS = {
     "tom": "thomas",

@@ -9,8 +9,8 @@ Clean Mokyr Survey Responses
 - Preserves anyone from baseline survey responses (if they have valid data)
 
 Usage:
-    python clean_survey.py --input Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv
-    python clean_survey.py --input Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv --baseline Data/Raw/Mokyr_Survey_Responses_013026_Raw.csv
+    python Code/Survey/clean_survey.py --input Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv
+    python Code/Survey/clean_survey.py --input Data/Raw/Mokyr_Survey_Responses_020726_Raw.csv --baseline Data/Raw/Mokyr_Survey_Responses_013026_Raw.csv
 """
 
 import argparse
@@ -19,7 +19,7 @@ import io
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # ---------------------------------------------------------------------------
 # Constants

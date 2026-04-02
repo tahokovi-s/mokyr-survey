@@ -12,21 +12,16 @@ Outputs:
 import argparse
 import csv
 import re
+import sys
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
-try:
-    from name_normalization import normalize_person_text, person_name_key as shared_person_name_key
-except ImportError:
-    from Code.name_normalization import normalize_person_text, person_name_key as shared_person_name_key
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "Code"))
 
-try:
-    from build_network import MANUAL_RESPONDENT_DEDUP, STUDENT_NAME_ALIASES
-except ImportError:
-    from Code.build_network import MANUAL_RESPONDENT_DEDUP, STUDENT_NAME_ALIASES
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from Shared.name_normalization import normalize_person_text, person_name_key as shared_person_name_key
+from Network.build_network import MANUAL_RESPONDENT_DEDUP, STUDENT_NAME_ALIASES
 
 FILE_PATTERNS = {
     "cleaned": (

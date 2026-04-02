@@ -24,7 +24,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 _NODES_DATE_RE = re.compile(r"^Network_Nodes_(\d{6})\.csv$")
 _EDGES_DATE_RE = re.compile(r"^Network_Edges_(\d{6})\.csv$")
