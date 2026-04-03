@@ -66,6 +66,11 @@ FILE_SPECS = {
         "Gen3_Public_Student_Verification_Findings_{date}.csv",
         re.compile(r"^Gen3_Public_Student_Verification_Findings_(\d{6})\.csv$"),
     ),
+    "backfill": (
+        PROJECT_ROOT / "Data" / "Derived",
+        "Gen2_Nonrespondent_Backfill_Approved_{date}.csv",
+        re.compile(r"^Gen2_Nonrespondent_Backfill_Approved_(\d{6})\.csv$"),
+    ),
 }
 
 
@@ -171,6 +176,7 @@ def main() -> None:
     parser.add_argument("--gen2-audit", help="Override Gen2 capture audit CSV path")
     parser.add_argument("--gen2-recovery-findings", help="Override Gen2 empty-Q12a public recovery findings CSV path")
     parser.add_argument("--gen3-verification-findings", help="Override Gen3 public student verification findings CSV path")
+    parser.add_argument("--backfill", help="Override approved backfill CSV path (enriches existing nodes)")
     parser.add_argument("--d3-path", help="Local d3.min.js path for viz rebuild")
     parser.add_argument("--current-raw", help="Optional current raw Qualtrics export for outreach refresh")
     parser.add_argument("--baseline-raw", help="Optional baseline raw Qualtrics export for outreach refresh")
@@ -189,6 +195,7 @@ def main() -> None:
     gen2_audit = resolve_compatible_input("gen2_audit", date_token, args.gen2_audit, required=False, allow_fallback=False)
     gen2_recovery_findings = resolve_compatible_input("gen2_recovery_findings", date_token, args.gen2_recovery_findings, required=False, allow_fallback=False)
     gen3_verification_findings = resolve_compatible_input("gen3_verification_findings", date_token, args.gen3_verification_findings, required=False, allow_fallback=False)
+    backfill = resolve_compatible_input("backfill", date_token, args.backfill, required=False, allow_fallback=False)
 
     nodes = PROJECT_ROOT / "Data" / "Derived" / f"Network_Nodes_{date_token}.csv"
     edges = PROJECT_ROOT / "Data" / "Derived" / f"Network_Edges_{date_token}.csv"
@@ -199,12 +206,14 @@ def main() -> None:
     canon = PROJECT_ROOT / "Data" / "Derived" / f"Descriptive_Validation_Canon_{date_token}.csv"
     master = PROJECT_ROOT / "Data" / "Derived" / f"Master_Contact_List_{date_token}.csv"
     first_generation = PROJECT_ROOT / "Data" / "Derived" / f"First_Generation_Subtree_Sizes_{date_token}.csv"
+    second_generation = PROJECT_ROOT / "Data" / "Derived" / f"Second_Generation_Subtree_Sizes_{date_token}.csv"
     html = PROJECT_ROOT / "Output" / f"mokyr-genealogy-{date_token}.html"
 
     required_scripts = [
         PROJECT_ROOT / "Code" / "Network" / "build_network.py",
         PROJECT_ROOT / "Code" / "Validation" / "validate_descriptive_inputs.py",
         PROJECT_ROOT / "Code" / "Network" / "describe_first_generation.py",
+        PROJECT_ROOT / "Code" / "Network" / "describe_second_generation.py",
         PROJECT_ROOT / "Code" / "Network" / "build_master_list.py",
         PROJECT_ROOT / "Code" / "Network" / "build_outstanding_lists.py",
         PROJECT_ROOT / "Code" / "Network" / "viz_network.py",
@@ -227,6 +236,7 @@ def main() -> None:
     append_path_arg(build_network_cmd, "--email-recovery", email_recovery)
     append_path_arg(build_network_cmd, "--manual-nodes", manual_nodes)
     append_path_arg(build_network_cmd, "--manual-edges", manual_edges)
+    append_path_arg(build_network_cmd, "--backfill", backfill)
     run_step("build_network", build_network_cmd)
 
     validate_inputs_cmd = [
@@ -256,6 +266,18 @@ def main() -> None:
         "--discrepancies", str(discrepancies.relative_to(PROJECT_ROOT)),
     ]
     run_step("describe_first_generation", describe_cmd)
+
+    describe_gen2_cmd = [
+        sys.executable,
+        "Code/Network/describe_second_generation.py",
+        "--date", date_token,
+        "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
+        "--edges", str(edges.relative_to(PROJECT_ROOT)),
+        "--coverage", str(coverage.relative_to(PROJECT_ROOT)),
+        "--generation", str(generation.relative_to(PROJECT_ROOT)),
+        "--canon", str(canon.relative_to(PROJECT_ROOT)),
+    ]
+    run_step("describe_second_generation", describe_gen2_cmd)
 
     master_cmd = [
         sys.executable,
@@ -376,7 +398,10 @@ def main() -> None:
         PROJECT_ROOT / "Data" / "Derived" / f"Outstanding_Advisor_Summary_{date_token}_Validated.csv",
         html,
         PROJECT_ROOT / "Output" / f"First_Generation_Descriptives_{date_token}.md",
+        PROJECT_ROOT / "Output" / f"Second_Generation_Descriptives_{date_token}.md",
         PROJECT_ROOT / "Output" / f"Descriptive_Input_Validation_{date_token}.md",
+        PROJECT_ROOT / "Data" / "Derived" / f"First_Generation_Profile_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Second_Generation_Profile_{date_token}.csv",
         PROJECT_ROOT / "Data" / "Derived" / f"Gen1_Student_Verification_Validation_{date_token}.csv",
         PROJECT_ROOT / "Data" / "Derived" / f"Gen1_Student_Verification_Summary_{date_token}.txt",
         PROJECT_ROOT / "Data" / "Derived" / f"Gen2_Student_Capture_Audit_{date_token}.csv",

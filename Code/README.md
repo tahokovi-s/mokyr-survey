@@ -38,6 +38,26 @@ Code/Outreach/check_outreach_responses.py       # outreach response tracking
 Code/Orchestration/refresh_downstream.py        # pipeline orchestrator
 ```
 
+## Curated Inputs
+
+| File | Consumed By | Purpose |
+|------|-------------|---------|
+| `Data/Derived/Manual_Nodes_{date}.csv` | `build_network.py` | Manually added nodes (non-respondents from outreach) |
+| `Data/Derived/Manual_Edges_{date}.csv` | `build_network.py` | Curated advisor-student edges not derivable from survey |
+| `Data/Derived/Email_Recovery_{date}.csv` | `build_network.py` | Recovered emails for S-nodes with stale/missing emails |
+| `Data/Derived/Gen2_Nonrespondent_Backfill_Approved_{date}.csv` | `build_network.py` | Web-researched metadata for Gen 2 nonrespondents (PhD, employer, country, email) |
+
+**Findings vs. Approved backfill:** The research/audit artifact is
+`Gen2_Nonrespondent_Backfill_Findings_{date}.csv` (full provenance, all 28
+columns).  The network-facing file is `..._Approved_{date}.csv` — a curated
+subset keyed by `node_id` containing only the fields that propagate into
+`Network_Nodes`.  `build_network.py` consumes the approved file via `--backfill`.
+
+**Approved backfill semantics:**
+- Nonblank `backfill_*` value = set/overwrite the corresponding canonical node field
+- Blank `backfill_*` value = no change (skip)
+- `clear_fields` column = comma-separated list of canonical field names to explicitly remove from the node (set to empty string)
+
 ## Invocation
 
 All scripts are run from the project root:

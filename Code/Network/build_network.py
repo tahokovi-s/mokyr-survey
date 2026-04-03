@@ -11,6 +11,14 @@ Outputs:
 Optional curated inputs:
   Data/Derived/Manual_Nodes_{date}.csv
   Data/Derived/Manual_Edges_{date}.csv
+  Data/Derived/Gen2_Nonrespondent_Backfill_Approved_{date}.csv
+
+The approved backfill CSV enriches existing nodes (matched by node_id) with
+web-researched metadata.  It does not create nodes; all node_ids must already
+exist after respondent + Q12a + manual node creation.  Semantics:
+  nonblank backfill_*  → set/overwrite that field
+  blank backfill_*     → no change
+  clear_fields column  → comma-separated canonical field names to set to ''
 
 Manual_Nodes supports the legacy minimal schema:
   first_name,last_name,email,advisor_source,generation
@@ -522,6 +530,68 @@ INSTITUTION_CANON = {
     "university of otago": "University of Otago",
     # Wisconsin-Milwaukee
     "university of wisconsin-milwaukee": "University of Wisconsin-Milwaukee",
+    # --- Backfill-sourced institutions (Gen 2 nonrespondent enrichment) ---
+    # Kent State University
+    "kent state university": "Kent State University",
+    "kent state": "Kent State University",
+    # Ahmedabad University
+    "ahmedabad university": "Ahmedabad University",
+    # Alberta Health Services
+    "alberta health services": "Alberta Health Services",
+    # Align Technology
+    "align technology": "Align Technology",
+    # Bank of England
+    "bank of england": "Bank of England",
+    # Butler University
+    "butler university": "Butler University",
+    # CEIBS (China Europe International Business School)
+    "ceibs": "CEIBS",
+    "china europe international business school": "CEIBS",
+    # California ISO
+    "california iso": "California ISO",
+    "caiso": "California ISO",
+    # Centre for Development Studies (Trivandrum)
+    "centre for development studies": "Centre for Development Studies",
+    # Citadel LLC
+    "citadel llc": "Citadel LLC",
+    "citadel": "Citadel LLC",
+    # City St George's, University of London (2024 rename of City, University of London)
+    "city st george's, university of london": "City St George's, University of London",
+    # Compass Lexecon
+    "compass lexecon": "Compass Lexecon",
+    # Deakin University
+    "deakin university": "Deakin University",
+    # Georgia Southern University
+    "georgia southern university": "Georgia Southern University",
+    # IIM Ahmedabad
+    "indian institute of management ahmedabad": "Indian Institute of Management Ahmedabad",
+    "iim ahmedabad": "Indian Institute of Management Ahmedabad",
+    # Nanyang Technological University
+    "nanyang technological university": "Nanyang Technological University",
+    "ntu singapore": "Nanyang Technological University",
+    # OECD
+    "oecd": "OECD",
+    "organisation for economic co-operation and development": "OECD",
+    # Perlman Eilat and Co.
+    "perlman eilat and co.": "Perlman Eilat and Co.",
+    "perlman eilat and co": "Perlman Eilat and Co.",
+    # Productivity Commission (Australia)
+    "productivity commission": "Productivity Commission",
+    # Red River College Polytechnic
+    "red river college polytechnic": "Red River College Polytechnic",
+    "red river college": "Red River College Polytechnic",
+    # Susquehanna University
+    "susquehanna university": "Susquehanna University",
+    # University of Pittsburgh
+    "university of pittsburgh": "University of Pittsburgh",
+    # University of Salamanca
+    "university of salamanca": "University of Salamanca",
+    # University of Washington
+    "university of washington": "University of Washington",
+    "uw": "University of Washington",
+    # Xi'an Jiaotong-Liverpool University
+    "xi'an jiaotong-liverpool university": "Xi'an Jiaotong-Liverpool University",
+    "xjtlu": "Xi'an Jiaotong-Liverpool University",
 }
 
 
@@ -827,6 +897,9 @@ def main():
     parser.add_argument('--manual-edges',
                         default=None,
                         help="Path to manual edges CSV (optional)")
+    parser.add_argument('--backfill',
+                        default=None,
+                        help="Path to approved backfill CSV (optional, enriches existing nodes)")
     args = parser.parse_args()
 
     date = _resolve_build_date(args.date, args.cleaned, args.q12a)
@@ -835,6 +908,7 @@ def main():
     email_recovery_path = PROJECT_ROOT / args.email_recovery if args.email_recovery else None
     manual_nodes_path   = PROJECT_ROOT / args.manual_nodes   if args.manual_nodes   else None
     manual_edges_path   = PROJECT_ROOT / args.manual_edges   if args.manual_edges   else None
+    backfill_path       = PROJECT_ROOT / args.backfill       if args.backfill       else None
     nodes_out      = PROJECT_ROOT / f"Data/Derived/Network_Nodes_{date}.csv"
     edges_out      = PROJECT_ROOT / f"Data/Derived/Network_Edges_{date}.csv"
     unresolved_out = PROJECT_ROOT / f"Data/Derived/Unresolved_Edges_{date}.csv"
@@ -1463,6 +1537,142 @@ def main():
         print(f"  Loaded {loaded_manual_edges} curated manual edges\n")
     elif manual_edges_path:
         print(f"  WARN: manual edges file not found: {manual_edges_path}\n")
+
+    # -------------------------------------------------------------------------
+    # Step E4: Apply approved backfill enrichments (optional)
+    # -------------------------------------------------------------------------
+    # The approved backfill CSV enriches existing nodes with web-researched
+    # metadata (PhD institution, employer, country, email, etc.).  It does NOT
+    # create new nodes — every node_id must already exist in the built node set.
+    #
+    # Behaviour per backfill_* field:
+    #   blank in approved CSV  → no change (skip)
+    #   nonblank in approved   → write to node (backfill empty OR overwrite)
+    #
+    # Explicit clear via clear_fields column:
+    #   Comma-separated list of canonical node field names to set to ''.
+    #   A field cannot appear in both clear_fields and as a nonblank backfill_*.
+    BACKFILL_FIELD_MAP = {
+        'backfill_email':                   'email',
+        'backfill_phd_institution_raw':     'phd_institution_raw',
+        'backfill_phd_institution_canon':   'phd_institution_canon',
+        'backfill_phd_year':                'phd_year',
+        'backfill_current_employer_raw':    'current_employer_raw',
+        'backfill_current_employer_canon':  'current_employer_canon',
+        'backfill_country':                 'country',
+        'backfill_us_state':                'us_state',
+    }
+
+    CLEARABLE_FIELDS = set(BACKFILL_FIELD_MAP.values())
+
+    if backfill_path and backfill_path.exists():
+        print(f"Loading approved backfill: {backfill_path}")
+        with open(backfill_path, newline='', encoding='utf-8') as f:
+            backfill_rows = list(csv.DictReader(f))
+        print(f"  {len(backfill_rows)} backfill entries")
+
+        # --- Validation ---
+        bf_nids = [r['node_id'].strip() for r in backfill_rows]
+        bf_nid_counts = Counter(bf_nids)
+        bf_dupes = {nid for nid, cnt in bf_nid_counts.items() if cnt > 1}
+        if bf_dupes:
+            sys.exit(f"ERROR: Duplicate node_id(s) in approved backfill: {sorted(bf_dupes)}")
+
+        bf_missing = [nid for nid in bf_nids if nid not in nodes]
+        if bf_missing:
+            sys.exit(
+                f"ERROR: Approved backfill references {len(bf_missing)} node_id(s) "
+                f"not in built node set: {bf_missing[:5]}{'...' if len(bf_missing) > 5 else ''}"
+            )
+
+        bf_updated = 0
+        bf_fields_updated = Counter()
+        bf_fields_cleared = Counter()
+        for brow in backfill_rows:
+            nid = brow['node_id'].strip()
+            node = nodes[nid]
+
+            # Parse clear_fields
+            clear_raw = brow.get('clear_fields', '').strip()
+            clear_set = {f.strip() for f in clear_raw.split(',') if f.strip()} if clear_raw else set()
+
+            # Validate: reject unknown field names in clear_fields
+            unknown_clear = clear_set - CLEARABLE_FIELDS
+            if unknown_clear:
+                sys.exit(
+                    f"ERROR: Approved backfill for {nid} has unknown clear_fields: "
+                    f"{sorted(unknown_clear)}"
+                )
+
+            # Validate: reject rows that both set and clear the same field
+            bf_set_fields = set()
+            for bf_col, node_col in BACKFILL_FIELD_MAP.items():
+                if brow.get(bf_col, '').strip():
+                    bf_set_fields.add(node_col)
+            set_and_clear = bf_set_fields & clear_set
+            if set_and_clear:
+                sys.exit(
+                    f"ERROR: Approved backfill for {nid} both sets and clears: "
+                    f"{sorted(set_and_clear)}"
+                )
+
+            # Validate: email requires at least one source URL
+            bf_email = brow.get('backfill_email', '').strip()
+            bf_src1 = brow.get('source_1_url', '').strip()
+            bf_src2 = brow.get('source_2_url', '').strip()
+            if bf_email and not bf_src1 and not bf_src2:
+                sys.exit(
+                    f"ERROR: Approved backfill for {nid} has email without source URL"
+                )
+
+            # Validate: us_state requires country = United States
+            bf_state = brow.get('backfill_us_state', '').strip()
+            bf_country = brow.get('backfill_country', '').strip()
+            if bf_state and bf_country and bf_country != 'United States':
+                sys.exit(
+                    f"ERROR: Approved backfill for {nid} has us_state={bf_state!r} "
+                    f"but country={bf_country!r} (expected 'United States')"
+                )
+
+            # Apply enrichments (nonblank backfill_* → set/overwrite)
+            updated_fields = []
+            for bf_col, node_col in BACKFILL_FIELD_MAP.items():
+                val = brow.get(bf_col, '').strip()
+                if not val:
+                    continue
+                old_val = str(node.get(node_col, '') or '').strip()
+                if val != old_val:
+                    action = 'backfill' if not old_val else 'overwrite'
+                    node[node_col] = val
+                    updated_fields.append(f"{node_col}({action})")
+                    bf_fields_updated[node_col] += 1
+
+            # Apply clears (clear_fields → set to '')
+            for field in sorted(clear_set):
+                old_val = str(node.get(field, '') or '').strip()
+                if old_val:
+                    node[field] = ''
+                    updated_fields.append(f"{field}(clear)")
+                    bf_fields_cleared[field] += 1
+
+            if updated_fields:
+                bf_updated += 1
+                print(f"  ENRICH {nid} ({node['first_name']} {node['last_name']}): "
+                      f"{', '.join(updated_fields)}")
+
+        total_updates = sum(bf_fields_updated.values()) + sum(bf_fields_cleared.values())
+        print(f"  Enriched {bf_updated} nodes ({total_updates} field changes)")
+        if bf_fields_updated:
+            print(f"  Set/overwrite:")
+            for field, cnt in sorted(bf_fields_updated.items()):
+                print(f"    {field}: {cnt}")
+        if bf_fields_cleared:
+            print(f"  Cleared:")
+            for field, cnt in sorted(bf_fields_cleared.items()):
+                print(f"    {field}: {cnt}")
+        print()
+    elif backfill_path:
+        print(f"  WARN: approved backfill file not found: {backfill_path}\n")
 
     # -------------------------------------------------------------------------
     # Step F: Build edge list + cycle detection + generation consistency
