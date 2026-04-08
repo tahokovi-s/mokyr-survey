@@ -24,6 +24,9 @@ Code/Survey/clean_survey.py                     # clean raw Qualtrics export
 Code/Survey/parse_q12a.py                       # parse Q12a free-text student listings
 Code/Network/build_network.py                   # build node/edge CSVs
 Code/Network/describe_first_generation.py       # first-generation descriptive statistics
+Code/Network/describe_second_generation.py      # second-generation descriptive statistics
+Code/Network/describe_third_generation.py       # third-generation descriptive statistics
+Code/Network/describe_fourth_generation.py      # fourth-generation descriptive statistics
 Code/Network/build_master_list.py               # one-row-per-person master CSV
 Code/Network/build_outstanding_lists.py         # outstanding outreach lists
 Code/Network/viz_network.py                     # interactive HTML genealogy
@@ -38,6 +41,24 @@ Code/Outreach/check_outreach_responses.py       # outreach response tracking
 Code/Orchestration/refresh_downstream.py        # pipeline orchestrator
 ```
 
+## Descriptive Outputs
+
+The four active descriptive scripts emit canonical profile CSVs:
+
+- `Code/Network/describe_first_generation.py` -> `Data/Derived/First_Generation_Profile_{date}.csv`
+- `Code/Network/describe_second_generation.py` -> `Data/Derived/Second_Generation_Profile_{date}.csv`
+- `Code/Network/describe_third_generation.py` -> `Data/Derived/Third_Generation_Profile_{date}.csv`
+- `Code/Network/describe_fourth_generation.py` -> `Data/Derived/Fourth_Generation_Profile_{date}.csv`
+
+Across these generations, most field distributions use all nodes in that generation
+with nonblank values for the relevant field. `has_students` remains
+respondent-only because nonrespondent `has_students=False` values are
+mechanical defaults from `build_network.py`, not observed survey data.
+
+Historical `Data/Derived/First_Generation_Respondent_Profile_{date}.csv` files
+may still exist from earlier snapshots. Treat them as archival artifacts, not
+current pipeline outputs.
+
 ## Curated Inputs
 
 | File | Consumed By | Purpose |
@@ -45,13 +66,18 @@ Code/Orchestration/refresh_downstream.py        # pipeline orchestrator
 | `Data/Derived/Manual_Nodes_{date}.csv` | `build_network.py` | Manually added nodes (non-respondents from outreach) |
 | `Data/Derived/Manual_Edges_{date}.csv` | `build_network.py` | Curated advisor-student edges not derivable from survey |
 | `Data/Derived/Email_Recovery_{date}.csv` | `build_network.py` | Recovered emails for S-nodes with stale/missing emails |
-| `Data/Derived/Gen2_Nonrespondent_Backfill_Approved_{date}.csv` | `build_network.py` | Web-researched metadata for Gen 2 nonrespondents (PhD, employer, country, email) |
+| `Data/Derived/Gen2_Nonrespondent_Backfill_Approved_{date}.csv` | `build_network.py` | Approved backfill metadata for Gen 2 nonrespondents |
+| `Data/Derived/Gen3_Nonrespondent_Backfill_Approved_{date}.csv` | `build_network.py` | Approved backfill metadata for Gen 3 nonrespondents |
+| `Data/Derived/Gen4_Nonrespondent_Backfill_Approved_{date}.csv` | `build_network.py` | Approved backfill metadata for Gen 4 nonrespondents |
 
-**Findings vs. Approved backfill:** The research/audit artifact is
-`Gen2_Nonrespondent_Backfill_Findings_{date}.csv` (full provenance, all 28
-columns).  The network-facing file is `..._Approved_{date}.csv` — a curated
-subset keyed by `node_id` containing only the fields that propagate into
-`Network_Nodes`.  `build_network.py` consumes the approved file via `--backfill`.
+**Findings vs. Approved backfill:** For each generation with nonrespondent
+backfill (currently Gen 2, Gen 3, and Gen 4), the research artifact is
+`Gen{N}_Nonrespondent_Backfill_Findings_{date}.csv` (full provenance).  The
+network-facing file is `Gen{N}_Nonrespondent_Backfill_Approved_{date}.csv` — a
+curated subset keyed by `node_id` containing only the fields that propagate
+into `Network_Nodes`.  `build_network.py` accepts multiple `--backfill` flags
+and `refresh_downstream.py` auto-discovers all approved backfill files for the
+given date.
 
 **Approved backfill semantics:**
 - Nonblank `backfill_*` value = set/overwrite the corresponding canonical node field

@@ -66,10 +66,20 @@ FILE_SPECS = {
         "Gen3_Public_Student_Verification_Findings_{date}.csv",
         re.compile(r"^Gen3_Public_Student_Verification_Findings_(\d{6})\.csv$"),
     ),
-    "backfill": (
+    "gen2_backfill": (
         PROJECT_ROOT / "Data" / "Derived",
         "Gen2_Nonrespondent_Backfill_Approved_{date}.csv",
         re.compile(r"^Gen2_Nonrespondent_Backfill_Approved_(\d{6})\.csv$"),
+    ),
+    "gen3_backfill": (
+        PROJECT_ROOT / "Data" / "Derived",
+        "Gen3_Nonrespondent_Backfill_Approved_{date}.csv",
+        re.compile(r"^Gen3_Nonrespondent_Backfill_Approved_(\d{6})\.csv$"),
+    ),
+    "gen4_backfill": (
+        PROJECT_ROOT / "Data" / "Derived",
+        "Gen4_Nonrespondent_Backfill_Approved_{date}.csv",
+        re.compile(r"^Gen4_Nonrespondent_Backfill_Approved_(\d{6})\.csv$"),
     ),
 }
 
@@ -176,7 +186,8 @@ def main() -> None:
     parser.add_argument("--gen2-audit", help="Override Gen2 capture audit CSV path")
     parser.add_argument("--gen2-recovery-findings", help="Override Gen2 empty-Q12a public recovery findings CSV path")
     parser.add_argument("--gen3-verification-findings", help="Override Gen3 public student verification findings CSV path")
-    parser.add_argument("--backfill", help="Override approved backfill CSV path (enriches existing nodes)")
+    parser.add_argument("--backfill", action="append", default=None,
+                        help="Override approved backfill CSV path(s) (repeatable; enriches existing nodes)")
     parser.add_argument("--d3-path", help="Local d3.min.js path for viz rebuild")
     parser.add_argument("--current-raw", help="Optional current raw Qualtrics export for outreach refresh")
     parser.add_argument("--baseline-raw", help="Optional baseline raw Qualtrics export for outreach refresh")
@@ -195,7 +206,15 @@ def main() -> None:
     gen2_audit = resolve_compatible_input("gen2_audit", date_token, args.gen2_audit, required=False, allow_fallback=False)
     gen2_recovery_findings = resolve_compatible_input("gen2_recovery_findings", date_token, args.gen2_recovery_findings, required=False, allow_fallback=False)
     gen3_verification_findings = resolve_compatible_input("gen3_verification_findings", date_token, args.gen3_verification_findings, required=False, allow_fallback=False)
-    backfill = resolve_compatible_input("backfill", date_token, args.backfill, required=False, allow_fallback=False)
+    # Resolve approved backfill files: explicit overrides take precedence over auto-discovery
+    if args.backfill:
+        backfill_paths = [resolve_project_path(p) for p in args.backfill]
+    else:
+        backfill_paths = []
+        for bf_label in ("gen2_backfill", "gen3_backfill", "gen4_backfill"):
+            bf = resolve_compatible_input(bf_label, date_token, None, required=False, allow_fallback=False)
+            if bf:
+                backfill_paths.append(bf)
 
     nodes = PROJECT_ROOT / "Data" / "Derived" / f"Network_Nodes_{date_token}.csv"
     edges = PROJECT_ROOT / "Data" / "Derived" / f"Network_Edges_{date_token}.csv"
@@ -207,6 +226,8 @@ def main() -> None:
     master = PROJECT_ROOT / "Data" / "Derived" / f"Master_Contact_List_{date_token}.csv"
     first_generation = PROJECT_ROOT / "Data" / "Derived" / f"First_Generation_Subtree_Sizes_{date_token}.csv"
     second_generation = PROJECT_ROOT / "Data" / "Derived" / f"Second_Generation_Subtree_Sizes_{date_token}.csv"
+    third_generation = PROJECT_ROOT / "Data" / "Derived" / f"Third_Generation_Subtree_Sizes_{date_token}.csv"
+    fourth_generation = PROJECT_ROOT / "Data" / "Derived" / f"Fourth_Generation_Subtree_Sizes_{date_token}.csv"
     html = PROJECT_ROOT / "Output" / f"mokyr-genealogy-{date_token}.html"
 
     required_scripts = [
@@ -214,6 +235,8 @@ def main() -> None:
         PROJECT_ROOT / "Code" / "Validation" / "validate_descriptive_inputs.py",
         PROJECT_ROOT / "Code" / "Network" / "describe_first_generation.py",
         PROJECT_ROOT / "Code" / "Network" / "describe_second_generation.py",
+        PROJECT_ROOT / "Code" / "Network" / "describe_third_generation.py",
+        PROJECT_ROOT / "Code" / "Network" / "describe_fourth_generation.py",
         PROJECT_ROOT / "Code" / "Network" / "build_master_list.py",
         PROJECT_ROOT / "Code" / "Network" / "build_outstanding_lists.py",
         PROJECT_ROOT / "Code" / "Network" / "viz_network.py",
@@ -236,7 +259,8 @@ def main() -> None:
     append_path_arg(build_network_cmd, "--email-recovery", email_recovery)
     append_path_arg(build_network_cmd, "--manual-nodes", manual_nodes)
     append_path_arg(build_network_cmd, "--manual-edges", manual_edges)
-    append_path_arg(build_network_cmd, "--backfill", backfill)
+    for bf in backfill_paths:
+        append_path_arg(build_network_cmd, "--backfill", bf)
     run_step("build_network", build_network_cmd)
 
     validate_inputs_cmd = [
@@ -278,6 +302,30 @@ def main() -> None:
         "--canon", str(canon.relative_to(PROJECT_ROOT)),
     ]
     run_step("describe_second_generation", describe_gen2_cmd)
+
+    describe_gen3_cmd = [
+        sys.executable,
+        "Code/Network/describe_third_generation.py",
+        "--date", date_token,
+        "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
+        "--edges", str(edges.relative_to(PROJECT_ROOT)),
+        "--coverage", str(coverage.relative_to(PROJECT_ROOT)),
+        "--generation", str(generation.relative_to(PROJECT_ROOT)),
+        "--canon", str(canon.relative_to(PROJECT_ROOT)),
+    ]
+    run_step("describe_third_generation", describe_gen3_cmd)
+
+    describe_gen4_cmd = [
+        sys.executable,
+        "Code/Network/describe_fourth_generation.py",
+        "--date", date_token,
+        "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
+        "--edges", str(edges.relative_to(PROJECT_ROOT)),
+        "--coverage", str(coverage.relative_to(PROJECT_ROOT)),
+        "--generation", str(generation.relative_to(PROJECT_ROOT)),
+        "--canon", str(canon.relative_to(PROJECT_ROOT)),
+    ]
+    run_step("describe_fourth_generation", describe_gen4_cmd)
 
     master_cmd = [
         sys.executable,
@@ -402,6 +450,16 @@ def main() -> None:
         PROJECT_ROOT / "Output" / f"Descriptive_Input_Validation_{date_token}.md",
         PROJECT_ROOT / "Data" / "Derived" / f"First_Generation_Profile_{date_token}.csv",
         PROJECT_ROOT / "Data" / "Derived" / f"Second_Generation_Profile_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Third_Generation_Headlines_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Third_Generation_Subtree_Sizes_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Third_Generation_Profile_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Third_Generation_Metadata_Coverage_{date_token}.csv",
+        PROJECT_ROOT / "Output" / f"Third_Generation_Descriptives_{date_token}.md",
+        PROJECT_ROOT / "Data" / "Derived" / f"Fourth_Generation_Headlines_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Fourth_Generation_Subtree_Sizes_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Fourth_Generation_Profile_{date_token}.csv",
+        PROJECT_ROOT / "Data" / "Derived" / f"Fourth_Generation_Metadata_Coverage_{date_token}.csv",
+        PROJECT_ROOT / "Output" / f"Fourth_Generation_Descriptives_{date_token}.md",
         PROJECT_ROOT / "Data" / "Derived" / f"Gen1_Student_Verification_Validation_{date_token}.csv",
         PROJECT_ROOT / "Data" / "Derived" / f"Gen1_Student_Verification_Summary_{date_token}.txt",
         PROJECT_ROOT / "Data" / "Derived" / f"Gen2_Student_Capture_Audit_{date_token}.csv",
