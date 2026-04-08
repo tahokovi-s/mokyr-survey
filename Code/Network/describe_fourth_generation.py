@@ -350,7 +350,7 @@ def write_profile(gen4_all, gen4_resp, out_path: Path):
         yes = sum(1 for node in cohort if node["has_students"] == "True")
         _add("has_students_by_cohort", label, "total", len(cohort))
         _add("has_students_by_cohort", label, "has_students", yes)
-        _add("has_students_by_cohort", label, "rate", round(yes / len(cohort), 4) if cohort else 0)
+        _add("has_students_by_cohort", label, "rate", round(yes / len(cohort), 4) if cohort else "n/a")
 
     with open(out_path, "w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["section", "label", "value", "count"])
@@ -515,7 +515,7 @@ def write_markdown(
     )
     _blank()
     _p(
-        "**Current snapshot note:** generation 5 is absent at `040126`, so all current "
+        f"**Current snapshot note:** generation 5 is absent at `{date_token}`, so all current "
         "gen-4 nodes are leaf nodes and every subtree size is zero."
     )
     _blank()
@@ -790,33 +790,46 @@ def write_markdown(
         f"have Q12=Yes without Q12a data. {validation_summary['unresolved_edges_total']} unresolved edges "
         "also reduce coverage."
     )
+    overlap = summed_descendants - unique_descendants
+    if overlap > 0:
+        _p(
+            f"2. **Subtree overlap.** {overlap} descendants appear in multiple gen-4 subtrees "
+            "(shared advisory relationships). Per-subtree sizes are correct; the sum of per-subtree "
+            f"sizes ({summed_descendants}) exceeds unique descendants ({unique_descendants})."
+        )
+    else:
+        _p(
+            f"2. **No subtree overlap.** All {unique_descendants} descendants reachable from gen-4 "
+            "appear in exactly one subtree. No shared advisory relationships across gen-4 advisors "
+            "at the gen-5+ level."
+        )
     _p(
-        f"2. **This generation is extremely sparse at `{date_token}`.** All {n_all} current gen-4 nodes "
+        f"3. **This generation is extremely sparse at `{date_token}`.** All {n_all} current gen-4 nodes "
         "are leaves, and generation 5 is absent. Subtree statistics should be interpreted as current-snapshot "
         "placeholders rather than stable lineage measures."
     )
     _p(
-        f"3. **Distributions include backfilled nonrespondents when available.** The {n_nonresp} non-respondent "
+        f"4. **Distributions include backfilled nonrespondents when available.** The {n_nonresp} non-respondent "
         "gen-4 nodes may receive metadata from the Gen 4 Nonrespondent Backfill, but until approved backfill "
         "rows exist most nonrespondent fields will remain blank. Has-students remains respondent-only "
         f"(N={n_resp}) because nonrespondent has_students=False is a mechanical default."
     )
     _p(
-        "4. **Country values should now be canonical in the node CSV.** This script retains a small alias map "
+        "5. **Country values should now be canonical in the node CSV.** This script retains a small alias map "
         "as a defensive fallback for older snapshots, but current rebuilds should already use short-form labels "
         "such as `United States` and `United Kingdom`."
     )
     _p(
-        f"5. **Canonical institution/employer mappings are incomplete.** {validation_summary['unmapped_phd_count']} "
+        f"6. **Canonical institution/employer mappings are incomplete.** {validation_summary['unmapped_phd_count']} "
         f"PhD institution values and {validation_summary['unmapped_employer_count']} employer values lack canonical "
         "mappings. Affected nodes appear as blank in canonical counts but retain raw values in the subtree roster."
     )
     _p(
-        f"6. **{validation_summary['blank_generation_count']} respondent nodes have no assigned generation** and are "
+        f"7. **{validation_summary['blank_generation_count']} respondent nodes have no assigned generation** and are "
         "excluded from all generation-specific counts."
     )
     _p(
-        "7. **Generation assignments use topology-corrected values.** "
+        "8. **Generation assignments use topology-corrected values.** "
         f"{validation_summary['topology_overrode_q8_count']} respondents had Q8 overridden by edge topology; "
         f"{validation_summary['hardcoded_q8_override_count']} had hardcoded Q8 adjustments. The `generation` "
         "column reflects final assignments."
