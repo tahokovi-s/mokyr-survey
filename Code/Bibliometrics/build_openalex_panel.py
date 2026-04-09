@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import sys
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -54,6 +55,100 @@ NICKNAME_GROUPS = [
     {"bill", "william"},
     {"alex", "alexander", "alexandra"},
 ]
+
+SURNAME_PARTICLES = {"de", "von", "van", "di", "el", "al", "bin", "la"}
+NON_ECONOMICS_FIELDS = {
+    "Physics", "Chemistry", "Biology", "Materials Science", "Medicine",
+    "Nursing", "Engineering", "Computer Science", "Environmental Science",
+    "Agricultural and Biological Sciences",
+    "Biochemistry, Genetics and Molecular Biology",
+}
+VALID_MANUAL_DECISIONS = {"keep_match", "approve_match", "replace_match", "reject_match", "needs_more_review"}
+MANUAL_MATCH_DECISIONS = {"keep_match", "approve_match", "replace_match"}
+PUBLIC_BLOCKING_FLAGS = {"name_mismatch_warning", "temporal_implausibility", "field_mismatch"}
+
+
+def strip_html(text: str) -> str:
+    """Remove HTML tags from text."""
+    return re.sub(r"<[^>]+>", "", text).strip()
+
+
+def strip_diacritics(text: str) -> str:
+    """Fold accented characters to their ASCII equivalents (e.g., e->e, n->n)."""
+    nfkd = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in nfkd if not unicodedata.combining(ch))
+
+
+def normalize_text(value: str, *, fold_diacritics: bool = True) -> str:
+    text = (value or "").strip().lower()
+    text = text.replace("\u2019", "'").replace("\u02bc", "'")
+    if fold_diacritics:
+        text = strip_diacritics(text)
+    text = re.sub(r"[()]", " ", text)
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def display_name_compatible(scholar: dict[str, Any], candidate: dict[str, Any]) -> bool:
+    """Check that at least one non-trivial surname token from the scholar appears
+    in the candidate's display_name.  Prevents cross-family auto-matches."""
+    last_name_raw = (scholar.get("last_name", "") or "").strip()
+    # Strip parentheticals
+    last_name_clean = re.sub(r"\([^)]*\)", " ", last_name_raw).strip()
+    last_name_clean = re.sub(r"\s+", " ", last_name_clean)
+    scholar_tokens = set(normalize_text(last_name_clean).split())
+
+    candidate_display = normalize_text(str(candidate.get("display_name", "") or ""))
+    candidate_tokens = set(candidate_display.split())
+
+    for token in scholar_tokens:
+        if len(token) >= 3 and token in candidate_tokens:
+            return True
+    return False
+
+
+def flag_suspicious_profile(scholar: dict[str, Any], candidate: dict[str, Any],
+                            works: list[dict[str, Any]], candidate_count: int) -> list[str]:
+    """Return a list of warning strings for suspicious match characteristics."""
+    flags: list[str] = []
+
+    if candidate_count == DEFAULT_AUTHOR_SEARCH_PAGE_SIZE:
+        flags.append("high_candidate_count")
+
+    phd_year_raw = (scholar.get("phd_year", "") or "").strip()
+    phd_year = None
+    if phd_year_raw:
+        try:
+            phd_year = int(phd_year_raw)
+        except ValueError:
+            pass
+
+    # Check most-cited paper timing
+    if works and phd_year is not None:
+        most_cited = works[0] if works else {}
+        mc_year_raw = most_cited.get("publication_year")
+        if mc_year_raw:
+            try:
+                mc_year = int(mc_year_raw)
+                current_year = datetime.now().year
+                if mc_year < phd_year - 20:
+                    flags.append("temporal_implausibility")
+                elif mc_year > current_year:
+                    flags.append("temporal_implausibility")
+            except (TypeError, ValueError):
+                pass
+
+    # Field mismatch
+    topic_info = extract_primary_topic(candidate)
+    primary_field = topic_info.get("primary_field", "")
+    if primary_field in NON_ECONOMICS_FIELDS:
+        flags.append("field_mismatch")
+
+    # Name compatibility
+    if not display_name_compatible(scholar, candidate):
+        flags.append("name_mismatch_warning")
+
+    return flags
 
 
 def parse_mmddyy(token: str) -> datetime:
@@ -103,20 +198,84 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def normalize_text(value: str) -> str:
-    text = (value or "").strip().lower()
-    text = text.replace("\u2019", "'").replace("\u02bc", "'")
-    text = re.sub(r"[()]", " ", text)
-    text = re.sub(r"[^a-z0-9]+", " ", text)
-    return re.sub(r"\s+", " ", text).strip()
-
-
 def normalize_affiliation(value: str) -> str:
     text = normalize_text(value)
     text = re.sub(r"\bdepartment of\b", " ", text)
     text = re.sub(r"\bschool of\b", " ", text)
     text = re.sub(r"\bcollege of\b", " ", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def blank_topic_info() -> dict[str, str]:
+    return {"primary_topic": "", "primary_subfield": "", "primary_field": "", "primary_domain": ""}
+
+
+def openalex_id_suffix(openalex_id: str) -> str:
+    return (openalex_id or "").rstrip("/").rsplit("/", 1)[-1]
+
+
+def normalize_manual_decision(decision: str) -> str:
+    return (decision or "").strip().lower()
+
+
+def manual_selected_openalex_id(decision_row: dict[str, str]) -> str:
+    decision = normalize_manual_decision(decision_row.get("decision", ""))
+    current_id = (decision_row.get("current_openalex_id", "") or "").strip()
+    proposed_id = (decision_row.get("proposed_openalex_id", "") or "").strip()
+    if decision == "keep_match":
+        return proposed_id or current_id
+    if decision in {"approve_match", "replace_match"}:
+        return proposed_id
+    if decision == "needs_more_review":
+        return proposed_id or current_id
+    return ""
+
+
+def manual_decision_source(decision: str) -> str:
+    if not decision:
+        return "automatic"
+    return {
+        "keep_match": "manual_keep",
+        "approve_match": "manual_approve",
+        "replace_match": "manual_replace",
+        "reject_match": "manual_reject",
+        "needs_more_review": "manual_review",
+    }[decision]
+
+
+def load_manual_decisions(path: Path) -> dict[str, dict[str, str]]:
+    if not path.exists():
+        raise FileNotFoundError(f"Manual decisions CSV not found: {path}")
+
+    decisions: dict[str, dict[str, str]] = {}
+    for line_no, raw_row in enumerate(load_csv(path), start=2):
+        row = dict(raw_row)
+        node_id = (row.get("node_id", "") or "").strip()
+        if not node_id:
+            raise ValueError(f"Manual decisions row {line_no} is missing node_id.")
+        if node_id in decisions:
+            raise ValueError(f"Manual decisions CSV contains duplicate node_id {node_id} (line {line_no}).")
+
+        decision = normalize_manual_decision(row.get("decision", ""))
+        if decision not in VALID_MANUAL_DECISIONS:
+            raise ValueError(
+                f"Manual decisions row {line_no} has unsupported decision '{row.get('decision', '')}'. "
+                f"Allowed values: {', '.join(sorted(VALID_MANUAL_DECISIONS))}."
+            )
+
+        current_id = (row.get("current_openalex_id", "") or "").strip()
+        proposed_id = (row.get("proposed_openalex_id", "") or "").strip()
+        if decision in {"approve_match", "replace_match"} and not proposed_id:
+            raise ValueError(f"Manual decisions row {line_no} for {node_id} is missing proposed_openalex_id.")
+        if decision == "keep_match" and not (current_id or proposed_id):
+            raise ValueError(f"Manual decisions row {line_no} for {node_id} needs current_openalex_id or proposed_openalex_id.")
+
+        row["node_id"] = node_id
+        row["decision"] = decision
+        row["current_openalex_id"] = current_id
+        row["proposed_openalex_id"] = proposed_id
+        decisions[node_id] = row
+    return decisions
 
 
 def first_name_alias_match(left: str, right: str) -> bool:
@@ -167,10 +326,47 @@ def build_name_queries(row: dict[str, Any]) -> list[str]:
     last_name = (row.get("last_name", "") or "").strip()
     if first_name and last_name:
         queries.append(f"{first_name} {last_name}")
+
+    # Strip diacritics: e->e, n->n, u->u, o->o, etc.
+    diacritics_stripped: list[str] = []
+    for query in list(queries):
+        folded = strip_diacritics(query)
+        if folded != query:
+            diacritics_stripped.append(folded)
+    queries.extend(diacritics_stripped)
+
+    # Strip quoted nicknames: 'Oeivind "Evan" Schoeyen' -> ["Oeivind Schoeyen", "Evan Schoeyen"]
+    full_name = f"{first_name} {last_name}".strip()
+    nickname_match = re.search(r'"([^"]+)"', full_name)
+    if nickname_match:
+        nickname = nickname_match.group(1).strip()
+        name_without_nickname = re.sub(r'"[^"]*"', " ", full_name).strip()
+        name_without_nickname = re.sub(r"\s+", " ", name_without_nickname)
+        if name_without_nickname:
+            queries.append(name_without_nickname)
+        # Try nickname as first name + remaining surname tokens
+        remaining_parts = re.sub(r'"[^"]*"', " ", full_name).strip().split()
+        if nickname and remaining_parts:
+            # Use the last token(s) as surname
+            queries.append(f"{nickname} {remaining_parts[-1]}")
+
+    # Compound surnames with particles: try with and without
+    last_tokens = last_name.split()
+    if len(last_tokens) >= 2:
+        first_token_lower = last_tokens[0].lower()
+        if first_token_lower in SURNAME_PARTICLES and first_name:
+            surname_without_particle = " ".join(last_tokens[1:])
+            queries.append(f"{first_name} {surname_without_particle}")
+
+    # Very long names (4+ tokens): try first + last token only
+    all_tokens = full_name.split()
+    if len(all_tokens) >= 4 and first_name and last_name:
+        queries.append(f"{all_tokens[0]} {all_tokens[-1]}")
+
     deduped = []
     seen = set()
     for query in queries:
-        key = normalize_text(query)
+        key = normalize_text(query, fold_diacritics=False)
         if key and key not in seen:
             seen.add(key)
             deduped.append(query)
@@ -313,7 +509,7 @@ def name_match_details(scholar: dict[str, Any], candidate: dict[str, Any]) -> tu
             if candidate_first and scholar_initial and candidate_first.startswith(scholar_initial):
                 return 0.45, "first_initial_last_match"
         if scholar_first and scholar_first in candidate_name and scholar_last in candidate_name:
-            return 0.50, "contains_first_last"
+            return 0.30, "contains_first_last"
     return 0.0, "no_name_match"
 
 
@@ -369,10 +565,13 @@ def timing_match_score(scholar: dict[str, Any], candidate: dict[str, Any]) -> tu
     earliest_year = earliest_publication_year(candidate)
     if earliest_year is None:
         return 0.0, ""
+    # Hard veto: impossibly early publication
+    if earliest_year < phd_year - 30:
+        return -0.50, f"earliest_pub={earliest_year} temporal_impossibility"
     if phd_year - 12 <= earliest_year <= phd_year + 8:
         return 0.10, f"earliest_pub={earliest_year}"
-    if earliest_year > phd_year + 15:
-        return -0.10, f"earliest_pub={earliest_year}"
+    if earliest_year > phd_year + 15 or earliest_year < phd_year - 25:
+        return -0.20, f"earliest_pub={earliest_year}"
     return 0.0, f"earliest_pub={earliest_year}"
 
 
@@ -394,7 +593,8 @@ def score_candidate(scholar: dict[str, Any], candidate: dict[str, Any]) -> dict[
     }
 
 
-def determine_match_status(scored_candidates: list[dict[str, Any]]) -> tuple[str, str]:
+def determine_match_status(scored_candidates: list[dict[str, Any]],
+                           scholar: dict[str, Any] | None = None) -> tuple[str, str]:
     if not scored_candidates:
         return "no_match", "No candidates returned by OpenAlex search."
 
@@ -402,23 +602,72 @@ def determine_match_status(scored_candidates: list[dict[str, Any]]) -> tuple[str
     second = scored_candidates[1] if len(scored_candidates) > 1 else None
     gap = best["score"] - (second["score"] if second else 0.0)
 
-    if best["score"] >= AUTO_MATCH_SCORE and (second is None or gap >= MIN_CLEAR_GAP):
+    if best["score"] >= AUTO_MATCH_SCORE and (second is None or gap >= MIN_CLEAR_GAP - 1e-9):
+        # Display-name compatibility gate: verify surname overlap before auto-matching
+        if scholar is not None and not display_name_compatible(scholar, best["candidate"]):
+            return "ambiguous_manual_review", "Auto-match blocked: display_name does not share a surname token."
         return "matched", "High-confidence unique match."
 
     if (
         best["score"] >= SECONDARY_AUTO_MATCH_SCORE
         and best["name_score"] >= 0.55
         and best["institution_score"] >= 0.12
-        and (second is None or gap >= 0.15)
+        and (second is None or gap >= 0.15 - 1e-9)
     ):
+        # Display-name compatibility gate
+        if scholar is not None and not display_name_compatible(scholar, best["candidate"]):
+            return "ambiguous_manual_review", "Auto-match blocked: display_name does not share a surname token."
         return "matched", "Name and institution align strongly."
 
     if best["score"] >= AMBIGUOUS_SCORE:
-        if second and second["score"] >= best["score"] - MIN_CLEAR_GAP:
+        if second and second["score"] >= best["score"] - MIN_CLEAR_GAP + 1e-9:
             return "ambiguous_manual_review", "Top candidates are too close to auto-resolve safely."
         return "ambiguous_manual_review", "Candidate is plausible but below auto-match threshold."
 
     return "no_match", "No candidate cleared the minimum plausibility threshold."
+
+
+def fetch_author_by_openalex_id(client: "CachedOpenAlexClient", openalex_id: str) -> dict[str, Any]:
+    author_short = openalex_id_suffix(openalex_id)
+    if not author_short:
+        return {}
+    try:
+        data, _headers = client.get_json(f"/authors/{author_short}")
+    except SystemExit as exc:
+        raise ValueError(f"Failed to fetch OpenAlex author {openalex_id}: {exc}") from exc
+    return data if data else {}
+
+
+def selected_candidate_context(
+    scholar: dict[str, Any],
+    scored_candidates: list[dict[str, Any]],
+    selected_candidate: dict[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    selected_id = str((selected_candidate or {}).get("id", "") or "")
+    selected_scored = None
+    remaining: list[dict[str, Any]] = []
+    for scored in scored_candidates:
+        candidate_id = str((scored.get("candidate") or {}).get("id", "") or "")
+        if selected_id and candidate_id == selected_id and selected_scored is None:
+            selected_scored = scored
+        else:
+            remaining.append(scored)
+
+    if selected_scored is None and selected_candidate:
+        selected_scored = score_candidate(scholar, selected_candidate)
+    second = remaining[0] if remaining else None
+    return selected_scored, second
+
+
+def compute_public_ready(match_status: str, suspicious_flags: list[str], decision_source: str) -> bool:
+    if match_status != "matched":
+        return False
+    flags = set(suspicious_flags)
+    if flags & PUBLIC_BLOCKING_FLAGS:
+        return False
+    if "high_candidate_count" in flags and decision_source == "automatic":
+        return False
+    return True
 
 
 def cache_key(path: str, params: dict[str, Any] | None) -> str:
@@ -515,7 +764,7 @@ def top_paper_rows_for_scholar(node_id: str, author_id: str, works: list[dict[st
                 "openalex_author_id": author_id,
                 "paper_rank": rank,
                 "openalex_work_id": str(work.get("id", "") or ""),
-                "title": str(work.get("display_name", "") or ""),
+                "title": strip_html(str(work.get("display_name", "") or "")),
                 "doi": str(work.get("doi", "") or ""),
                 "publication_year": str(work.get("publication_year", "") or ""),
                 "cited_by_count": str(work.get("cited_by_count", "") or ""),
@@ -526,7 +775,72 @@ def top_paper_rows_for_scholar(node_id: str, author_id: str, works: list[dict[st
     return rows
 
 
-def serialize_scholar_json(panel_row: dict[str, Any], top_papers: list[dict[str, Any]]) -> dict[str, Any]:
+def serialize_scholar_json(
+    panel_row: dict[str, Any],
+    top_papers: list[dict[str, Any]],
+    *,
+    public_mode: bool = False,
+) -> dict[str, Any]:
+    public_ready = panel_row.get("public_ready", "0") == "1"
+    openalex_payload = {
+        "id": panel_row["openalex_id"],
+        "display_name": panel_row["openalex_display_name"],
+        "works_count": int(panel_row["works_count"] or 0) if panel_row["works_count"] else None,
+        "cited_by_count": int(panel_row["cited_by_count"] or 0) if panel_row["cited_by_count"] else None,
+        "h_index": int(panel_row["h_index"] or 0) if panel_row["h_index"] else None,
+        "i10_index": int(panel_row["i10_index"] or 0) if panel_row["i10_index"] else None,
+        "current_institution": panel_row["current_institution_openalex"],
+        "primary_field": panel_row["primary_field"],
+        "primary_subfield": panel_row["primary_subfield"],
+        "primary_topic": panel_row["primary_topic"],
+        "primary_domain": panel_row["primary_domain"],
+        "counts_by_year": json.loads(panel_row["counts_by_year_json"]) if panel_row["counts_by_year_json"] else [],
+        "institutions": json.loads(panel_row["institutions_openalex_json"]) if panel_row["institutions_openalex_json"] else [],
+        "topics": json.loads(panel_row["topics_json"]) if panel_row["topics_json"] else [],
+    }
+    most_cited_payload = {
+        "openalex_work_id": panel_row["most_cited_paper_id"],
+        "title": panel_row["most_cited_paper_title"],
+        "doi": panel_row["most_cited_paper_doi"],
+        "publication_year": int(panel_row["most_cited_paper_year"]) if panel_row["most_cited_paper_year"] else None,
+        "cited_by_count": int(panel_row["most_cited_paper_cited_by_count"]) if panel_row["most_cited_paper_cited_by_count"] else None,
+        "venue": panel_row["most_cited_paper_venue"],
+        "primary_topic": panel_row["most_cited_paper_topic"],
+    }
+    top_papers_payload = [
+        {
+            "rank": int(row["paper_rank"]),
+            "openalex_work_id": row["openalex_work_id"],
+            "title": row["title"],
+            "doi": row["doi"],
+            "publication_year": int(row["publication_year"]) if row["publication_year"] else None,
+            "cited_by_count": int(row["cited_by_count"]) if row["cited_by_count"] else None,
+            "venue": row["venue"],
+            "primary_topic": row["primary_topic"],
+        }
+        for row in top_papers
+    ]
+
+    if public_mode and not public_ready:
+        openalex_payload = {
+            "id": "",
+            "display_name": "",
+            "works_count": None,
+            "cited_by_count": None,
+            "h_index": None,
+            "i10_index": None,
+            "current_institution": "",
+            "primary_field": "",
+            "primary_subfield": "",
+            "primary_topic": "",
+            "primary_domain": "",
+            "counts_by_year": [],
+            "institutions": [],
+            "topics": [],
+        }
+        most_cited_payload = {}
+        top_papers_payload = []
+
     return {
         "node_id": panel_row["node_id"],
         "name": panel_row["full_name"],
@@ -540,44 +854,13 @@ def serialize_scholar_json(panel_row: dict[str, Any], top_papers: list[dict[str,
         "match_status": panel_row["match_status"],
         "match_confidence": float(panel_row["match_confidence"] or 0),
         "needs_manual_review": panel_row["needs_manual_review"] == "1",
-        "openalex": {
-            "id": panel_row["openalex_id"],
-            "display_name": panel_row["openalex_display_name"],
-            "works_count": int(panel_row["works_count"] or 0) if panel_row["works_count"] else None,
-            "cited_by_count": int(panel_row["cited_by_count"] or 0) if panel_row["cited_by_count"] else None,
-            "h_index": int(panel_row["h_index"] or 0) if panel_row["h_index"] else None,
-            "i10_index": int(panel_row["i10_index"] or 0) if panel_row["i10_index"] else None,
-            "current_institution": panel_row["current_institution_openalex"],
-            "primary_field": panel_row["primary_field"],
-            "primary_subfield": panel_row["primary_subfield"],
-            "primary_topic": panel_row["primary_topic"],
-            "primary_domain": panel_row["primary_domain"],
-            "counts_by_year": json.loads(panel_row["counts_by_year_json"]) if panel_row["counts_by_year_json"] else [],
-            "institutions": json.loads(panel_row["institutions_openalex_json"]) if panel_row["institutions_openalex_json"] else [],
-            "topics": json.loads(panel_row["topics_json"]) if panel_row["topics_json"] else [],
-        },
-        "most_cited_paper": {
-            "openalex_work_id": panel_row["most_cited_paper_id"],
-            "title": panel_row["most_cited_paper_title"],
-            "doi": panel_row["most_cited_paper_doi"],
-            "publication_year": int(panel_row["most_cited_paper_year"]) if panel_row["most_cited_paper_year"] else None,
-            "cited_by_count": int(panel_row["most_cited_paper_cited_by_count"]) if panel_row["most_cited_paper_cited_by_count"] else None,
-            "venue": panel_row["most_cited_paper_venue"],
-            "primary_topic": panel_row["most_cited_paper_topic"],
-        },
-        "top_papers": [
-            {
-                "rank": int(row["paper_rank"]),
-                "openalex_work_id": row["openalex_work_id"],
-                "title": row["title"],
-                "doi": row["doi"],
-                "publication_year": int(row["publication_year"]) if row["publication_year"] else None,
-                "cited_by_count": int(row["cited_by_count"]) if row["cited_by_count"] else None,
-                "venue": row["venue"],
-                "primary_topic": row["primary_topic"],
-            }
-            for row in top_papers
-        ],
+        "manual_decision": panel_row.get("manual_decision", ""),
+        "decision_source": panel_row.get("decision_source", "automatic"),
+        "public_ready": public_ready,
+        "suspicious_flags": [f for f in (panel_row.get("suspicious_flags", "") or "").split("; ") if f],
+        "openalex": openalex_payload,
+        "most_cited_paper": most_cited_payload,
+        "top_papers": top_papers_payload,
     }
 
 
@@ -603,6 +886,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-panel", default=None, help="Output CSV for the canonical bibliometric panel")
     parser.add_argument("--output-json", default=None, help="Output JSON for the website-friendly panel")
     parser.add_argument("--website-output", default=None, help="Optional additional JSON copy for the static website")
+    parser.add_argument("--manual-decisions", default=None, help="Path to manual decisions CSV (columns: node_id, full_name, current_openalex_id, proposed_openalex_id, decision, reason, reviewer)")
     return parser
 
 
@@ -652,6 +936,12 @@ def main() -> None:
     node_rows = load_csv(nodes_path) if nodes_path.exists() else []
     node_by_id = {row.get("node_id", "").strip(): row for row in node_rows}
 
+    manual_decisions: dict[str, dict[str, str]] = {}
+    if args.manual_decisions:
+        manual_path = resolve_path(args.manual_decisions)
+        manual_decisions = load_manual_decisions(manual_path)
+        print(f"Loaded {len(manual_decisions)} manual decisions from {manual_path}")
+
     if args.limit:
         master_rows = master_rows[: args.limit]
 
@@ -685,31 +975,90 @@ def main() -> None:
 
         candidates, queries = search_openalex_candidates(client, scholar)
         scored_candidates = choose_best_candidate(scholar, candidates)
-        match_status, review_note = determine_match_status(scored_candidates)
-        best = scored_candidates[0] if scored_candidates else None
-        second = scored_candidates[1] if len(scored_candidates) > 1 else None
+        best_search = scored_candidates[0] if scored_candidates else None
+        second_search = scored_candidates[1] if len(scored_candidates) > 1 else None
 
-        openalex_candidate = best["candidate"] if best and match_status == "matched" else {}
+        manual_dec = manual_decisions.get(node_id)
+        manual_decision = (manual_dec.get("decision", "") or "").strip().lower() if manual_dec else ""
+        decision_source = manual_decision_source(manual_decision)
+        selected_scored = None
+        second = second_search
+        openalex_candidate: dict[str, Any] = {}
+        current_institution_openalex = ""
+        topic_info = blank_topic_info()
+        candidate_institutions: list[str] = []
+        counts_by_year: list[dict[str, Any]] = []
+        topic_share: list[dict[str, Any]] = []
+        works: list[dict[str, Any]] = []
+        review_note = ""
+        match_status = "no_match"
+
+        def populate_selected_candidate(candidate: dict[str, Any]) -> None:
+            nonlocal openalex_candidate, current_institution_openalex, topic_info
+            nonlocal candidate_institutions, counts_by_year, topic_share, works
+            openalex_candidate = candidate or {}
+            current_institution_openalex = extract_current_institution(openalex_candidate) if openalex_candidate else ""
+            topic_info = extract_primary_topic(openalex_candidate) if openalex_candidate else blank_topic_info()
+            candidate_institutions = candidate_institution_names(openalex_candidate) if openalex_candidate else []
+            counts_by_year = openalex_candidate.get("counts_by_year") or []
+            topic_share = openalex_candidate.get("topic_share") or openalex_candidate.get("topics") or []
+            author_id = openalex_id_suffix(str(openalex_candidate.get("id", "") or ""))
+            if not author_id:
+                works = []
+                return
+            try:
+                works = fetch_all_works_for_author(client, author_id, args.max_works_pages)
+            except SystemExit as exc:
+                raise ValueError(f"Failed to fetch works for {node_id} ({full_name or node_id}) using author {author_id}: {exc}") from exc
+
+        if manual_decision == "reject_match":
+            match_status = "rejected_manual"
+            review_note = f"Manual rejection: {(manual_dec.get('reason', '') or '').strip()}"
+        elif manual_decision in MANUAL_MATCH_DECISIONS:
+            selected_id = manual_selected_openalex_id(manual_dec or {})
+            openalex_candidate = fetch_author_by_openalex_id(client, selected_id)
+            if not openalex_candidate:
+                raise ValueError(f"Manual decision for {node_id} references missing OpenAlex author '{selected_id}'.")
+            selected_scored, second = selected_candidate_context(scholar, scored_candidates, openalex_candidate)
+            match_status = "matched"
+            review_note = f"Manual {manual_decision}: {(manual_dec.get('reason', '') or '').strip()}"
+            populate_selected_candidate(openalex_candidate)
+        elif manual_decision == "needs_more_review":
+            match_status = "needs_manual_review"
+            review_note = f"Flagged for review: {(manual_dec.get('reason', '') or '').strip()}"
+            selected_id = manual_selected_openalex_id(manual_dec or {})
+            if selected_id:
+                openalex_candidate = fetch_author_by_openalex_id(client, selected_id)
+                if not openalex_candidate:
+                    raise ValueError(f"Manual review row for {node_id} references missing OpenAlex author '{selected_id}'.")
+                selected_scored, second = selected_candidate_context(scholar, scored_candidates, openalex_candidate)
+                populate_selected_candidate(openalex_candidate)
+            elif best_search:
+                openalex_candidate = best_search["candidate"]
+                selected_scored = best_search
+                second = second_search
+                populate_selected_candidate(openalex_candidate)
+        else:
+            match_status, review_note = determine_match_status(scored_candidates, scholar)
+            if best_search and match_status == "matched":
+                selected_scored = best_search
+                second = second_search
+                populate_selected_candidate(best_search["candidate"])
+
         openalex_id = str(openalex_candidate.get("id", "") or "")
         openalex_display_name = str(openalex_candidate.get("display_name", "") or "")
-        current_institution_openalex = extract_current_institution(openalex_candidate) if openalex_candidate else ""
-        topic_info = extract_primary_topic(openalex_candidate) if openalex_candidate else {
-            "primary_topic": "",
-            "primary_subfield": "",
-            "primary_field": "",
-            "primary_domain": "",
-        }
-        candidate_institutions = candidate_institution_names(openalex_candidate) if openalex_candidate else []
-        counts_by_year = openalex_candidate.get("counts_by_year") or []
-        topic_share = openalex_candidate.get("topic_share") or openalex_candidate.get("topics") or []
-
-        works = fetch_all_works_for_author(client, openalex_id.rsplit("/", 1)[-1], args.max_works_pages) if openalex_id else []
         scholar_top_papers = top_paper_rows_for_scholar(node_id, openalex_id, works)
         top_paper_rows.extend(scholar_top_papers)
         most_cited = scholar_top_papers[0] if scholar_top_papers else {}
 
-        match_confidence = best["score"] if best else 0.0
-        matched_institutions = "; ".join(best["institution_pairs"]) if best else ""
+        suspicious_flags_list = flag_suspicious_profile(
+            scholar, openalex_candidate, works, len(scored_candidates)
+        ) if openalex_candidate else []
+        suspicious_flags_str = "; ".join(suspicious_flags_list)
+        public_ready = compute_public_ready(match_status, suspicious_flags_list, decision_source)
+
+        match_confidence = selected_scored["score"] if selected_scored else 0.0
+        matched_institutions = "; ".join(selected_scored["institution_pairs"]) if selected_scored else ""
         matches_row = {
             "node_id": node_id,
             "first_name": scholar["first_name"],
@@ -722,11 +1071,13 @@ def main() -> None:
             "phd_year": scholar["phd_year"],
             "search_queries": "; ".join(queries),
             "match_status": match_status,
-            "match_confidence": f"{match_confidence:.4f}" if best else "",
-            "match_method": best["name_match_type"] if best else "",
+            "match_confidence": f"{match_confidence:.4f}" if selected_scored else "",
+            "match_method": selected_scored["name_match_type"] if selected_scored else "",
+            "manual_decision": manual_decision,
+            "decision_source": decision_source,
             "review_notes": review_note,
             "candidate_count": len(scored_candidates),
-            "best_candidate_score": f"{best['score']:.4f}" if best else "",
+            "best_candidate_score": f"{selected_scored['score']:.4f}" if selected_scored else "",
             "second_candidate_score": f"{second['score']:.4f}" if second else "",
             "matched_institutions": matched_institutions,
             "openalex_id": openalex_id,
@@ -735,6 +1086,8 @@ def main() -> None:
             "cited_by_count": str(openalex_candidate.get("cited_by_count", "") or ""),
             "h_index": str(((openalex_candidate.get("summary_stats") or {}).get("h_index", "")) or ""),
             "i10_index": str(((openalex_candidate.get("summary_stats") or {}).get("i10_index", "")) or ""),
+            "public_ready": "1" if public_ready else "0",
+            "suspicious_flags": suspicious_flags_str,
         }
         matches_rows.append(matches_row)
 
@@ -804,9 +1157,12 @@ def main() -> None:
                 "openalex_display_name": openalex_display_name,
                 "openalex_url": openalex_id,
                 "match_status": match_status,
-                "match_confidence": f"{match_confidence:.4f}" if best else "",
-                "match_method": best["name_match_type"] if best else "",
+                "match_confidence": f"{match_confidence:.4f}" if selected_scored else "",
+                "match_method": selected_scored["name_match_type"] if selected_scored else "",
                 "needs_manual_review": "1" if match_status != "matched" else "0",
+                "manual_decision": manual_decision,
+                "decision_source": decision_source,
+                "public_ready": "1" if public_ready else "0",
                 "review_notes": review_note,
                 "works_count": str(openalex_candidate.get("works_count", "") or ""),
                 "cited_by_count": str(openalex_candidate.get("cited_by_count", "") or ""),
@@ -829,6 +1185,7 @@ def main() -> None:
                 "most_cited_paper_cited_by_count": most_cited.get("cited_by_count", ""),
                 "most_cited_paper_venue": most_cited.get("venue", ""),
                 "most_cited_paper_topic": most_cited.get("primary_topic", ""),
+                "suspicious_flags": suspicious_flags_str,
             }
         )
 
@@ -846,6 +1203,8 @@ def main() -> None:
         "match_status",
         "match_confidence",
         "match_method",
+        "manual_decision",
+        "decision_source",
         "review_notes",
         "candidate_count",
         "best_candidate_score",
@@ -857,6 +1216,8 @@ def main() -> None:
         "cited_by_count",
         "h_index",
         "i10_index",
+        "public_ready",
+        "suspicious_flags",
     ]
     review_fields = [
         "node_id",
@@ -908,6 +1269,9 @@ def main() -> None:
         "match_confidence",
         "match_method",
         "needs_manual_review",
+        "manual_decision",
+        "decision_source",
+        "public_ready",
         "review_notes",
         "works_count",
         "cited_by_count",
@@ -930,6 +1294,7 @@ def main() -> None:
         "most_cited_paper_cited_by_count",
         "most_cited_paper_venue",
         "most_cited_paper_topic",
+        "suspicious_flags",
     ]
 
     write_csv(matches_out, match_fields, matches_rows)
@@ -943,14 +1308,23 @@ def main() -> None:
     for rows in top_papers_by_node.values():
         rows.sort(key=lambda row: int(row["paper_rank"]))
 
-    website_payload = {
+    analyst_payload = {
         "snapshot_date": date_token,
         "source": "OpenAlex",
         "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "scholars": [serialize_scholar_json(row, top_papers_by_node.get(row["node_id"], [])) for row in panel_rows],
     }
-    write_json(json_out, website_payload)
+    write_json(json_out, analyst_payload)
     if website_out:
+        website_payload = {
+            "snapshot_date": date_token,
+            "source": "OpenAlex",
+            "built_at": analyst_payload["built_at"],
+            "scholars": [
+                serialize_scholar_json(row, top_papers_by_node.get(row["node_id"], []), public_mode=True)
+                for row in panel_rows
+            ],
+        }
         write_json(website_out, website_payload)
 
     status_counts = defaultdict(int)
@@ -959,8 +1333,10 @@ def main() -> None:
     print("\n=== OpenAlex Panel Summary ===")
     print(f"Date token:             {date_token}")
     print(f"Scholars processed:     {len(panel_rows)}")
-    for status in ("matched", "ambiguous_manual_review", "no_match"):
-        print(f"{status}:".ljust(24) + f"{status_counts.get(status, 0)}")
+    for status in ("matched", "ambiguous_manual_review", "no_match", "rejected_manual", "needs_manual_review"):
+        count = status_counts.get(status, 0)
+        if count:
+            print(f"{status}:".ljust(24) + f"{count}")
     print(f"Top-paper rows:         {len(top_paper_rows)}")
     print(f"Matches CSV:            {matches_out}")
     print(f"Review CSV:             {review_out}")

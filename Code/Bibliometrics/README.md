@@ -72,6 +72,14 @@ Build the dated OpenAlex match panel from the master list:
 python3 Code/Bibliometrics/build_openalex_panel.py --date 040126
 ```
 
+Apply a reviewed decision file during the build:
+
+```bash
+python3 Code/Bibliometrics/build_openalex_panel.py \
+  --date 040126 \
+  --manual-decisions Data/Derived/OpenAlex_All_Decisions_040126.csv
+```
+
 By default, the pipeline fetches only the first `works` page per matched author.
 Because works are sorted by `cited_by_count:desc`, that is enough to recover the
 top 10 most-cited papers while keeping refreshes fast. Pass
@@ -90,5 +98,11 @@ Optional website copy:
 ```bash
 python3 Code/Bibliometrics/build_openalex_panel.py \
   --date 040126 \
+  --manual-decisions Data/Derived/OpenAlex_All_Decisions_040126.csv \
   --website-output mokyr-legacy-site/assets/data/bibliometric-panel.json
 ```
+
+The dated JSON in `Data/Derived/` remains the full analyst artifact. The
+optional website copy is filtered for public use: unresolved or suspicious rows
+stay in the file with `public_ready=false`, but top-paper and topic fields are
+suppressed unless the row is public-safe.
