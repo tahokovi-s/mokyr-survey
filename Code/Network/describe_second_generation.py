@@ -45,8 +45,8 @@ PHD_YEAR_BINS = [
 # ------------------------------------------------------------------
 # Country harmonization
 # ------------------------------------------------------------------
-# Survey respondents use Qualtrics long-form country names; backfilled
-# nonrespondents use short names. Harmonize for counting.
+# Current node builds should already use canonical short-form country
+# labels. Keep a small alias map as a defensive fallback for older snapshots.
 
 COUNTRY_HARMONIZATION = {
     "United States of America": "United States",
@@ -692,8 +692,8 @@ def write_markdown(gen2_all, gen2_resp, gen2_nonresp, subtree_stats,
     _blank()
     _p(f"- N with country: {sum(country_counter.values())} / {n_all}")
     _p(
-        "- Country values are harmonized for display "
-        "(e.g., \"United States of America\" -> \"United States\")."
+        "- Country counts are reported using canonical short-form labels "
+        "(e.g., \"United States\")."
     )
     _blank()
     _p("| Country | Count |")
@@ -778,10 +778,10 @@ def write_markdown(gen2_all, gen2_resp, gen2_nonresp, subtree_stats,
        "each field, so backfilled data is reflected. Exception: has-students uses "
        f"respondent-only data (N={n_resp}) because nonrespondent has_students=False "
        "is a mechanical default from build_network.py, not a survey answer.")
-    _p(f"4. **Country values are harmonized for display.** Survey respondents use "
-       "Qualtrics long-form names (e.g., \"United States of America\"), while backfilled "
-       "nodes use short names (\"United States\"). This script maps to short forms "
-       "for counting; the underlying node CSV retains original values.")
+    _p(f"4. **Country values should now be canonical in the node CSV.** This script "
+       "retains a small alias map as a defensive fallback for older snapshots, but "
+       "current rebuilds should already use short-form labels such as \"United States\" "
+       "and \"United Kingdom\".")
     _p("5. **Canonical institution/employer mappings are incomplete.** "
        f"{validation_summary['unmapped_phd_count']} PhD institution values and "
        f"{validation_summary['unmapped_employer_count']} employer values lack canonical "

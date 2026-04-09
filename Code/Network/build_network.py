@@ -11,11 +11,13 @@ Outputs:
 Optional curated inputs:
   Data/Derived/Manual_Nodes_{date}.csv
   Data/Derived/Manual_Edges_{date}.csv
-  Data/Derived/Gen2_Nonrespondent_Backfill_Approved_{date}.csv
+  Approved backfill CSVs (one or more, via repeatable --backfill flag)
 
-The approved backfill CSV enriches existing nodes (matched by node_id) with
-web-researched metadata.  It does not create nodes; all node_ids must already
-exist after respondent + Q12a + manual node creation.  Semantics:
+Approved backfill CSVs enrich existing nodes (matched by node_id) with
+web-researched metadata.  They do not create nodes; all node_ids must already
+exist after respondent + Q12a + manual node creation.  Multiple --backfill
+flags can be passed; files are applied in CLI order.  A node_id must not
+appear in more than one backfill file.  Semantics per file:
   nonblank backfill_*  → set/overwrite that field
   blank backfill_*     → no change
   clear_fields column  → comma-separated canonical field names to set to ''
@@ -55,6 +57,98 @@ def split_emails(raw_email: str) -> list[str]:
     """Split a possibly semicolon-delimited email string into individual emails."""
     parts = re.split(r'[;\s]+', raw_email or '')
     return [normalize_email(part) for part in parts if '@' in normalize_email(part)]
+
+
+COUNTRY_ALIASES = {
+    "United States of America": "United States",
+    "United Kingdom of Great Britain and Northern Ireland": "United Kingdom",
+}
+US_COUNTRY_VALUES = {"United States"}
+US_STATE_NAME_TO_ABBR = {
+    "alabama": "AL",
+    "alaska": "AK",
+    "arizona": "AZ",
+    "arkansas": "AR",
+    "california": "CA",
+    "colorado": "CO",
+    "connecticut": "CT",
+    "delaware": "DE",
+    "district of columbia": "DC",
+    "washington dc": "DC",
+    "washington, dc": "DC",
+    "florida": "FL",
+    "georgia": "GA",
+    "hawaii": "HI",
+    "idaho": "ID",
+    "illinois": "IL",
+    "indiana": "IN",
+    "iowa": "IA",
+    "kansas": "KS",
+    "kentucky": "KY",
+    "louisiana": "LA",
+    "maine": "ME",
+    "maryland": "MD",
+    "massachusetts": "MA",
+    "michigan": "MI",
+    "minnesota": "MN",
+    "mississippi": "MS",
+    "missouri": "MO",
+    "montana": "MT",
+    "nebraska": "NE",
+    "nevada": "NV",
+    "new hampshire": "NH",
+    "new jersey": "NJ",
+    "new mexico": "NM",
+    "new york": "NY",
+    "north carolina": "NC",
+    "north dakota": "ND",
+    "ohio": "OH",
+    "oklahoma": "OK",
+    "oregon": "OR",
+    "pennsylvania": "PA",
+    "rhode island": "RI",
+    "south carolina": "SC",
+    "south dakota": "SD",
+    "tennessee": "TN",
+    "texas": "TX",
+    "utah": "UT",
+    "vermont": "VT",
+    "virginia": "VA",
+    "washington": "WA",
+    "west virginia": "WV",
+    "wisconsin": "WI",
+    "wyoming": "WY",
+}
+US_STATE_ABBREVIATIONS = set(US_STATE_NAME_TO_ABBR.values())
+
+
+def normalize_country(raw_country: str) -> str:
+    country = re.sub(r'\s+', ' ', (raw_country or '').strip())
+    if not country:
+        return ''
+    return COUNTRY_ALIASES.get(country, country)
+
+
+def is_us_country(country: str) -> bool:
+    return normalize_country(country) in US_COUNTRY_VALUES
+
+
+def normalize_us_state(raw_state: str, country: str) -> str:
+    state = (raw_state or '').strip()
+    if not state or not is_us_country(country):
+        return state
+    compact = re.sub(r'\s+', ' ', state).strip()
+    compact = compact.replace('.', '')
+    upper = compact.upper()
+    if upper in US_STATE_ABBREVIATIONS:
+        return upper
+    lookup = compact.lower()
+    if lookup in US_STATE_NAME_TO_ABBR:
+        return US_STATE_NAME_TO_ABBR[lookup]
+    sys.exit(
+        f"ERROR: Unrecognized U.S. state value {raw_state!r} for country {country!r}. "
+        "Use USPS two-letter abbreviations or a standard full state name."
+    )
 
 
 def _latest_matching_date(base_dir: Path, pattern: re.Pattern[str]) -> str | None:
@@ -466,6 +560,9 @@ INSTITUTION_CANON = {
     # Chinese University of Hong Kong, Shenzhen
     "the chinese university of hong kong, shenzhen": "Chinese University of Hong Kong, Shenzhen",
     "chinese university of hong kong, shenzhen": "Chinese University of Hong Kong, Shenzhen",
+    "chinese university of hong kong shenzhen": "Chinese University of Hong Kong, Shenzhen",
+    "cuhk-shenzhen": "Chinese University of Hong Kong, Shenzhen",
+    "cuhk shenzhen": "Chinese University of Hong Kong, Shenzhen",
     # Tsinghua
     "tsinghua university": "Tsinghua University",
     "school of social sciences, tsinghua university": "Tsinghua University, School of Social Sciences",
@@ -592,6 +689,51 @@ INSTITUTION_CANON = {
     # Xi'an Jiaotong-Liverpool University
     "xi'an jiaotong-liverpool university": "Xi'an Jiaotong-Liverpool University",
     "xjtlu": "Xi'an Jiaotong-Liverpool University",
+    # --- Canon misses (040126 build) ---
+    # PhD institution misses
+    "european university institute": "European University Institute",
+    "eui": "European University Institute",
+    "imt lucca, italy": "IMT Lucca",
+    "imt lucca": "IMT Lucca",
+    "norwegian school of economics": "NHH Norwegian School of Economics",
+    "nhh": "NHH Norwegian School of Economics",
+    "nhh norwegian school of economics": "NHH Norwegian School of Economics",
+    "scuola superiore sant'anna pisa": "Scuola Superiore Sant'Anna",
+    "stanford univeristy": "Stanford University",
+    "washington university in saint louis": "Washington University in St. Louis",
+    # Employer misses
+    "american enterprise institute": "American Enterprise Institute",
+    "aei": "American Enterprise Institute",
+    "azim premji university": "Azim Premji University",
+    "bogazici university": "Bogazici University",
+    "cide (mexico)": "CIDE",
+    "cide": "CIDE",
+    "cna": "CNA",
+    "carnegie mellon university": "Carnegie Mellon University",
+    "cmu": "Carnegie Mellon University",
+    "exodus point capital management": "Exodus Point Capital Management",
+    "harvard kennedy school": "Harvard University",
+    "hks": "Harvard University",
+    "hitotsubashi university": "Hitotsubashi University",
+    "inter-american development bank": "Inter-American Development Bank",
+    "iadb": "Inter-American Development Bank",
+    "jane street": "Jane Street",
+    "practical idealism economics, llc": "Practical Idealism Economics",
+    "practical idealism economics": "Practical Idealism Economics",
+    "rice university": "Rice University",
+    "rice": "Rice University",
+    "samford university": "Samford University",
+    "the arctic university of norway": "The Arctic University of Norway",
+    "uit the arctic university of norway": "The Arctic University of Norway",
+    "u.s. bureau of labor statistics": "U.S. Bureau of Labor Statistics",
+    "bureau of labor statistics": "U.S. Bureau of Labor Statistics",
+    "bls": "U.S. Bureau of Labor Statistics",
+    "university of calcutta, department of economics": "University of Calcutta",
+    "university of san francisco": "University of San Francisco",
+    "university of siena": "University of Siena",
+    "university of toronto": "University of Toronto",
+    "u of t": "University of Toronto",
+    "university of valencia": "University of Valencia",
 }
 
 
@@ -613,9 +755,10 @@ def canon_institution(raw: str) -> str:
 def parse_q8_generation(q8_val: str) -> dict:
     """Classify Q8 into generation evidence and review flags.
 
-    Committee membership alone is not treated as direct-advisee evidence.
-    Mixed committee + indirect cases are left for manual review rather than
-    auto-assigned from Q8.
+    Committee membership alone is not auto-assigned here. Downstream policy may
+    still promote some committee-linked respondents to Gen 1. Mixed committee +
+    indirect cases remain manual-review candidates unless a later explicit
+    override applies.
     """
     result = {
         'generation': None,
@@ -739,6 +882,13 @@ def tokenize_q11(q11_val: str) -> list:
 Q8_GENERATION_OVERRIDES = {
     "R_7vrtdVnraeOr681": 2,  # Santiago Perez (Q11="Ran Abramitzky")
     "R_7rSYUx2xrPi8nia": 1,  # Netanel Ben-Porath (Q11="Joel himself!")
+}
+
+# Project policy: if Joel was on a respondent's dissertation committee, treat
+# that respondent as Gen 1. A small number of mixed committee + indirect cases
+# still need explicit overrides rather than a general rule expansion.
+COMMITTEE_GEN1_POLICY_OVERRIDES = {
+    "R_2kpoi5m38XN9OVj": "manual_review_committee_indirect",  # Michael Andrews
 }
 
 # Curated respondent metadata overrides from strong post-survey verification.
@@ -873,6 +1023,16 @@ def is_other_unsure_q8(text: str) -> bool:
     )
 
 
+def classify_committee_gen1_promotion(rid: str, q8_analysis: dict) -> str | None:
+    if (
+        q8_analysis['has_committee']
+        and not q8_analysis['has_direct']
+        and not q8_analysis['has_indirect']
+    ):
+        return 'committee_only'
+    return COMMITTEE_GEN1_POLICY_OVERRIDES.get(rid)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -898,8 +1058,9 @@ def main():
                         default=None,
                         help="Path to manual edges CSV (optional)")
     parser.add_argument('--backfill',
+                        action='append',
                         default=None,
-                        help="Path to approved backfill CSV (optional, enriches existing nodes)")
+                        help="Path to approved backfill CSV (repeatable; enriches existing nodes)")
     args = parser.parse_args()
 
     date = _resolve_build_date(args.date, args.cleaned, args.q12a)
@@ -908,7 +1069,7 @@ def main():
     email_recovery_path = PROJECT_ROOT / args.email_recovery if args.email_recovery else None
     manual_nodes_path   = PROJECT_ROOT / args.manual_nodes   if args.manual_nodes   else None
     manual_edges_path   = PROJECT_ROOT / args.manual_edges   if args.manual_edges   else None
-    backfill_path       = PROJECT_ROOT / args.backfill       if args.backfill       else None
+    backfill_paths = [PROJECT_ROOT / p for p in args.backfill] if args.backfill else []
     nodes_out      = PROJECT_ROOT / f"Data/Derived/Network_Nodes_{date}.csv"
     edges_out      = PROJECT_ROOT / f"Data/Derived/Network_Edges_{date}.csv"
     unresolved_out = PROJECT_ROOT / f"Data/Derived/Unresolved_Edges_{date}.csv"
@@ -1024,12 +1185,24 @@ def main():
     raw_gen_by_rid = {}
     pretopo_gen_by_rid = {}
     q8_analysis_by_rid = {}
+    committee_gen1_promotion_by_rid = {}
     unresolved_edges = []   # list of dicts
     for rid, r in respondents.items():
         q8_analysis = parse_q8_generation(r['q8'])
         q8_analysis_by_rid[rid] = q8_analysis
         raw_gen = q8_analysis['raw_generation']
         raw_gen_by_rid[rid] = raw_gen
+        committee_promotion = classify_committee_gen1_promotion(rid, q8_analysis)
+        committee_gen1_promotion_by_rid[rid] = committee_promotion
+        if committee_promotion:
+            pretopo_gen_by_rid[rid] = 1
+            print(
+                f"  INFO committee->Gen1 policy: {r['first']} {r['last']} ({rid})"
+                f" -> {committee_promotion}"
+            )
+            if q8_analysis['flag']:
+                print(f"  WARN non-adjacent multi-gen Q8: {r['first']} {r['last']} ({rid}): {r['q8']!r}")
+            continue
         if q8_analysis['requires_manual_review']:
             print(f"  INFO Q8 manual review: {r['first']} {r['last']} ({rid}) -> mixed committee + indirect")
             pretopo_gen_by_rid[rid] = None
@@ -1056,15 +1229,15 @@ def main():
     # -------------------------------------------------------------------------
     # Step C: Institution canonicalization
     # -------------------------------------------------------------------------
-    canon_misses_phd = set()
-    canon_misses_emp = set()
+    respondent_canon_misses_phd = set()
+    respondent_canon_misses_emp = set()
     for r in respondents.values():
         r['phd_canon'] = canon_institution(r['q9'])
         r['emp_canon'] = canon_institution(r['q5_text'])
         if r['q9'] and not r['phd_canon']:
-            canon_misses_phd.add(r['q9'])
+            respondent_canon_misses_phd.add(r['q9'])
         if r['q5_text'] and not r['emp_canon']:
-            canon_misses_emp.add(r['q5_text'])
+            respondent_canon_misses_emp.add(r['q5_text'])
 
     # -------------------------------------------------------------------------
     # Step D: Q11 advisor name matching
@@ -1186,7 +1359,7 @@ def main():
         'current_employer_canon': 'Northwestern University',
         'phd_year': '',
         'country': 'United States',
-        'us_state': 'Illinois',
+        'us_state': normalize_us_state('Illinois', 'United States'),
         'generation': 0,
         'generation_q8': 0,
         'generation_q8_raw': 0,
@@ -1197,6 +1370,8 @@ def main():
     # Respondent nodes
     for rid, r in respondents.items():
         node_id = f"R-{rid}"
+        respondent_country = normalize_country(r['q6'])
+        respondent_state = normalize_us_state(r['q6a'], respondent_country)
         nodes[node_id] = {
             'node_id': node_id,
             'first_name': r['first'],
@@ -1207,8 +1382,8 @@ def main():
             'current_employer_raw': r['q5_text'],
             'current_employer_canon': r['emp_canon'],
             'phd_year': r['q10'],
-            'country': r['q6'],
-            'us_state': r['q6a'],
+            'country': respondent_country,
+            'us_state': respondent_state,
             'generation': pretopo_gen_by_rid[rid],
             'generation_q8': pretopo_gen_by_rid[rid],
             'generation_q8_raw': raw_gen_by_rid[rid],
@@ -1410,13 +1585,19 @@ def main():
             memp_raw = mrow.get('current_employer_raw', '').strip()
             memp_canon = mrow.get('current_employer_canon', '').strip()
             mphd_year = mrow.get('phd_year', '').strip()
-            mcountry = mrow.get('country', '').strip()
-            mstate = mrow.get('us_state', '').strip()
+            mcountry = normalize_country(mrow.get('country', '').strip())
+            mstate = normalize_us_state(mrow.get('us_state', '').strip(), mcountry)
 
-            if mphd_raw and not mphd_canon:
-                mphd_canon = canon_institution(mphd_raw) or mphd_raw
-            if memp_raw and not memp_canon:
-                memp_canon = canon_institution(memp_raw) or memp_raw
+            # Always re-canonicalize: try raw first, then existing canon value
+            # (catches hand-typed canon values that don't match the dictionary)
+            if mphd_raw:
+                mphd_canon = canon_institution(mphd_raw) or canon_institution(mphd_canon) or mphd_canon or mphd_raw
+            elif mphd_canon:
+                mphd_canon = canon_institution(mphd_canon) or mphd_canon
+            if memp_raw:
+                memp_canon = canon_institution(memp_raw) or canon_institution(memp_canon) or memp_canon or memp_raw
+            elif memp_canon:
+                memp_canon = canon_institution(memp_canon) or memp_canon
 
             # Check if node already exists (curated duplicate, exact email, or exact normalized name).
             mkey = _person_name_key(mfirst, mlast)
@@ -1539,10 +1720,10 @@ def main():
         print(f"  WARN: manual edges file not found: {manual_edges_path}\n")
 
     # -------------------------------------------------------------------------
-    # Step E4: Apply approved backfill enrichments (optional)
+    # Step E4: Apply approved backfill enrichments (optional, repeatable)
     # -------------------------------------------------------------------------
-    # The approved backfill CSV enriches existing nodes with web-researched
-    # metadata (PhD institution, employer, country, email, etc.).  It does NOT
+    # One or more approved backfill CSVs enrich existing nodes with web-researched
+    # metadata (PhD institution, employer, country, email, etc.).  They do NOT
     # create new nodes — every node_id must already exist in the built node set.
     #
     # Behaviour per backfill_* field:
@@ -1565,114 +1746,149 @@ def main():
 
     CLEARABLE_FIELDS = set(BACKFILL_FIELD_MAP.values())
 
-    if backfill_path and backfill_path.exists():
-        print(f"Loading approved backfill: {backfill_path}")
-        with open(backfill_path, newline='', encoding='utf-8') as f:
-            backfill_rows = list(csv.DictReader(f))
-        print(f"  {len(backfill_rows)} backfill entries")
+    # --- Cross-file duplicate node_id check ---
+    if backfill_paths:
+        all_bf_nids: list[tuple[str, Path]] = []  # (node_id, file_path)
+        loaded_backfills: list[tuple[Path, list[dict[str, str]]]] = []
+        for bf_path in backfill_paths:
+            if not bf_path.exists():
+                print(f"  WARN: approved backfill file not found: {bf_path}")
+                continue
+            print(f"Loading approved backfill: {bf_path}")
+            with open(bf_path, newline='', encoding='utf-8') as f:
+                rows = list(csv.DictReader(f))
+            print(f"  {len(rows)} backfill entries")
+            loaded_backfills.append((bf_path, rows))
+            for r in rows:
+                all_bf_nids.append((r['node_id'].strip(), bf_path))
 
-        # --- Validation ---
-        bf_nids = [r['node_id'].strip() for r in backfill_rows]
-        bf_nid_counts = Counter(bf_nids)
-        bf_dupes = {nid for nid, cnt in bf_nid_counts.items() if cnt > 1}
-        if bf_dupes:
-            sys.exit(f"ERROR: Duplicate node_id(s) in approved backfill: {sorted(bf_dupes)}")
-
-        bf_missing = [nid for nid in bf_nids if nid not in nodes]
-        if bf_missing:
+        # Check for cross-file duplicates
+        cross_nid_counts = Counter(nid for nid, _ in all_bf_nids)
+        cross_dupes = {nid for nid, cnt in cross_nid_counts.items() if cnt > 1}
+        if cross_dupes:
+            # Build detail showing which files contain the duplicate
+            detail_parts = []
+            for nid in sorted(cross_dupes):
+                files = [str(fp.name) for n, fp in all_bf_nids if n == nid]
+                detail_parts.append(f"  {nid}: {', '.join(files)}")
             sys.exit(
-                f"ERROR: Approved backfill references {len(bf_missing)} node_id(s) "
-                f"not in built node set: {bf_missing[:5]}{'...' if len(bf_missing) > 5 else ''}"
+                f"ERROR: Duplicate node_id(s) across backfill files:\n"
+                + "\n".join(detail_parts)
             )
 
-        bf_updated = 0
-        bf_fields_updated = Counter()
-        bf_fields_cleared = Counter()
-        for brow in backfill_rows:
-            nid = brow['node_id'].strip()
-            node = nodes[nid]
+        bf_total_updated = 0
+        bf_total_fields_updated = Counter()
+        bf_total_fields_cleared = Counter()
 
-            # Parse clear_fields
-            clear_raw = brow.get('clear_fields', '').strip()
-            clear_set = {f.strip() for f in clear_raw.split(',') if f.strip()} if clear_raw else set()
+        for bf_path, backfill_rows in loaded_backfills:
+            # --- Per-file validation ---
+            bf_nids = [r['node_id'].strip() for r in backfill_rows]
+            bf_nid_counts = Counter(bf_nids)
+            bf_dupes = {nid for nid, cnt in bf_nid_counts.items() if cnt > 1}
+            if bf_dupes:
+                sys.exit(f"ERROR: Duplicate node_id(s) in approved backfill {bf_path.name}: {sorted(bf_dupes)}")
 
-            # Validate: reject unknown field names in clear_fields
-            unknown_clear = clear_set - CLEARABLE_FIELDS
-            if unknown_clear:
+            bf_missing = [nid for nid in bf_nids if nid not in nodes]
+            if bf_missing:
                 sys.exit(
-                    f"ERROR: Approved backfill for {nid} has unknown clear_fields: "
-                    f"{sorted(unknown_clear)}"
+                    f"ERROR: Approved backfill {bf_path.name} references {len(bf_missing)} node_id(s) "
+                    f"not in built node set: {bf_missing[:5]}{'...' if len(bf_missing) > 5 else ''}"
                 )
 
-            # Validate: reject rows that both set and clear the same field
-            bf_set_fields = set()
-            for bf_col, node_col in BACKFILL_FIELD_MAP.items():
-                if brow.get(bf_col, '').strip():
-                    bf_set_fields.add(node_col)
-            set_and_clear = bf_set_fields & clear_set
-            if set_and_clear:
-                sys.exit(
-                    f"ERROR: Approved backfill for {nid} both sets and clears: "
-                    f"{sorted(set_and_clear)}"
-                )
+            bf_updated = 0
+            bf_fields_updated = Counter()
+            bf_fields_cleared = Counter()
+            for brow in backfill_rows:
+                nid = brow['node_id'].strip()
+                node = nodes[nid]
 
-            # Validate: email requires at least one source URL
-            bf_email = brow.get('backfill_email', '').strip()
-            bf_src1 = brow.get('source_1_url', '').strip()
-            bf_src2 = brow.get('source_2_url', '').strip()
-            if bf_email and not bf_src1 and not bf_src2:
-                sys.exit(
-                    f"ERROR: Approved backfill for {nid} has email without source URL"
-                )
+                # Parse clear_fields
+                raw_clear = brow.get('clear_fields', '').strip()
+                clear_set = {f.strip() for f in raw_clear.split(',') if f.strip()} if raw_clear else set()
+                unknown_clear = clear_set - CLEARABLE_FIELDS
+                if unknown_clear:
+                    sys.exit(
+                        f"ERROR: Approved backfill for {nid} has unknown clear_fields: "
+                        f"{sorted(unknown_clear)}"
+                    )
 
-            # Validate: us_state requires country = United States
-            bf_state = brow.get('backfill_us_state', '').strip()
-            bf_country = brow.get('backfill_country', '').strip()
-            if bf_state and bf_country and bf_country != 'United States':
-                sys.exit(
-                    f"ERROR: Approved backfill for {nid} has us_state={bf_state!r} "
-                    f"but country={bf_country!r} (expected 'United States')"
-                )
+                # Determine which backfill fields are being set (nonblank)
+                bf_set_fields = set()
+                for bf_col, node_col in BACKFILL_FIELD_MAP.items():
+                    if brow.get(bf_col, '').strip():
+                        bf_set_fields.add(node_col)
 
-            # Apply enrichments (nonblank backfill_* → set/overwrite)
-            updated_fields = []
-            for bf_col, node_col in BACKFILL_FIELD_MAP.items():
-                val = brow.get(bf_col, '').strip()
-                if not val:
-                    continue
-                old_val = str(node.get(node_col, '') or '').strip()
-                if val != old_val:
-                    action = 'backfill' if not old_val else 'overwrite'
-                    node[node_col] = val
-                    updated_fields.append(f"{node_col}({action})")
-                    bf_fields_updated[node_col] += 1
+                set_and_clear = bf_set_fields & clear_set
+                if set_and_clear:
+                    sys.exit(
+                        f"ERROR: Approved backfill for {nid} both sets and clears: "
+                        f"{sorted(set_and_clear)}"
+                    )
 
-            # Apply clears (clear_fields → set to '')
-            for field in sorted(clear_set):
-                old_val = str(node.get(field, '') or '').strip()
-                if old_val:
-                    node[field] = ''
-                    updated_fields.append(f"{field}(clear)")
-                    bf_fields_cleared[field] += 1
+                # Validate: email requires at least one source URL
+                bf_email = brow.get('backfill_email', '').strip()
+                bf_src1 = brow.get('source_1_url', '').strip()
+                bf_src2 = brow.get('source_2_url', '').strip()
+                if bf_email and not bf_src1 and not bf_src2:
+                    sys.exit(
+                        f"ERROR: Approved backfill for {nid} has email without source URL"
+                    )
 
-            if updated_fields:
-                bf_updated += 1
-                print(f"  ENRICH {nid} ({node['first_name']} {node['last_name']}): "
-                      f"{', '.join(updated_fields)}")
+                # Validate: us_state requires a recognized U.S. country label
+                bf_country = normalize_country(brow.get('backfill_country', '').strip())
+                bf_state = normalize_us_state(brow.get('backfill_us_state', '').strip(), bf_country)
+                if bf_state and not is_us_country(bf_country):
+                    sys.exit(
+                        f"ERROR: Approved backfill for {nid} has us_state={bf_state!r} "
+                        f"but country={bf_country!r} (expected one of {sorted(US_COUNTRY_VALUES)})"
+                    )
 
-        total_updates = sum(bf_fields_updated.values()) + sum(bf_fields_cleared.values())
-        print(f"  Enriched {bf_updated} nodes ({total_updates} field changes)")
-        if bf_fields_updated:
+                # Apply enrichments (nonblank backfill_* → set/overwrite)
+                updated_fields = []
+                for bf_col, node_col in BACKFILL_FIELD_MAP.items():
+                    val = brow.get(bf_col, '').strip()
+                    if bf_col == 'backfill_country':
+                        val = bf_country
+                    if bf_col == 'backfill_us_state':
+                        val = bf_state
+                    if not val:
+                        continue
+                    old_val = str(node.get(node_col, '') or '').strip()
+                    if val != old_val:
+                        action = 'backfill' if not old_val else 'overwrite'
+                        node[node_col] = val
+                        updated_fields.append(f"{node_col}({action})")
+                        bf_fields_updated[node_col] += 1
+
+                # Apply clears (clear_fields → set to '')
+                for field in sorted(clear_set):
+                    old_val = str(node.get(field, '') or '').strip()
+                    if old_val:
+                        node[field] = ''
+                        updated_fields.append(f"{field}(clear)")
+                        bf_fields_cleared[field] += 1
+
+                if updated_fields:
+                    bf_updated += 1
+                    print(f"  ENRICH {nid} ({node['first_name']} {node['last_name']}): "
+                          f"{', '.join(updated_fields)}")
+
+            print(f"  [{bf_path.name}] Enriched {bf_updated} nodes")
+            bf_total_updated += bf_updated
+            bf_total_fields_updated.update(bf_fields_updated)
+            bf_total_fields_cleared.update(bf_fields_cleared)
+
+        total_updates = sum(bf_total_fields_updated.values()) + sum(bf_total_fields_cleared.values())
+        print(f"  Backfill totals: {bf_total_updated} nodes enriched ({total_updates} field changes) across {len(loaded_backfills)} file(s)")
+        if bf_total_fields_updated:
             print(f"  Set/overwrite:")
-            for field, cnt in sorted(bf_fields_updated.items()):
+            for field, cnt in sorted(bf_total_fields_updated.items()):
                 print(f"    {field}: {cnt}")
-        if bf_fields_cleared:
+        if bf_total_fields_cleared:
             print(f"  Cleared:")
-            for field, cnt in sorted(bf_fields_cleared.items()):
+            for field, cnt in sorted(bf_total_fields_cleared.items()):
                 print(f"    {field}: {cnt}")
         print()
-    elif backfill_path:
-        print(f"  WARN: approved backfill file not found: {backfill_path}\n")
 
     # -------------------------------------------------------------------------
     # Step F: Build edge list + cycle detection + generation consistency
@@ -1787,9 +2003,45 @@ def main():
         q8_analysis = q8_analysis_by_rid[rid]
         final_generation = node['generation']
         override_generation = Q8_GENERATION_OVERRIDES.get(rid)
-        is_direct = q8_analysis['has_direct'] or override_generation == 1
+        committee_promotion = committee_gen1_promotion_by_rid.get(rid)
+        is_direct = (
+            q8_analysis['has_direct']
+            or override_generation == 1
+            or committee_promotion is not None
+        )
 
-        if q8_analysis['requires_manual_review']:
+        if committee_promotion == 'committee_only':
+            discrepancy_rows.append({
+                'response_id': rid,
+                'node_id': node_id,
+                'category': 'committee_only_promoted_to_gen1',
+                'first_name': r['first'],
+                'last_name': r['last'],
+                'raw_q8': r['q8'],
+                'raw_q11': r['q11'],
+                'raw_q12': r['q12'],
+                'generation_q8': node.get('generation_q8', ''),
+                'generation_q8_raw': node.get('generation_q8_raw', ''),
+                'final_generation': final_generation,
+                'note': 'Committee-only Mokyr relationship promoted to Gen 1 by policy.',
+            })
+        elif committee_promotion == 'manual_review_committee_indirect':
+            discrepancy_rows.append({
+                'response_id': rid,
+                'node_id': node_id,
+                'category': 'manual_review_committee_indirect_promoted_to_gen1',
+                'first_name': r['first'],
+                'last_name': r['last'],
+                'raw_q8': r['q8'],
+                'raw_q11': r['q11'],
+                'raw_q12': r['q12'],
+                'generation_q8': node.get('generation_q8', ''),
+                'generation_q8_raw': node.get('generation_q8_raw', ''),
+                'final_generation': final_generation,
+                'note': 'Promoted to Gen 1 by explicit policy override despite mixed committee + indirect Q8 evidence.',
+            })
+
+        if q8_analysis['requires_manual_review'] and committee_promotion is None:
             discrepancy_rows.append({
                 'response_id': rid,
                 'node_id': node_id,
@@ -1891,6 +2143,40 @@ def main():
         'generation_q8', 'generation_q8_raw', 'final_generation', 'note',
     ]
 
+    # Final re-canonicalization pass: ensure all institution canon values are
+    # consistent with INSTITUTION_CANON, regardless of how they were set
+    # (survey, manual nodes, backfill enrichment, etc.)
+    recanon_fixes = 0
+    for n in nodes.values():
+        for canon_field, raw_field in [
+            ('phd_institution_canon', 'phd_institution_raw'),
+            ('current_employer_canon', 'current_employer_raw'),
+        ]:
+            raw_val = str(n.get(raw_field, '') or '').strip()
+            old_val = str(n.get(canon_field, '') or '').strip()
+            if not raw_val and not old_val:
+                continue
+            # Reconcile raw + canon after all enrichment paths have run.
+            new_val = canon_institution(raw_val) or canon_institution(old_val)
+            if new_val and new_val != old_val:
+                n[canon_field] = new_val
+                recanon_fixes += 1
+    if recanon_fixes:
+        print(f"  Re-canonicalized {recanon_fixes} institution value(s)")
+
+    final_canon_misses_phd = sorted({
+        str(n.get('phd_institution_raw', '') or '').strip()
+        for n in nodes.values()
+        if str(n.get('phd_institution_raw', '') or '').strip()
+        and not str(n.get('phd_institution_canon', '') or '').strip()
+    })
+    final_canon_misses_emp = sorted({
+        str(n.get('current_employer_raw', '') or '').strip()
+        for n in nodes.values()
+        if str(n.get('current_employer_raw', '') or '').strip()
+        and not str(n.get('current_employer_canon', '') or '').strip()
+    })
+
     node_rows = sorted(nodes.values(), key=lambda row: row['node_id'])
     clean_edges.sort(key=lambda row: (row[0], row[1], row[2], row[3]))
     unresolved_edges.sort(
@@ -1944,11 +2230,17 @@ def main():
     print(f"  Unresolved : {len(unresolved_edges)}")
     print(f"  Discrepancies : {len(discrepancy_rows)}")
 
-    print(f"\n  Canon misses (PhD institution): {len(canon_misses_phd)}")
-    for m in sorted(canon_misses_phd):
+    print(f"\n  Initial respondent canon misses (PhD institution): {len(respondent_canon_misses_phd)}")
+    for m in sorted(respondent_canon_misses_phd):
         print(f"    {m!r}")
-    print(f"\n  Canon misses (employer): {len(canon_misses_emp)}")
-    for m in sorted(canon_misses_emp):
+    print(f"\n  Initial respondent canon misses (employer): {len(respondent_canon_misses_emp)}")
+    for m in sorted(respondent_canon_misses_emp):
+        print(f"    {m!r}")
+    print(f"\n  Final node-level canon misses (PhD institution): {len(final_canon_misses_phd)}")
+    for m in final_canon_misses_phd:
+        print(f"    {m!r}")
+    print(f"\n  Final node-level canon misses (employer): {len(final_canon_misses_emp)}")
+    for m in final_canon_misses_emp:
         print(f"    {m!r}")
 
     print(f"\nOutputs written:")

@@ -11,7 +11,7 @@ Merges data from:
   - Cleaned survey responses (email_survey from Q3)
 
 Usage:
-    python3 Code/Network/build_master_list.py [--date 030226]
+    python3 Code/Network/build_master_list.py [--date 030226] [--include-root]
 
 Defaults:
     - Network_Nodes / Network_Edges use the requested --date exactly
@@ -20,6 +20,8 @@ Defaults:
 
 Output:
     Data/Derived/Master_Contact_List_{date}.csv
+
+By default, the exported contact list excludes the synthetic JM-ROOT node.
 """
 
 import argparse
@@ -63,6 +65,11 @@ def clean_contact_email(raw_email):
     # Some wave CSVs have trailing semicolons and multiple emails separated by ;
     emails = [e.strip() for e in raw_email.split(";") if e.strip()]
     return emails[0] if emails else ""
+
+
+def best_affiliation(node, canon_key, raw_key):
+    """Prefer canonical affiliation, but fall back to raw text if needed."""
+    return (node.get(canon_key, "") or node.get(raw_key, "") or "").strip()
 
 
 def parse_date_token(token):
@@ -127,6 +134,11 @@ def main():
     parser.add_argument(
         "--output",
         help="Output path (default: Data/Derived/Master_Contact_List_{date}.csv)",
+    )
+    parser.add_argument(
+        "--include-root",
+        action="store_true",
+        help="Include the synthetic JM-ROOT node in the exported contact list",
     )
     args = parser.parse_args()
 
@@ -315,8 +327,10 @@ def main():
     )
 
     # --- Build master rows ---
+    exported_nodes = nodes if args.include_root else [n for n in nodes if n["node_id"] != "JM-ROOT"]
+
     output_rows = []
-    for n in nodes:
+    for n in exported_nodes:
         nid = n["node_id"]
         advisors = advisor_map_primary.get(nid, [])
         if not advisors:
@@ -331,8 +345,8 @@ def main():
             "first_name": n["first_name"],
             "last_name": n["last_name"],
             "advisor": advisor_str,
-            "phd_institution": n.get("phd_institution_canon", ""),
-            "current_employer": n.get("current_employer_canon", ""),
+            "phd_institution": best_affiliation(n, "phd_institution_canon", "phd_institution_raw"),
+            "current_employer": best_affiliation(n, "current_employer_canon", "current_employer_raw"),
             "email_network": n.get("email", ""),
             "email_survey": survey_email_by_nid.get(nid, ""),
             "email_q12a": q12a_email_by_nid.get(nid, ""),
@@ -342,8 +356,8 @@ def main():
         }
         output_rows.append(row)
 
-    assert len(output_rows) == len(nodes), (
-        f"Row count mismatch: {len(output_rows)} output rows vs {len(nodes)} nodes"
+    assert len(output_rows) == len(exported_nodes), (
+        f"Row count mismatch: {len(output_rows)} output rows vs {len(exported_nodes)} exported nodes"
     )
 
     # --- Sort: generation ascending (blanks last), then last_name ---
@@ -408,6 +422,7 @@ def main():
     print(f"\n{'='*50}")
     print(f"MASTER CONTACT LIST SUMMARY")
     print(f"{'='*50}")
+    print(f"Included JM-ROOT:         {'yes' if args.include_root else 'no'}")
     print(f"Total rows:              {total}")
     print(f"Responded to survey:     {responded}")
     print(f"Non-respondents:         {total - responded}")

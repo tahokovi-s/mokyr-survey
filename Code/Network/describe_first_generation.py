@@ -18,6 +18,13 @@ Universes:
     has_students=False is a mechanical default, not observed data)
   - Metadata coverage section spans all gen-1 to show
     respondent/nonrespondent coverage
+
+Notes:
+  - First_Generation_Profile_{date}.csv is the canonical aggregated profile
+    output for Gen 1 descriptives.
+  - Historical First_Generation_Respondent_Profile_{date}.csv files predate
+    the current mixed-universe denominator convention and are not written by
+    this script.
 """
 
 import argparse
@@ -48,8 +55,8 @@ PHD_YEAR_BINS = [
 # ------------------------------------------------------------------
 # Country harmonization
 # ------------------------------------------------------------------
-# Survey respondents use Qualtrics long-form country names; backfilled
-# nodes (or seed lists) may use short names. Harmonize for counting.
+# Current node builds should already use canonical short-form country
+# labels. Keep a small alias map as a defensive fallback for older snapshots.
 
 COUNTRY_HARMONIZATION = {
     "United States of America": "United States",
@@ -699,8 +706,8 @@ def write_markdown(gen1_all, gen1_resp, gen1_nonresp, subtree_stats,
     _blank()
     _p(f"- N with country: {sum(country_counter.values())} / {n_all}")
     _p(
-        "- Country values are harmonized for display "
-        "(e.g., \"United States of America\" -> \"United States\")."
+        "- Country counts are reported using canonical short-form labels "
+        "(e.g., \"United States\")."
     )
     _blank()
     _p("| Country | Count |")
@@ -770,10 +777,10 @@ def write_markdown(gen1_all, gen1_resp, gen1_nonresp, subtree_stats,
        "each field, so backfilled data is reflected. Exception: has-students uses "
        f"respondent-only data (N={n_resp}) because nonrespondent has_students=False "
        "is a mechanical default, not a survey answer.")
-    _p(f"4. **Country values are harmonized for display.** Survey respondents use "
-       "Qualtrics long-form names (e.g., \"United States of America\"), while backfilled "
-       "nodes use short names (\"United States\"). This script maps to short forms "
-       "for counting; the underlying node CSV retains original values.")
+    _p(f"4. **Country values should now be canonical in the node CSV.** This script "
+       "retains a small alias map as a defensive fallback for older snapshots, but "
+       "current rebuilds should already use short-form labels such as \"United States\" "
+       "and \"United Kingdom\".")
     _p("5. **Canonical institution/employer mappings are incomplete.** "
        f"{validation_summary['unmapped_phd_count']} PhD institution values and "
        f"{validation_summary['unmapped_employer_count']} employer values lack canonical "

@@ -10,6 +10,7 @@ All scripts for the Mokyr Survey pipeline. Run from the project root
 | **Shared/** | Reusable helpers imported by other scripts (name normalization) |
 | **Survey/** | Qualtrics cleaning (`clean_survey.py`) and Q12a parsing (`parse_q12a.py`) |
 | **Network/** | Node/edge graph build, master contact list, descriptive stats, visualization |
+| **Bibliometrics/** | External scholarly-source enrichment for citations, fields, papers, and author matching |
 | **Validation/** | Audit validators, verification renderers, and descriptive-input checks |
 | **Outreach/** | Response-tracking against outreach contact lists |
 | **Orchestration/** | `refresh_downstream.py` -- single-command rebuild of all derived outputs |

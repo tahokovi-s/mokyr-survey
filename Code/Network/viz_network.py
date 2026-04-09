@@ -152,6 +152,18 @@ def _load_nodes(nodes_csv: Path) -> list:
                 gen = int(gen)
             except (ValueError, TypeError):
                 gen = None
+            populated_detail_fields = sum(
+                1
+                for value in (
+                    row['email'],
+                    row['phd_institution_canon'] or row['phd_institution_raw'],
+                    row['phd_year'],
+                    row['current_employer_canon'] or row['current_employer_raw'],
+                    row['country'],
+                    row['us_state'],
+                )
+                if str(value or '').strip()
+            )
             nodes.append({
                 'id':           row['node_id'],
                 'label':        f"{row['first_name']} {row['last_name']}".strip(),
@@ -162,6 +174,9 @@ def _load_nodes(nodes_csv: Path) -> list:
                 'employer':     row['current_employer_canon'] or row['current_employer_raw'],
                 'phd_year':     row['phd_year'],
                 'country':      row['country'],
+                'us_state':     row['us_state'],
+                'nonrespondent_field_count': populated_detail_fields,
+                'show_nonrespondent': populated_detail_fields >= 2,
                 # email intentionally excluded
             })
     return nodes
@@ -197,12 +212,54 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
 
   #controls {{
     position: absolute; top: 12px; left: 12px; z-index: 10;
-    background: rgba(0,0,0,0.6); border-radius: 8px; padding: 12px 16px;
-    display: flex; flex-direction: column; gap: 8px; min-width: 220px;
+    display: flex; flex-direction: column; align-items: flex-start;
   }}
-  #controls h2 {{ font-size: 14px; color: #ccc; margin-bottom: 4px; }}
   #controls label {{ font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }}
   #controls input[type=checkbox] {{ width: 15px; height: 15px; cursor: pointer; }}
+  #settings-trigger {{
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 999px;
+    padding: 0;
+    background: rgba(8, 12, 28, 0.82);
+    color: #f4f7ff;
+    font-size: 20px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+  }}
+  #settings-trigger.active {{
+    background: rgba(74, 158, 255, 0.24);
+    border-color: rgba(74, 158, 255, 0.45);
+    color: #fff;
+  }}
+  #settings-panel {{
+    position: absolute;
+    top: 50px;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 250px;
+    padding: 12px 14px 14px;
+    background: rgba(8, 12, 28, 0.9);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+    backdrop-filter: blur(18px);
+  }}
+  #settings-panel[hidden] {{ display: none; }}
+  .settings-title {{
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #95a0bf;
+    margin-bottom: 2px;
+  }}
   #search {{
     padding: 5px 8px; border-radius: 5px; border: 1px solid #555;
     background: #2a2a3e; color: #eee; font-size: 13px; width: 100%;
@@ -233,6 +290,91 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     padding: 8px 14px; font-size: 12px; color: #aaa;
   }}
 
+  #person-panel {{
+    position: absolute; top: 64px; right: 12px; bottom: 12px; z-index: 10;
+    width: min(360px, calc(100vw - 24px));
+    background: rgba(8, 12, 28, 0.9);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+    backdrop-filter: blur(18px);
+    display: flex; flex-direction: column; gap: 16px;
+    padding: 16px;
+    overflow: hidden;
+  }}
+  .panel-header {{
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }}
+  .panel-eyebrow {{
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: #8fb7ff; margin-bottom: 6px;
+  }}
+  #person-title {{
+    font-size: 24px; line-height: 1.1; color: #fff;
+  }}
+  #person-subtitle {{
+    margin-top: 6px; font-size: 13px; color: #aeb7d1;
+  }}
+  #panel-close {{
+    border: 0; border-radius: 999px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.1);
+    color: #eaf0ff; font-size: 12px; cursor: pointer;
+  }}
+  #panel-close:disabled {{
+    opacity: 0.45; cursor: default;
+  }}
+  #person-empty {{
+    color: #c2cae1; font-size: 14px; line-height: 1.55;
+  }}
+  #person-content {{
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 16px;
+    padding-right: 4px;
+  }}
+  .detail-grid {{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }}
+  .detail-item {{
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 10px 12px;
+    min-height: 72px;
+  }}
+  .detail-label {{
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #95a0bf; margin-bottom: 8px;
+  }}
+  .detail-value {{
+    font-size: 14px; line-height: 1.4; color: #fff; font-weight: 600;
+    word-break: break-word;
+  }}
+  .panel-section {{
+    display: flex; flex-direction: column; gap: 10px;
+  }}
+  .panel-section h3 {{
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #95a0bf;
+  }}
+  .relationship-list {{
+    display: flex; flex-direction: column; gap: 8px;
+  }}
+  .relationship-item {{
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: #f6f8ff;
+    line-height: 1.4;
+  }}
+  .relationship-empty {{
+    color: #b5bdd4;
+    font-size: 14px;
+  }}
+
   svg {{ width: 100vw; height: 100vh; display: block; }}
   .link {{ stroke: #888; stroke-opacity: 0.45; fill: none; }}
   .link.q12a {{ stroke-dasharray: 4 3; stroke-opacity: 0.3; }}
@@ -246,22 +388,52 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     paint-order: stroke; stroke: #1a1a2e; stroke-width: 3px;
   }}
   .highlighted circle {{ stroke: #fff !important; stroke-width: 2.5px !important; }}
+  .node.selected circle {{
+    stroke: #fff !important; stroke-width: 3.5px !important;
+    filter: drop-shadow(0 0 12px rgba(255,255,255,0.4));
+  }}
+  .node.selected text {{ fill: #fff; font-weight: 700; }}
+
+  @media (max-width: 900px) {{
+    #person-panel {{
+      top: auto; left: 12px; right: 12px; bottom: 12px; width: auto;
+      max-height: min(46vh, 380px);
+    }}
+  }}
+
+  @media (max-width: 560px) {{
+    #settings-panel {{
+      min-width: min(250px, calc(100vw - 24px));
+    }}
+    #person-panel {{
+      max-height: 52vh;
+    }}
+    .detail-grid {{
+      grid-template-columns: 1fr;
+    }}
+  }}
 </style>
 </head>
 <body>
 
 <div id="controls">
-  <h2>Mokyr Genealogy Network</h2>
-  <input id="search" type="text" placeholder="Search by name…">
-  <label>
-    <input type="checkbox" id="showQ12a"> Show non-respondent nodes
-  </label>
-  <label>
-    <input type="checkbox" id="showLabels" checked> Show name labels
-  </label>
-  <label>
-    <input type="checkbox" id="showMedium" checked> Show medium-confidence links
-  </label>
+  <button id="settings-trigger" type="button" aria-expanded="false" aria-controls="settings-panel" aria-label="Settings">&#9881;</button>
+  <div id="settings-panel" hidden>
+    <div class="settings-title">Settings</div>
+    <input id="search" type="text" placeholder="Search by name…">
+    <label>
+      <input type="checkbox" id="showQ12a" checked> Show non-respondent nodes (2+ fields)
+    </label>
+    <label>
+      <input type="checkbox" id="showMokyrDirect"> Show only Mokyr direct links
+    </label>
+    <label>
+      <input type="checkbox" id="showLabels" checked> Show name labels
+    </label>
+    <label>
+      <input type="checkbox" id="showMedium"> Show medium-confidence links
+    </label>
+  </div>
 </div>
 
 <div id="legend">
@@ -279,6 +451,21 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   <span id="stat-edges"></span> edges
 </div>
 
+<aside id="person-panel" aria-live="polite">
+  <div class="panel-header">
+    <div>
+      <div class="panel-eyebrow">Person Details</div>
+      <h3 id="person-title">Select a person</h3>
+      <div id="person-subtitle">Click a node to inspect the latest details and direct relationships.</div>
+    </div>
+    <button id="panel-close" type="button" disabled>Clear</button>
+  </div>
+  <div id="person-empty">
+    The panel will show person-level metadata from the node file plus direct advisors and direct students from the current network edges.
+  </div>
+  <div id="person-content" hidden></div>
+</aside>
+
 <div id="tooltip"></div>
 <svg id="graph"></svg>
 
@@ -289,6 +476,30 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
 const RAW_NODES = {nodes_json};
 const RAW_EDGES = {edges_json};
 // ──────────────────────────────────────────────────────────────────────────
+
+const NODE_BY_ID = new Map(RAW_NODES.map(node => [node.id, node]));
+const MOKYR_DIRECT_IDS = new Set(
+  ['JM-ROOT', ...RAW_EDGES.filter(edge => edge.source === 'JM-ROOT').map(edge => edge.target)]
+);
+
+function buildRelationshipMaps(edges) {{
+  const advisorsByNode = new Map();
+  const studentsByNode = new Map();
+
+  function ensureSet(map, key) {{
+    if (!map.has(key)) map.set(key, new Set());
+    return map.get(key);
+  }}
+
+  edges.forEach(edge => {{
+    ensureSet(studentsByNode, edge.source).add(edge.target);
+    ensureSet(advisorsByNode, edge.target).add(edge.source);
+  }});
+
+  return {{ advisorsByNode, studentsByNode }};
+}}
+
+const RELATIONSHIPS = buildRelationshipMaps(RAW_EDGES);
 
 const GEN_COLOR = {{
   0: '#f5c518',
@@ -307,18 +518,27 @@ function nodeRadius(d) {{
 }}
 
 // ── state ──────────────────────────────────────────────────────────────────
-let showQ12a    = false;
+let showQ12a    = true;
+let showMokyrDirect = false;
 let showLabels  = true;
-let showMedium  = true;
+let showMedium  = false;
+let showSettings = false;
 let searchTerm  = '';
+let selectedNodeId = null;
 
 // ── build visible sets ─────────────────────────────────────────────────────
 function visibleNodeIds() {{
-  return new Set(
-    RAW_NODES
-      .filter(n => showQ12a || n.is_respondent || n.id === 'JM-ROOT')
-      .map(n => n.id)
-  );
+  let visibleNodes = RAW_NODES.filter(n => {{
+    if (n.id === 'JM-ROOT') return true;
+    if (n.is_respondent) return true;
+    return showQ12a && n.show_nonrespondent;
+  }});
+
+  if (showMokyrDirect) {{
+    visibleNodes = visibleNodes.filter(n => MOKYR_DIRECT_IDS.has(n.id));
+  }}
+
+  return new Set(visibleNodes.map(n => n.id));
 }}
 function visibleEdges(vids) {{
   return RAW_EDGES.filter(e => {{
@@ -331,6 +551,13 @@ function visibleEdges(vids) {{
 // ── D3 setup ───────────────────────────────────────────────────────────────
 const svg = d3.select('#graph');
 const g   = svg.append('g');
+const panelTitleEl = document.getElementById('person-title');
+const panelSubtitleEl = document.getElementById('person-subtitle');
+const panelEmptyEl = document.getElementById('person-empty');
+const panelContentEl = document.getElementById('person-content');
+const panelCloseEl = document.getElementById('panel-close');
+const settingsTriggerEl = document.getElementById('settings-trigger');
+const settingsPanelEl = document.getElementById('settings-panel');
 
 // Arrowhead marker
 svg.append('defs').append('marker')
@@ -359,6 +586,9 @@ function render() {{
   const H = window.innerHeight;
 
   const vids   = visibleNodeIds();
+  if (selectedNodeId && !vids.has(selectedNodeId)) {{
+    selectedNodeId = null;
+  }}
   const vNodes = RAW_NODES.filter(n => vids.has(n.id));
   const vEdges = visibleEdges(vids);
 
@@ -403,7 +633,11 @@ function render() {{
           .on('start', dragstarted)
           .on('drag',  dragged)
           .on('end',   dragended));
-        ng.on('mousemove', showTooltip)
+        ng.on('click', (event, d) => {{
+            if (event.defaultPrevented) return;
+            selectNode(d.id);
+          }})
+          .on('mousemove', showTooltip)
           .on('mouseleave', hideTooltip);
         return ng;
       }}
@@ -420,7 +654,8 @@ function render() {{
     .text(d => d.label)
     .style('display', showLabels ? null : 'none');
 
-  applySearch(node);
+  updateNodeStyles(node);
+  renderPersonPanel();
 
   simulation.on('tick', () => {{
     link
@@ -443,18 +678,147 @@ function render() {{
   }});
 }}
 
-function applySearch(node) {{
+function matchesSearch(d, q) {{
+  return d.label.toLowerCase().includes(q)
+      || (d.institution || '').toLowerCase().includes(q)
+      || (d.employer || '').toLowerCase().includes(q)
+      || (d.country || '').toLowerCase().includes(q)
+      || (d.us_state || '').toLowerCase().includes(q);
+}}
+
+function updateNodeStyles(node) {{
   const q = searchTerm.trim().toLowerCase();
-  if (!q) {{
-    node.classed('highlighted', false).classed('dimmed', false);
+  node.each(function(d) {{
+    const match = q ? matchesSearch(d, q) : false;
+    d3.select(this)
+      .classed('highlighted', q ? match : false)
+      .classed('dimmed', q ? !match : false)
+      .classed('selected', d.id === selectedNodeId);
+  }});
+}}
+
+function selectNode(nodeId) {{
+  selectedNodeId = nodeId;
+  updateNodeStyles(nodeG.selectAll('g.node'));
+  renderPersonPanel();
+}}
+
+function clearSelection() {{
+  selectedNodeId = null;
+  updateNodeStyles(nodeG.selectAll('g.node'));
+  renderPersonPanel();
+}}
+
+function renderSettingsPanel() {{
+  settingsPanelEl.hidden = !showSettings;
+  settingsTriggerEl.classList.toggle('active', showSettings);
+  settingsTriggerEl.setAttribute('aria-expanded', showSettings ? 'true' : 'false');
+}}
+
+function formatGeneration(generation) {{
+  if (generation === null || generation === undefined) return '';
+  if (generation === 0) return 'Generation 0 (root)';
+  return 'Generation ' + generation;
+}}
+
+function displayValue(value, fallback = '') {{
+  return value && String(value).trim() ? String(value).trim() : fallback;
+}}
+
+function relatedNodes(map, nodeId) {{
+  return Array
+    .from(map.get(nodeId) || [])
+    .map(id => NODE_BY_ID.get(id))
+    .filter(Boolean)
+    .sort((a, b) => a.label.localeCompare(b.label));
+}}
+
+function buildDetailItem(label, value) {{
+  const item = document.createElement('div');
+  item.className = 'detail-item';
+
+  const labelEl = document.createElement('div');
+  labelEl.className = 'detail-label';
+  labelEl.textContent = label;
+
+  const valueEl = document.createElement('div');
+  valueEl.className = 'detail-value';
+  valueEl.textContent = displayValue(value);
+
+  item.appendChild(labelEl);
+  item.appendChild(valueEl);
+  return item;
+}}
+
+function buildRelationshipSection(title, people) {{
+  const section = document.createElement('section');
+  section.className = 'panel-section';
+
+  const heading = document.createElement('h3');
+  heading.textContent = title + ' (' + people.length + ')';
+  section.appendChild(heading);
+
+  if (!people.length) {{
+    const empty = document.createElement('div');
+    empty.className = 'relationship-empty';
+    empty.textContent = 'None listed';
+    section.appendChild(empty);
+    return section;
+  }}
+
+  const list = document.createElement('div');
+  list.className = 'relationship-list';
+
+  people.forEach(person => {{
+    const item = document.createElement('div');
+    item.className = 'relationship-item';
+    item.textContent = person.label;
+    list.appendChild(item);
+  }});
+
+  section.appendChild(list);
+  return section;
+}}
+
+function renderPersonPanel() {{
+  const node = selectedNodeId ? NODE_BY_ID.get(selectedNodeId) : null;
+  panelContentEl.replaceChildren();
+
+  if (!node) {{
+    panelTitleEl.textContent = 'Select a person';
+    panelSubtitleEl.textContent = 'Click a node to inspect the latest details and direct relationships.';
+    panelEmptyEl.hidden = false;
+    panelContentEl.hidden = true;
+    panelCloseEl.disabled = true;
     return;
   }}
-  node.each(function(d) {{
-    const match = d.label.toLowerCase().includes(q)
-                || (d.institution || '').toLowerCase().includes(q)
-                || (d.employer || '').toLowerCase().includes(q);
-    d3.select(this).classed('highlighted', match).classed('dimmed', !match);
+
+  panelTitleEl.textContent = node.label;
+  panelSubtitleEl.textContent = formatGeneration(node.generation);
+  panelEmptyEl.hidden = true;
+  panelContentEl.hidden = false;
+  panelCloseEl.disabled = false;
+
+  const detailGrid = document.createElement('section');
+  detailGrid.className = 'detail-grid';
+  [
+    ['Generation', formatGeneration(node.generation)],
+    ['PhD institution', node.institution],
+    ['PhD year', node.phd_year],
+    ['Current employer', node.employer],
+    ['Country', node.country],
+    ['US state', node.us_state],
+  ].forEach(([label, value]) => {{
+    detailGrid.appendChild(buildDetailItem(label, value));
   }});
+
+  panelContentEl.appendChild(detailGrid);
+  panelContentEl.appendChild(
+    buildRelationshipSection('Direct advisors', relatedNodes(RELATIONSHIPS.advisorsByNode, node.id))
+  );
+  panelContentEl.appendChild(
+    buildRelationshipSection('Direct students', relatedNodes(RELATIONSHIPS.studentsByNode, node.id))
+  );
 }}
 
 // ── tooltip (textContent only — no innerHTML) ──────────────────────────────
@@ -463,11 +827,9 @@ const tooltipEl = document.getElementById('tooltip');
 function showTooltip(event, d) {{
   tooltipEl.innerHTML = '';  // clear
 
-  const lines = [
-    d.label,
-    d.generation !== null && d.generation !== undefined
-      ? 'Generation: ' + d.generation : 'Generation: unknown',
-  ];
+  const lines = [d.label];
+  const generationText = formatGeneration(d.generation);
+  if (generationText) lines.push(generationText);
   if (d.institution) lines.push('PhD: ' + d.institution + (d.phd_year ? ' (' + d.phd_year + ')' : ''));
   if (d.employer)    lines.push('At: ' + d.employer);
   if (d.country)     lines.push(d.country);
@@ -516,6 +878,13 @@ function dragended(event, d) {{
 document.getElementById('showQ12a').addEventListener('change', e => {{
   showQ12a = e.target.checked; render();
 }});
+settingsTriggerEl.addEventListener('click', () => {{
+  showSettings = !showSettings;
+  renderSettingsPanel();
+}});
+document.getElementById('showMokyrDirect').addEventListener('change', e => {{
+  showMokyrDirect = e.target.checked; render();
+}});
 document.getElementById('showLabels').addEventListener('change', e => {{
   showLabels = e.target.checked;
   nodeG.selectAll('g.node text').style('display', showLabels ? null : 'none');
@@ -525,12 +894,17 @@ document.getElementById('showMedium').addEventListener('change', e => {{
 }});
 document.getElementById('search').addEventListener('input', e => {{
   searchTerm = e.target.value;
-  applySearch(nodeG.selectAll('g.node'));
+  updateNodeStyles(nodeG.selectAll('g.node'));
+}});
+panelCloseEl.addEventListener('click', clearSelection);
+window.addEventListener('keydown', event => {{
+  if (event.key === 'Escape') clearSelection();
 }});
 
 window.addEventListener('resize', render);
 
 // ── initial render ─────────────────────────────────────────────────────────
+renderSettingsPanel();
 render();
 </script>
 </body>
