@@ -1,0 +1,34 @@
+Subject: Mokyr update: descriptives
+
+Hi Ran,
+
+Quick Mokyr update. I have been cleaning the advisor-student data and now have descriptives through the first two generations. As of April 1, 2026:
+
+The tree has 386 people (not counting Joel). Of those, 76 are in the first generation, 186 in the second, 115 in the third, and 5 in the fourth, with 4 people still unassigned pending relationship cleanup.
+
+- Your branch is the largest in the first generation by a wide margin: 152 people trace back to you as their link to Joel. Avner Greif is next with 45, then John Nye with 22, Fabio Braggion (13), Maristella Botticini (10), and Mauricio Drelichman, Jose-Antonio Espin-Sanchez, and Lyndon Moore each with 9.
+- Of the 76 first-generation people, 64 got their PhDs at Northwestern. In the second generation, the PhD institutions are much more dispersed (31 distinct programs), but Stanford is the most common, with 77 of 186 people, followed by Yale (11), Tilburg (10), and George Mason (9).
+- The three largest second-generation branches are all your students: Santiago Perez (17 people below him), Michela Giorcelli (15), and Arthur van Benthem (14). After that it is Karen Clay (Avner Greif's student, 6), Anirban Mukherjee (Mauricio Drelichman's student, 6), and Noel Johnson (John Nye's student, 5).
+- Among first-generation respondents, 22 of 73 (30%) report having supervised PhD students. Among second-generation respondents, 37 of 147 (25%) do.
+- Among people with country data, the first generation spans 13 countries, with 49 in the U.S., 5 in Canada, and 4 in the U.K. The second generation spans 23 countries: 102 in the U.S., 12 in the U.K., 10 in China, 9 in Italy, and 6 in India. Within the U.S., California is the most common state in the second generation (37 people), and among those with employer data the top employers are Stanford (16), Yale (6), and UCLA (5).
+
+I have also been filling in information for people who did not respond to the survey. These are people we know about either because their advisor listed them in Q12a (the question where we ask respondents to name their PhD students) or because I found them on an advisor's CV when the advisor did not provide a student list. For the 39 second-generation nonrespondents, I was able to find PhD institution for 92%, current employer for 82%, and country for 85% through public sources. I am now almost done doing the same for the third generation, which is the last generation with enough people to make this worthwhile (the fourth generation is still very sparse). So far I have 36 approved updates for Gen 3.
+
+The main caveat on the lineage counts is that they are still lower bounds: some respondents say they have supervised students but did not list them, and there are some advisor-student links I have not yet been able to resolve. So the numbers are concrete enough to guide the next round of charts, but I am still treating them as working tables rather than final tables.
+
+Next I will turn these into cleaner charts and update the interactive network visualization. On photos, I am planning to show each person's photo as the default node display, with more information (including the name) appearing when you hover over a node. For people with no photo on file, the node would show their name, which is how the visualization works now for everyone.
+
+I am also planning to use automated agents (via Claude Code) to recover information about people in the tree that we did not capture in the survey, things like citation counts, fields of research, and publication lists. If that works, it would let us calculate richer descriptives about how Joel's intellectual tree has spread across fields, who the most-cited descendants are, and so on.
+
+---
+
+Separate update on Legacy. Some of this you already know, but it helps me to write it out clearly, so apologies if I am repeating myself. This is the project asking whether elite colleges have "dynasties," families whose surnames persist at the same institution generation after generation, beyond what general socioeconomic persistence would predict. The key test is whether a surname's historical concentration at a given college (say, Harvard) predicts its modern concentration at that same college more than it predicts concentration at other elite colleges (say, Yale or Princeton). If the persistence is stronger along that diagonal, something college-specific is at work.
+
+Since mid-March I have been working on the estimation side. The earlier specifications Santi and I discussed were producing magnitudes that felt implausibly large for some school-cohort combinations, so the goal has been to compare different statistical approaches and find one that gives defensible estimates.
+
+I moved the estimation off Redivis (which was hitting memory limits) and onto Sherlock, where we have more resources. I built three alternative model specifications: an overrepresentation logit that asks a clean yes/no question about historical concentration, a weighted linear model that lets us separate the contribution of earlier vs. later historical cohorts, and a log-binomial model (closest to what Santi originally proposed) that estimates relative-risk ratios. Each specification runs with and without about 104 surname-level controls (racial composition, foreign-born parent shares, state of origin), and across four different ways of constructing the modern LinkedIn sample, so that we can check whether the results depend on how we build the data.
+
+I've been running earlier versions of this comparison over the past two weeks, and I've had to fix errors as they came up in each round. The job currently running on Sherlock is the second iteration of the code, built to account for the issues that've come up so far. It covers 120 model runs (all combinations of specification, controls, sample variant, and school scope) and should finish tomorrow (April 5). Each job takes roughly 24 hours on Sherlock's fast hardware. The reason it takes that long is that each of the 120 runs fits hundreds to thousands of individual regressions (one for every pair of schools in the scope), and the controlled versions add 104 covariates to each regression, so the full grid adds up to tens of thousands of model fits. Once the results land, I will take a careful look at the full set of outputs and pass along a summary to you and Santi for discussion on next steps.
+
+Best,
+Jensen

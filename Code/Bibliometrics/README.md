@@ -26,15 +26,18 @@ Expected upstream inputs:
 - `Data/Derived/Network_Nodes_{date}.csv`
 - `Data/Derived/Network_Edges_{date}.csv`
 
+Current source-specific pipelines:
+
+- `fetch_openalex.py`
+- `build_openalex_panel.py`
+- `GoogleScholar/`
+- `RePEc/`
+
 Suggested future scripts:
 
 - `match_authors.py`
-- `fetch_openalex.py`
-- `fetch_repec.py`
 - `fetch_semantic_scholar.py`
 - `build_bibliometric_panel.py`
-- `build_openalex_panel.py`
-
 ## OpenAlex Quickstart
 
 Store the API key outside the repo:
@@ -106,3 +109,69 @@ The dated JSON in `Data/Derived/` remains the full analyst artifact. The
 optional website copy is filtered for public use: unresolved or suspicious rows
 stay in the file with `public_ready=false`, but top-paper and topic fields are
 suppressed unless the row is public-safe.
+
+## RePEc Quickstart
+
+Install the lightweight HTML dependencies if needed:
+
+```bash
+python3 -m pip install requests beautifulsoup4
+```
+
+Build the dated RePEc manifest from the master list and network nodes:
+
+```bash
+python3 Code/Bibliometrics/RePEc/repec_manifest.py --date 040126
+```
+
+Consolidate batch outputs into one canonical enrichment file:
+
+```bash
+python3 Code/Bibliometrics/RePEc/consolidate_enrichment.py \
+  --manifest Data/Derived/RePEc_Manifest_040126.jsonl \
+  --enrichment Data/Derived/RePEc_Enrichment_040126_Batch_*.jsonl \
+  --output Data/Derived/RePEc_Enrichment_040126.jsonl \
+  --summary-output Data/Derived/RePEc_Enrichment_040126_Summary.csv
+```
+
+Fetch RePEc / IDEAS / CitEc enrichment:
+
+```bash
+python3 Code/Bibliometrics/RePEc/fetch_repec.py \
+  --manifest Data/Derived/RePEc_Manifest_040126.jsonl \
+  --output Data/Derived/RePEc_Enrichment_040126.jsonl \
+  --delay 2
+```
+
+Run a second-pass robustness sweep on sparse rows from a prior enrichment:
+
+```bash
+python3 Code/Bibliometrics/RePEc/fetch_repec.py \
+  --manifest Data/Derived/RePEc_Manifest_040126.jsonl \
+  --prior-enrichment Data/Derived/RePEc_Enrichment_040126.jsonl \
+  --output Data/Derived/RePEc_Enrichment_040126_Robust.jsonl \
+  --review-output Data/Derived/RePEc_Review_040126.csv \
+  --override-csv Data/Derived/RePEc_Handle_Overrides_040126.csv \
+  --robustness-pass \
+  --delay 2
+```
+
+Validate the enrichment JSONL:
+
+```bash
+python3 Code/Bibliometrics/RePEc/validate_enrichment.py \
+  --manifest Data/Derived/RePEc_Manifest_040126.jsonl \
+  --enrichment Data/Derived/RePEc_Enrichment_040126.jsonl
+```
+
+Merge RePEc fields into the bibliometric panel:
+
+```bash
+python3 Code/Bibliometrics/RePEc/merge_enrichment.py \
+  --date 040126 \
+  --enrichment Data/Derived/RePEc_Enrichment_040126.jsonl
+```
+
+If a scholar's handle is known and automatic discovery is brittle, either add
+`repec_handle_override` to the manifest row or place `node_id,repec_handle_override,notes`
+rows in `Data/Derived/RePEc_Handle_Overrides_040126.csv` and pass it with `--override-csv`.

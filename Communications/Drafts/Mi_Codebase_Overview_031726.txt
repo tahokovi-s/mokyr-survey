@@ -1,0 +1,25 @@
+Subject: Mokyr survey Dropbox overview and where to start
+
+Hi Mi,
+
+Ran, looping you in here as well: Mi is going to get started on the descriptive statistics for Joel ("Joe") Mokyr's students, while I continue monitoring the survey itself and coordinating any follow-up outreach. I also wanted to send Mi a quick overview of the Dropbox and where it is most useful to start.
+
+The two most useful places to begin are Data/Cleaned/ and Data/Derived/. The latest respondent-level file is Data/Cleaned/Mokyr_Survey_Responses_031126_Cleaned.csv, which reflects the survey data through March 11, 2026. That is the best source for self-reported variables such as current institution/employer, current role, country/state, website, relationship to Joel, PhD institution/year/advisor, and whether the respondent has supervised students. If you want descriptive stats only for actual respondents, this is the cleanest place to work.
+
+For network-style analysis, the main derived tables are Data/Derived/Network_Nodes_030226.csv, Data/Derived/Network_Edges_030226.csv, and Data/Derived/Master_Contact_List_030226.csv. Network_Nodes is one row per person and already canonicalizes PhD institution and current employer, while also keeping geography, generation, and respondent status. Network_Edges is the genealogy link structure. Master_Contact_List is probably the easiest single file if you want one row per person with advisor, institution, employer, generation, and response status in one place. One important detail is that these network/master files are dated March 2, 2026, so they are slightly older than the latest cleaned survey export.
+
+If you specifically want the reported student lists from respondents, the key file is Data/Derived/Advisors_and_Reported_Students_031126.csv. That is the parsed version of Q12a, where respondents listed their own PhD students in free text. In the current snapshot there are 211 advisor-student pairs from 49 advisors. If you want direct Joel advisees in the network, the root node is JM-ROOT in the edge list.
+
+All of the code is in Code/. The main scripts are:
+- clean_survey.py: cleans the raw Qualtrics exports into Data/Cleaned/
+- parse_q12a.py: parses the free-text student lists into Advisors_and_Reported_Students
+- build_network.py: creates the node and edge files for the genealogy
+- build_master_list.py: creates the one-row-per-person summary table
+
+The other folders are less central for this next step. Data/Contact_Lists/ is mostly the invitation-wave history, Communications/ is drafts and memos, Logs/ is audit/cleaning history, and Output/ currently just has the interactive genealogy HTML.
+
+One caveat: field and citation measures are not explicit survey variables. What the survey gives us is the person-level roster we would use to derive them. The current files have institutions, geography, role, websites, and advisor links, but not a standardized field variable or citation totals. So for something like total citations of Joel's students, the next step would be to take the relevant people from the cleaned/derived files and merge in external information keyed off names, websites, institutions, and emails. Fields would likely be derived the same way, either through manual coding or an external classification step.
+
+If useful, I’d suggest starting with Master_Contact_List_030226 for a quick overview, and then going back to the 031126 cleaned survey file whenever you want the most up-to-date respondent-side variables.
+
+Best,

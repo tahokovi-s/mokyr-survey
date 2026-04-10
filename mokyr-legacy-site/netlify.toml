@@ -1,0 +1,13 @@
+[build]
+publish = "."
+
+[[headers]]
+for = "/*"
+
+[headers.values]
+Referrer-Policy = "same-origin"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "SAMEORIGIN"
+Permissions-Policy = "camera=(), geolocation=(), microphone=()"
+X-Robots-Tag = "noindex, nofollow, noarchive, nosnippet, notranslate"
+Cache-Control = "no-store, max-age=0"

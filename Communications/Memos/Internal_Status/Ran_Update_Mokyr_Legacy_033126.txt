@@ -1,0 +1,38 @@
+Subject: Re: Quick update + travel to Austria
+
+Hi Ran,
+
+On Mokyr, I have a first pass of the generation-based descriptives and a working interactive network visualization. A meaningful share of the time before spring break went into building and repeatedly adjusting the Python processing pipeline that takes the raw survey data and converts it into a format I can use for visualization and analysis. That part has taken longer in part because some survey fields, especially Q12a, do not come in a standardized format the way the multiple-choice fields do. In practice, after each new survey update I have had to rerun the conversion pipeline, see which newly added free-text responses break the parsing logic, adjust the code accordingly, and then validate the revised output against prior survey waves and already-processed responses to make sure the fixes are consistent across the full dataset.
+
+At this stage, the descriptives I am computing directly from the survey fields are:
+
+- Head counts by generation: Joel's direct students, their students, later descendants, and network totals.
+- Subtree sizes: how many known descendants sit under each of Joel's direct students.
+- Student supervision: who reports having supervised PhD students and where Q12 says "yes" but Q12a is missing.
+- PhD-year distributions: cohort ranges, means, medians, and cohort-specific supervision rates.
+- PhD institutions: counts by doctoral institution for Joel's direct students.
+- Current employers: counts by institution or employer.
+- Geography: country and U.S. state distributions where available.
+- Role/status: faculty, graduate student, industry, government, policy, etc.
+
+I will finish these survey-field stats first. That gives us a descriptive baseline grounded in data we collected ourselves.
+
+I am also attaching the current network HTML (mokyr-genealogy-033126.html). It should be opened on a computer or laptop rather than on a phone, since the layout and controls are designed for a larger screen. To launch it, you should just download the attachment and open the HTML file in a browser (Chrome, Safari, or Firefox all work; no special software is needed). The search box lets you jump to a specific person, institution, or employer; "Show non-respondent nodes" adds the non-respondent names currently carried in the working graph from Q12a and curated manual additions; "Show name labels" toggles the labels on and off; and "Show medium-confidence links" toggles the advisory links that are still being carried as provisional rather than fully confirmed. You can also hover over any node for details, drag nodes around to untangle clusters, and zoom/pan freely.
+
+The next layer is descriptives the survey does not contain:
+
+- Research field or subfield classifications.
+- Citation counts.
+- Publication-based prominence measures.
+- Lineage coverage from public sources for branches that are thin in the survey.
+
+For those, I am planning on leveraging the help of AI agents (via Claude Code) to search the web and public roster data for Joel's network, and merge that external information onto the survey-based person list.
+
+After that I will restructure the descriptives so I can produce visualizations faster. The main output is still a network figure like the interactive proof-of-concept I have, plus summary charts and tables.
+
+My goal is to have the survey-field descriptives done by the end of the day on Tuesday, March 31, 2026, and if not then by Wednesday, April 1, 2026. After that I will move onto the next layer of descriptives. I anticipate that will take longer since I will have to source much of that information manually, but I will write with another update on Friday, April 3, 2026.
+
+On Legacy, I have written the code for the next steps Santi outlined, but the bottleneck has been getting everything to run reliably on Sherlock. A full model run can take close to a day, and I have also had to migrate parts of the analysis that were previously running on Redivis so they work with the packages and environment available on Sherlock. So the work is moving, but it has been slowed by runtime and debugging rather than by lack of code. My goal is to finish the current debugging/stabilization pass this week and have a clearer sense next week of how long the full runs will take end to end.
+
+Best,
+Jensen
