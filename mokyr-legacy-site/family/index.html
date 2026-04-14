@@ -26,30 +26,52 @@
     </header>
 
     <main class="section-main">
+
+      <!-- intro section -->
       <section class="section-intro" data-reveal>
         <p class="eyebrow">Joel's Academic Family</p>
         <h1>Joel's Academic Family</h1>
-        <p class="lead section-lead">Explore the interactive genealogy network.</p>
+        <p class="lead section-lead">Explore Joel Mokyr's academic lineage — from first-generation students to today.</p>
       </section>
 
-      <section class="viz-frame-shell" data-reveal>
-        <div class="viz-toolbar">
-          <p class="viz-note">Interactive genealogy visualization</p>
-          <a class="secondary-link" href="../network/mokyr-genealogy.html" target="_blank" rel="noopener noreferrer">
-            Open full screen
-          </a>
+      <!-- mode chooser -->
+      <section class="ft-chooser" data-reveal aria-label="Choose a view">
+        <button class="ft-tile is-active" data-mode="tree" aria-pressed="true" type="button">
+          <span class="ft-tile-label">Family Tree</span>
+          <span class="ft-tile-desc">Browse the lineage branch by branch</span>
+        </button>
+        <button class="ft-tile" data-mode="network" aria-pressed="false" type="button">
+          <span class="ft-tile-label">Network Map</span>
+          <span class="ft-tile-desc">Interactive force-directed visualization</span>
+        </button>
+      </section>
+
+      <!-- family tree panel (default visible) -->
+      <section class="ft-panel" id="ft-tree-panel" aria-label="Family Tree view">
+        <div class="ft-toolbar">
+          <p class="ft-ordering-note">People with descendants appear first, ranked from most to least; people with no descendants then follow alphabetically.</p>
+          <div class="ft-search-wrap">
+            <input type="search" id="ft-search" class="ft-search" placeholder="Search people…" aria-label="Search people in the family tree">
+          </div>
         </div>
-        <div class="viz-frame">
-          <iframe
-            src="../network/mokyr-genealogy.html"
-            title="Joel Mokyr academic genealogy visualization"
-            loading="eager"
-          ></iframe>
+        <div id="ft-tree-root" class="ft-tree-root" role="tree" aria-label="Joel Mokyr academic genealogy"></div>
+      </section>
+
+      <!-- network map panel (hidden until selected) -->
+      <section class="ft-panel ft-network-panel" id="ft-network-panel" aria-label="Network Map view" hidden>
+        <div class="ft-network-frame-shell" id="ft-network-frame-shell">
+          <!-- iframe injected lazily when this panel is shown -->
+        </div>
+        <div class="ft-network-toolbar">
+          <a class="secondary-link" href="../network/mokyr-genealogy.html" target="_blank" rel="noopener noreferrer">Open full screen</a>
         </div>
       </section>
+
     </main>
   </div>
 
-  <script src="../assets/site.js"></script>
+  <script src="../assets/site.js?v=20260413b"></script>
+  <script src="../assets/genealogy-data.js?v=20260413b"></script>
+  <script src="../assets/family-tree.js?v=20260413b"></script>
 </body>
 </html>

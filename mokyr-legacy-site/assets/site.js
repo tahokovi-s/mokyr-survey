@@ -46,6 +46,14 @@ if (previewCard && !prefersReducedMotion) {
 
 const countUpElements = document.querySelectorAll("[data-count-to]");
 
+const formatCount = (element, value) => {
+  if (element.dataset.numberFormat === "plain") {
+    return String(value);
+  }
+
+  return value.toLocaleString();
+};
+
 const animateCount = (element) => {
   if (element.dataset.counted === "true") {
     return;
@@ -59,7 +67,7 @@ const animateCount = (element) => {
   element.dataset.counted = "true";
 
   if (prefersReducedMotion) {
-    element.textContent = target.toLocaleString();
+    element.textContent = formatCount(element, target);
     return;
   }
 
@@ -71,7 +79,7 @@ const animateCount = (element) => {
     const eased = 1 - Math.pow(1 - progress, 3);
     const value = Math.round(target * eased);
 
-    element.textContent = value.toLocaleString();
+    element.textContent = formatCount(element, value);
 
     if (progress < 1) {
       window.requestAnimationFrame(frame);
