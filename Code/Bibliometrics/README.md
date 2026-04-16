@@ -110,6 +110,55 @@ optional website copy is filtered for public use: unresolved or suspicious rows
 stay in the file with `public_ready=false`, but top-paper and topic fields are
 suppressed unless the row is public-safe.
 
+## OpenAlex Review Workflow
+
+Run the audit first to identify rows that still need manual classification:
+
+```bash
+python3 Code/Bibliometrics/audit_review_decisions.py \
+  --decisions Data/Derived/OpenAlex_Ambiguous_Decisions_040126.csv
+```
+
+For local smoke tests without API calls, use `--provider mock`.
+
+Generate the default current-review queue:
+
+```bash
+python3 Code/Bibliometrics/generate_review_html.py --date 040126
+```
+
+The default page writes `tmp/openalex_review/openalex_claude_followup_review_040126.html`
+and loads `OpenAlex_Claude_Review_Followup_040126.csv`, which contains the latest
+rows that still need manual review after the Claude pass. The page shows Claude's
+recommendation alongside the editable candidate list; export
+`openalex_claude_followup_review_decisions_040126.csv` from the page.
+
+If you want the older post-audit flagged queue instead, request it explicitly:
+
+```bash
+python3 Code/Bibliometrics/generate_review_html.py \
+  --mode flagged \
+  --date 040126
+```
+
+If you still need the original unresolved candidate picker, request it
+explicitly:
+
+```bash
+python3 Code/Bibliometrics/generate_review_html.py \
+  --mode unresolved \
+  --date 040126
+```
+
+Merge reviewed decisions into the canonical union file:
+
+```bash
+python3 Code/Bibliometrics/merge_review_decisions.py \
+  --audited ~/Downloads/openalex_flagged_review_decisions_040126.csv
+```
+
+Pass `--rebuild` to regenerate the panel with the merged decisions file.
+
 ## RePEc Quickstart
 
 Install the lightweight HTML dependencies if needed:

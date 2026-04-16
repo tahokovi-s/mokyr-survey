@@ -21,3 +21,11 @@ Logs/
 
 # Output — generated artifacts (large HTML files)
 Output/
+
+# Local debug artifacts
+tmp/
+.netlify/
+mokyr-legacy-site/.netlify/
+probe.json
+captcha_check.png
+shape-*.png
