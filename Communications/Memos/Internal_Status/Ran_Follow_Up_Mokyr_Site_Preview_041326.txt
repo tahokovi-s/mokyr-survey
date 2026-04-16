@@ -1,0 +1,24 @@
+Subject: Re: Ahokovi-Abramitzky Weekly Update (4/4/26) re: Mokyr + Legacy
+
+Hi Ran (cc: Mi),
+
+Quick follow-up on the Mokyr side: I now have a working preview of the site. One quick note before the link: it is much better to open on a laptop than on a phone, especially if you want to click around the tree/network views or use it while presenting.
+
+https://polite-baklava-a95d7b.netlify.app/
+
+It is an unlisted preview link rather than a public launch, and I have it set not to be indexed by search engines.
+
+If you open it, the landing page is intentionally very simple. You will see two main buttons: "Joel's Academic Family" and "Joel's Legacy by the Numbers."
+
+If you click "Joel's Academic Family," it opens to the tree view by default. At the top there is a toggle between "Family Tree" and "Network Map." In the tree view, you click on Joel to open the first generation, and then click through each branch to expand descendants. People with descendants are shown first, and the number on the right of each card shows how many recorded descendants sit below that person. There is also a search bar that lets you search the tree by name. If you switch to "Network Map," it opens the interactive force-directed version of the genealogy, and there is also an "Open full screen" button if you want to show just that visualization by itself.
+
+If you click "Joel's Legacy by the Numbers," it opens a scrollable narrative page that works a bit like a live slide deck. The left-hand navigation walks through "Overview," "Structure," "Branches," "Cohorts," "Training Hubs," and "Reach," and as you scroll the page the relevant section comes into focus. My sense is that this could work especially well if you are sharing your screen while presenting at the conference: instead of moving through a static deck, you could scroll through the descriptives as a kind of interactive slideshow, then jump back to the family tree or network view if you want to illustrate a specific branch or person.
+
+I am still working on enriching the "Legacy by the Numbers" section further. In particular, I am trying to add richer bibliometric descriptives, but that has been more tedious than I initially hoped because data quality varies a lot across sources, and matching people cleanly to citation and publication records is uneven. So I am moving carefully there to avoid introducing noisy or misleading summary statistics.
+
+There are also some smaller backend items I still need to clean up, like continuing to add headshots for people where we have them and tightening a few presentation details, but those feel relatively minor compared to the broader structure, which is now in place.
+
+If you have a chance to click through it, I'd be very glad to hear any reactions on what feels most useful, what is confusing, and what additional descriptives would be most valuable to prioritize.
+
+Best,
+Jensen
