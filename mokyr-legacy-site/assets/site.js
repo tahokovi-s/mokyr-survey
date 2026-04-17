@@ -24,26 +24,6 @@ if (prefersReducedMotion) {
   revealTargets.forEach((element) => revealObserver.observe(element));
 }
 
-const previewCard = document.querySelector("[data-preview-card]");
-
-if (previewCard && !prefersReducedMotion) {
-  const resetCard = () => {
-    previewCard.style.transform = "";
-  };
-
-  previewCard.addEventListener("pointermove", (event) => {
-    const bounds = previewCard.getBoundingClientRect();
-    const rotateY = ((event.clientX - bounds.left) / bounds.width - 0.5) * 10;
-    const rotateX = (0.5 - (event.clientY - bounds.top) / bounds.height) * 8;
-
-    previewCard.style.transform =
-      `perspective(1600px) rotateY(${rotateY.toFixed(2)}deg) rotateX(${rotateX.toFixed(2)}deg)`;
-  });
-
-  previewCard.addEventListener("pointerleave", resetCard);
-  previewCard.addEventListener("pointercancel", resetCard);
-}
-
 const countUpElements = document.querySelectorAll("[data-count-to]");
 
 const formatCount = (element, value) => {
@@ -103,7 +83,7 @@ if (countUpElements.length) {
           countObserver.unobserve(entry.target);
         });
       },
-      { threshold: 0.45 }
+      { threshold: 0.1, rootMargin: "0px 0px -80px 0px" }
     );
 
     countUpElements.forEach((element) => countObserver.observe(element));
@@ -116,31 +96,35 @@ const storyNavItems = [...document.querySelectorAll("[data-story-nav-item]")];
 if (storySteps.length && storyNavItems.length) {
   const setActiveStoryStep = (stepId) => {
     storyNavItems.forEach((item) => {
-      item.classList.toggle("is-active", item.dataset.storyNavItem === stepId);
+      const isActive = item.dataset.storyNavItem === stepId;
+      item.classList.toggle("is-active", isActive);
+      if (isActive) {
+        item.setAttribute("aria-current", "location");
+      } else {
+        item.removeAttribute("aria-current");
+      }
     });
   };
 
   setActiveStoryStep(storySteps[0].dataset.storyStep);
 
-  if (!prefersReducedMotion) {
-    const storyObserver = new IntersectionObserver(
-      (entries) => {
-        const visibleEntries = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+  const storyObserver = new IntersectionObserver(
+    (entries) => {
+      const visibleEntries = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
 
-        if (!visibleEntries.length) {
-          return;
-        }
-
-        setActiveStoryStep(visibleEntries[0].target.dataset.storyStep);
-      },
-      {
-        rootMargin: "-30% 0px -30% 0px",
-        threshold: [0.2, 0.45, 0.7],
+      if (!visibleEntries.length) {
+        return;
       }
-    );
 
-    storySteps.forEach((step) => storyObserver.observe(step));
-  }
+      setActiveStoryStep(visibleEntries[0].target.dataset.storyStep);
+    },
+    {
+      rootMargin: "-30% 0px -30% 0px",
+      threshold: [0.2, 0.45, 0.7],
+    }
+  );
+
+  storySteps.forEach((step) => storyObserver.observe(step));
 }
