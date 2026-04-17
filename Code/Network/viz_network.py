@@ -274,7 +274,6 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   #legend h3 {{ font-size: 12px; color: #aaa; margin-bottom: 6px; }}
   .legend-item {{ display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }}
   .legend-dot {{ width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }}
-  .legend-dot.dashed {{ background: transparent !important; border: 2px dashed #aaa; }}
 
   #tooltip {{
     position: absolute; pointer-events: none; z-index: 20;
@@ -379,7 +378,6 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   .link {{ stroke: #888; stroke-opacity: 0.45; fill: none; }}
   .link.q12a {{ stroke-dasharray: 4 3; stroke-opacity: 0.3; }}
   .node circle {{ stroke-width: 1.5px; cursor: pointer; }}
-  .node circle.q12a-only {{ stroke-dasharray: 4 2; }}
   .node.hidden {{ display: none; }}
   .node.dimmed circle {{ opacity: 0.2; }}
   .node.dimmed text {{ opacity: 0.15; }}
@@ -422,9 +420,6 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     <div class="settings-title">Settings</div>
     <input id="search" type="text" placeholder="Search by name…">
     <label>
-      <input type="checkbox" id="showQ12a" checked> Show non-respondent nodes (2+ fields)
-    </label>
-    <label>
       <input type="checkbox" id="showMokyrDirect"> Show only Mokyr direct links
     </label>
     <label>
@@ -442,8 +437,7 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div> Gen 1 — Direct students</div>
   <div class="legend-item"><div class="legend-dot" style="background:#50c878"></div> Gen 2</div>
   <div class="legend-item"><div class="legend-dot" style="background:#ff8c42"></div> Gen 3</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#aaa"></div> Gen 4+ or unknown</div>
-  <div class="legend-item"><div class="legend-dot dashed"></div> Non-respondent node</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#aaa"></div> Gen 4+</div>
 </div>
 
 <div id="stats">
@@ -477,9 +471,42 @@ const RAW_NODES = {nodes_json};
 const RAW_EDGES = {edges_json};
 // ──────────────────────────────────────────────────────────────────────────
 
-const NODE_BY_ID = new Map(RAW_NODES.map(node => [node.id, node]));
+function connectedNodeIdsFromRoot(nodes, edges, rootId) {{
+  const knownNodeIds = new Set(nodes.map(node => node.id));
+  const childrenById = new Map();
+
+  edges.forEach(edge => {{
+    if (!knownNodeIds.has(edge.source) || !knownNodeIds.has(edge.target)) return;
+    if (!childrenById.has(edge.source)) childrenById.set(edge.source, []);
+    childrenById.get(edge.source).push(edge.target);
+  }});
+
+  if (!knownNodeIds.has(rootId)) return new Set();
+
+  const seen = new Set([rootId]);
+  const stack = [rootId];
+
+  while (stack.length) {{
+    const current = stack.pop();
+    (childrenById.get(current) || []).forEach(childId => {{
+      if (seen.has(childId)) return;
+      seen.add(childId);
+      stack.push(childId);
+    }});
+  }}
+
+  return seen;
+}}
+
+const CONNECTED_NODE_IDS = connectedNodeIdsFromRoot(RAW_NODES, RAW_EDGES, 'JM-ROOT');
+const NETWORK_NODES = RAW_NODES.filter(node => CONNECTED_NODE_IDS.has(node.id));
+const NETWORK_EDGES = RAW_EDGES.filter(edge => (
+  CONNECTED_NODE_IDS.has(edge.source) && CONNECTED_NODE_IDS.has(edge.target)
+));
+
+const NODE_BY_ID = new Map(NETWORK_NODES.map(node => [node.id, node]));
 const MOKYR_DIRECT_IDS = new Set(
-  ['JM-ROOT', ...RAW_EDGES.filter(edge => edge.source === 'JM-ROOT').map(edge => edge.target)]
+  ['JM-ROOT', ...NETWORK_EDGES.filter(edge => edge.source === 'JM-ROOT').map(edge => edge.target)]
 );
 
 function buildRelationshipMaps(edges) {{
@@ -499,7 +526,7 @@ function buildRelationshipMaps(edges) {{
   return {{ advisorsByNode, studentsByNode }};
 }}
 
-const RELATIONSHIPS = buildRelationshipMaps(RAW_EDGES);
+const RELATIONSHIPS = buildRelationshipMaps(NETWORK_EDGES);
 
 const GEN_COLOR = {{
   0: '#f5c518',
@@ -518,7 +545,6 @@ function nodeRadius(d) {{
 }}
 
 // ── state ──────────────────────────────────────────────────────────────────
-let showQ12a    = true;
 let showMokyrDirect = false;
 let showLabels  = true;
 let showMedium  = false;
@@ -528,11 +554,9 @@ let selectedNodeId = null;
 
 // ── build visible sets ─────────────────────────────────────────────────────
 function visibleNodeIds() {{
-  let visibleNodes = RAW_NODES.filter(n => {{
-    if (n.id === 'JM-ROOT') return true;
-    if (n.is_respondent) return true;
-    return showQ12a && n.show_nonrespondent;
-  }});
+  let visibleNodes = NETWORK_NODES.filter(n => (
+    n.id === 'JM-ROOT' || n.is_respondent || n.show_nonrespondent
+  ));
 
   if (showMokyrDirect) {{
     visibleNodes = visibleNodes.filter(n => MOKYR_DIRECT_IDS.has(n.id));
@@ -541,7 +565,7 @@ function visibleNodeIds() {{
   return new Set(visibleNodes.map(n => n.id));
 }}
 function visibleEdges(vids) {{
-  return RAW_EDGES.filter(e => {{
+  return NETWORK_EDGES.filter(e => {{
     if (!vids.has(e.source) || !vids.has(e.target)) return false;
     if (!showMedium && e.confidence === 'medium') return false;
     return true;
@@ -589,7 +613,7 @@ function render() {{
   if (selectedNodeId && !vids.has(selectedNodeId)) {{
     selectedNodeId = null;
   }}
-  const vNodes = RAW_NODES.filter(n => vids.has(n.id));
+  const vNodes = NETWORK_NODES.filter(n => vids.has(n.id));
   const vEdges = visibleEdges(vids);
 
   // Build id->node index for simulation
@@ -646,8 +670,7 @@ function render() {{
   node.select('circle')
     .attr('r', nodeRadius)
     .attr('fill', nodeColor)
-    .attr('stroke', d => d3.color(nodeColor(d)).brighter(0.4))
-    .classed('q12a-only', d => !d.is_respondent && d.id !== 'JM-ROOT');
+    .attr('stroke', d => d3.color(nodeColor(d)).brighter(0.4));
 
   node.select('text')
     .attr('x', d => nodeRadius(d) + 4)
@@ -809,10 +832,13 @@ function renderPersonPanel() {{
     ['Country', node.country],
     ['US state', node.us_state],
   ].forEach(([label, value]) => {{
+    if (!displayValue(value)) return;
     detailGrid.appendChild(buildDetailItem(label, value));
   }});
 
-  panelContentEl.appendChild(detailGrid);
+  if (detailGrid.childElementCount) {{
+    panelContentEl.appendChild(detailGrid);
+  }}
   panelContentEl.appendChild(
     buildRelationshipSection('Direct advisors', relatedNodes(RELATIONSHIPS.advisorsByNode, node.id))
   );
@@ -833,7 +859,6 @@ function showTooltip(event, d) {{
   if (d.institution) lines.push('PhD: ' + d.institution + (d.phd_year ? ' (' + d.phd_year + ')' : ''));
   if (d.employer)    lines.push('At: ' + d.employer);
   if (d.country)     lines.push(d.country);
-  if (!d.is_respondent && d.id !== 'JM-ROOT') lines.push('[non-respondent node]');
 
   lines.forEach((line, i) => {{
     const div = document.createElement('div');
@@ -875,9 +900,6 @@ function dragended(event, d) {{
 }}
 
 // ── controls ───────────────────────────────────────────────────────────────
-document.getElementById('showQ12a').addEventListener('change', e => {{
-  showQ12a = e.target.checked; render();
-}});
 settingsTriggerEl.addEventListener('click', () => {{
   showSettings = !showSettings;
   renderSettingsPanel();
