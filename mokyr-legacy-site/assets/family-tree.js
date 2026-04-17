@@ -1,29 +1,38 @@
 /**
  * family-tree.js
- * Drives the /family page: mode switching (tree / network) and the
- * expandable family-tree UI.  Depends on GENEALOGY global from genealogy-data.js.
+ * Drives the /family page:
+ *   - Tablist mode switching (Family Tree / Network Map) with keyboard support.
+ *   - Disclosure-widget tree (nested <ul> + buttons with aria-expanded).
+ *   - Search with polite live-region announcements and ancestor auto-expansion.
+ *   - Mobile-aware network fallback (no iframe injection on small screens).
+ * Depends on the GENEALOGY global from genealogy-data.js.
  */
 
 (function () {
   "use strict";
 
   // ── DOM references ──────────────────────────────────────────────────────────
-  const treePanel     = document.getElementById("ft-tree-panel");
-  const networkPanel  = document.getElementById("ft-network-panel");
-  const networkShell  = document.getElementById("ft-network-frame-shell");
-  const treeRoot      = document.getElementById("ft-tree-root");
-  const searchInput   = document.getElementById("ft-search");
-  const tileBtns      = Array.from(document.querySelectorAll(".ft-tile"));
+  const tabs            = Array.from(document.querySelectorAll('.ft-tab[role="tab"]'));
+  const treePanel       = document.getElementById("ft-tree-panel");
+  const networkPanel    = document.getElementById("ft-network-panel");
+  const networkShell    = document.getElementById("ft-network-frame-shell");
+  const networkFallback = document.getElementById("ft-network-fallback");
+  const treeRoot        = document.getElementById("ft-tree-root");
+  const searchInput     = document.getElementById("ft-search");
+  const searchStatus    = document.getElementById("ft-search-status");
+
+  const MOBILE_MQ = window.matchMedia("(max-width: 639px)");
 
   // ── State ───────────────────────────────────────────────────────────────────
-  let networkInjected = false;
-  let searchTimer     = null;
+  let networkInjected    = false;
+  let searchTimer        = null;
+  let lastAnnouncedCount = -1;
+  let rootAutoExpanded   = false;
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Build a concise meta string: "Institution · Year", "Institution", "Year", or "".
-   */
+  function isMobile() { return MOBILE_MQ.matches; }
+
   function buildMeta(node) {
     const inst = node.institution || node.employer || "";
     const year = node.phd_year || "";
@@ -33,51 +42,37 @@
     return "";
   }
 
-  /**
-   * Sort an array of node ids so that:
-   * 1. people with descendants come first
-   * 2. those people are ordered by descendant count, highest to lowest
-   * 3. zero-descendant people follow alphabetically by label
-   */
   function sortByDescThenLabel(ids) {
     return ids.slice().sort(function (a, b) {
       const da = GENEALOGY.descendantCountById[a] || 0;
       const db = GENEALOGY.descendantCountById[b] || 0;
       const aHasDesc = da > 0;
       const bHasDesc = db > 0;
-
       if (aHasDesc !== bHasDesc) return aHasDesc ? -1 : 1;
       if (aHasDesc && db !== da) return db - da;
-
       const la = (GENEALOGY.peopleById[a] || {}).label || "";
       const lb = (GENEALOGY.peopleById[b] || {}).label || "";
       return la.localeCompare(lb);
     });
   }
 
-  // ── Node builders ────────────────────────────────────────────────────────────
+  // ── Node builders (disclosure semantics) ────────────────────────────────────
 
-  /**
-   * Build the root node element for Joel Mokyr and append it to treeRoot.
-   */
   function buildRootNode() {
-    const id     = GENEALOGY.ROOT_ID;
-    const node   = GENEALOGY.peopleById[id] || {};
-    const desc   = GENEALOGY.descendantCountById[id] || 0;
-    const meta   = buildMeta(node);
+    const id   = GENEALOGY.ROOT_ID;
+    const node = GENEALOGY.peopleById[id] || {};
+    const desc = GENEALOGY.descendantCountById[id] || 0;
+    const meta = buildMeta(node);
 
     const wrapper = document.createElement("div");
-    wrapper.className        = "ft-node ft-node--root";
-    wrapper.setAttribute("role",          "treeitem");
-    wrapper.setAttribute("aria-expanded", "false");
-    wrapper.setAttribute("data-id",       id);
-    wrapper.setAttribute("tabindex",      "0");
+    wrapper.className = "ft-node ft-node--root";
+    wrapper.setAttribute("data-id", id);
 
     const btn = document.createElement("button");
     btn.className = "ft-card ft-card--root";
     btn.type      = "button";
     btn.setAttribute("aria-expanded", "false");
-    btn.setAttribute("aria-controls",  "ft-children-" + id);
+    btn.setAttribute("aria-controls", "ft-children-" + id);
 
     const inner = document.createElement("div");
     inner.className = "ft-card-inner";
@@ -110,65 +105,49 @@
     btn.appendChild(inner);
     wrapper.appendChild(btn);
 
-    // Helper callout
     const helper = document.createElement("p");
-    helper.className = "ft-helper";
-    helper.id        = "ft-helper";
+    helper.className   = "ft-helper";
+    helper.id          = "ft-helper";
     helper.textContent = "Click Joel Mokyr to open the tree.";
     wrapper.appendChild(helper);
 
-    // Children container
     const ul = document.createElement("ul");
-    ul.className = "ft-children";
+    ul.className = "ft-children ft-children--root";
     ul.id        = "ft-children-" + id;
-    ul.setAttribute("role", "group");
     ul.hidden    = true;
     wrapper.appendChild(ul);
 
     treeRoot.appendChild(wrapper);
 
-    // Events
-    btn.addEventListener("click",   function () { handleRootClick(wrapper, btn, ul, helper); });
-    btn.addEventListener("keydown",  function (e) {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        btn.click();
-      }
-    });
-    wrapper.addEventListener("keydown", function (e) {
-      if (e.target === wrapper && (e.key === "Enter" || e.key === " ")) {
-        e.preventDefault();
-        btn.click();
-      }
+    btn.addEventListener("click", function () {
+      toggleRoot(wrapper, btn, ul, helper);
     });
   }
 
-  /**
-   * Build a single branch <li> node.
-   */
   function buildBranchNode(id) {
     const node  = GENEALOGY.peopleById[id] || {};
     const desc  = GENEALOGY.descendantCountById[id] || 0;
     const meta  = buildMeta(node);
     const coAdv = GENEALOGY.secondaryAdvisorById ? GENEALOGY.secondaryAdvisorById[id] : null;
+    const hasChildren = desc > 0;
 
     const li = document.createElement("li");
-    li.className        = "ft-node";
-    li.setAttribute("role",          "treeitem");
-    li.setAttribute("aria-expanded", "false");
-    li.setAttribute("data-id",       id);
-    li.setAttribute("tabindex",      "-1");
+    li.className = "ft-node";
+    li.setAttribute("data-id", id);
 
     const btn = document.createElement("button");
     btn.className = "ft-card";
     btn.type      = "button";
-    btn.setAttribute("aria-expanded", "false");
-    btn.setAttribute("aria-controls",  "ft-children-" + id);
+    if (hasChildren) {
+      btn.setAttribute("aria-expanded", "false");
+      btn.setAttribute("aria-controls", "ft-children-" + id);
+    }
 
     const expandIcon = document.createElement("span");
-    expandIcon.className             = "ft-expand-icon";
+    expandIcon.className = "ft-expand-icon";
     expandIcon.setAttribute("aria-hidden", "true");
-    expandIcon.textContent           = "\u25b6"; // ▶
+    expandIcon.textContent = hasChildren ? "\u25b8" : "\u00b7"; // ▸ or middle dot
+    if (!hasChildren) expandIcon.classList.add("ft-expand-icon--leaf");
 
     const inner = document.createElement("div");
     inner.className = "ft-card-inner";
@@ -209,54 +188,36 @@
       li.appendChild(coNote);
     }
 
-    const ul = document.createElement("ul");
-    ul.className = "ft-children";
-    ul.id        = "ft-children-" + id;
-    ul.setAttribute("role", "group");
-    ul.hidden    = true;
-    li.appendChild(ul);
+    if (hasChildren) {
+      const ul = document.createElement("ul");
+      ul.className = "ft-children";
+      ul.id        = "ft-children-" + id;
+      ul.hidden    = true;
+      li.appendChild(ul);
 
-    // Events
-    btn.addEventListener("click", function () { handleBranchClick(li, btn, expandIcon, ul); });
-    btn.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        btn.click();
-      }
-    });
-    li.addEventListener("keydown", function (e) {
-      if (e.target === li && (e.key === "Enter" || e.key === " ")) {
-        e.preventDefault();
-        btn.click();
-      }
-    });
+      btn.addEventListener("click", function () {
+        toggleBranch(li, btn, expandIcon, ul);
+      });
+    }
 
     return li;
   }
 
-  // ── Expand / collapse helpers ────────────────────────────────────────────────
+  // ── Expand / collapse ───────────────────────────────────────────────────────
 
-  /**
-   * Collapse a branch node: hide children, purge them from the DOM, reset aria.
-   */
-  function collapseNode(li) {
+  function collapseBranch(li) {
     const btn  = li.querySelector(":scope > .ft-card");
     const icon = btn ? btn.querySelector(".ft-expand-icon") : null;
     const ul   = li.querySelector(":scope > .ft-children");
-
-    li.setAttribute("aria-expanded", "false");
-    if (btn)  { btn.setAttribute("aria-expanded", "false"); btn.classList.remove("is-expanded"); }
-    if (icon) { icon.classList.remove("is-expanded"); }
+    if (btn && btn.hasAttribute("aria-expanded")) {
+      btn.setAttribute("aria-expanded", "false");
+      btn.classList.remove("is-expanded");
+    }
+    if (icon) icon.classList.remove("is-expanded");
     if (ul)   { ul.hidden = true; ul.innerHTML = ""; }
   }
 
-  /**
-   * Render child nodes into a <ul> using the tree ordering rule:
-   * descendants first, then descendant count desc, then alphabetical for zero-descendant nodes.
-   */
   function renderChildren(id, ul) {
-    // Only include children whose primary parent is this node, to avoid showing
-    // co-advised people under their secondary advisor's branch.
     const allChildIds = GENEALOGY.childrenById[id] || [];
     const childIds    = allChildIds.filter(function (cid) {
       return GENEALOGY.primaryParentById[cid] === id;
@@ -267,70 +228,70 @@
     });
   }
 
-  /**
-   * Expand root (Joel Mokyr): render all Gen 1 nodes with descendants first,
-   * sorted most-to-least, then alphabetical for zero-descendant people.
-   */
-  function handleRootClick(wrapper, btn, ul, helper) {
-    const isExpanded = wrapper.getAttribute("aria-expanded") === "true";
-
+  function toggleRoot(wrapper, btn, ul, helper) {
+    const isExpanded = btn.getAttribute("aria-expanded") === "true";
     if (isExpanded) {
-      // Collapse: hide and purge children, restore helper
       ul.hidden    = true;
       ul.innerHTML = "";
-      wrapper.setAttribute("aria-expanded", "false");
       btn.setAttribute("aria-expanded", "false");
       btn.classList.remove("is-expanded");
       if (helper) helper.hidden = false;
     } else {
-      // Expand: render Gen 1 nodes with descendants first, then alphabetical among zero-descendant people
       ul.innerHTML = "";
       renderChildren(GENEALOGY.ROOT_ID, ul);
-      ul.hidden    = false;
-      wrapper.setAttribute("aria-expanded", "true");
+      ul.hidden = false;
       btn.setAttribute("aria-expanded", "true");
       btn.classList.add("is-expanded");
       if (helper) helper.hidden = true;
+      if (isMobile()) scrollTargetIntoView(ul);
     }
   }
 
-  /**
-   * Expand or collapse a branch node (Gen 1+).
-   * Collapses any expanded sibling before expanding self.
-   */
-  function handleBranchClick(li, btn, expandIcon, ul) {
-    const isExpanded = li.getAttribute("aria-expanded") === "true";
+  function openBranch(li, btn, expandIcon, ul) {
+    renderChildren(li.getAttribute("data-id"), ul);
+    ul.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    btn.classList.add("is-expanded");
+    if (expandIcon) expandIcon.classList.add("is-expanded");
+  }
 
+  function toggleBranch(li, btn, expandIcon, ul) {
+    const isExpanded = btn.getAttribute("aria-expanded") === "true";
     if (isExpanded) {
-      collapseNode(li);
-    } else {
-      // Collapse any expanded sibling at the same depth
-      const parent = li.parentElement;
-      if (parent) {
-        const siblings = Array.from(parent.children);
-        siblings.forEach(function (sib) {
-          if (sib !== li && sib.getAttribute("aria-expanded") === "true") {
-            collapseNode(sib);
-          }
-        });
-      }
-
-      // Expand self
-      renderChildren(li.getAttribute("data-id"), ul);
-      ul.hidden    = false;
-      li.setAttribute("aria-expanded", "true");
-      btn.setAttribute("aria-expanded", "true");
-      btn.classList.add("is-expanded");
-      expandIcon.classList.add("is-expanded");
+      collapseBranch(li);
+      return;
     }
+    // Collapse any expanded sibling at the same depth to keep single-open
+    // progressive reveal during normal browsing.
+    const parent = li.parentElement;
+    if (parent) {
+      Array.from(parent.children).forEach(function (sib) {
+        if (sib !== li) {
+          const sibBtn = sib.querySelector(":scope > .ft-card");
+          if (sibBtn && sibBtn.getAttribute("aria-expanded") === "true") {
+            collapseBranch(sib);
+          }
+        }
+      });
+    }
+    openBranch(li, btn, expandIcon, ul);
+    if (isMobile()) scrollTargetIntoView(ul);
   }
 
-  // ── Search ───────────────────────────────────────────────────────────────────
+  function scrollTargetIntoView(target) {
+    if (!target) return;
+    // Defer to next frame so the newly-rendered rows have laid out.
+    requestAnimationFrame(function () {
+      try {
+        target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } catch (_) {
+        target.scrollIntoView();
+      }
+    });
+  }
 
-  /**
-   * Given a node id, walk up to find all ancestor ids that are already rendered
-   * in the DOM as ft-node elements, returning them root-first.
-   */
+  // ── Search ──────────────────────────────────────────────────────────────────
+
   function getAncestorIds(id) {
     const ancestors = [];
     let current = GENEALOGY.primaryParentById ? GENEALOGY.primaryParentById[id] : null;
@@ -338,61 +299,67 @@
       ancestors.unshift(current);
       current = GENEALOGY.primaryParentById ? GENEALOGY.primaryParentById[current] : null;
     }
-    if (current === GENEALOGY.ROOT_ID) {
-      ancestors.unshift(GENEALOGY.ROOT_ID);
-    }
+    if (current === GENEALOGY.ROOT_ID) ancestors.unshift(GENEALOGY.ROOT_ID);
     return ancestors;
   }
 
-  /**
-   * Ensure a node's branch is expanded (used during search to make matches visible).
-   * Walks the ancestor chain and expands any collapsed ancestor.
-   */
-  function ensureVisible(id) {
-    const ancestorIds = getAncestorIds(id);
-
-    ancestorIds.forEach(function (ancId) {
-      const ancEl = treeRoot.querySelector('[data-id="' + ancId + '"]');
-      if (!ancEl) return;
-
-      const isExpanded = ancEl.getAttribute("aria-expanded") === "true";
-      if (isExpanded) return;
-
-      if (ancId === GENEALOGY.ROOT_ID) {
-        // Expand root
-        const btn    = ancEl.querySelector(":scope > .ft-card");
-        const ul     = ancEl.querySelector(":scope > .ft-children");
-        const helper = ancEl.querySelector(".ft-helper");
-        handleRootClick(ancEl, btn, ul, helper);
-      } else {
-        const btn      = ancEl.querySelector(":scope > .ft-card");
-        const icon     = btn ? btn.querySelector(".ft-expand-icon") : null;
-        const ul       = ancEl.querySelector(":scope > .ft-children");
-        if (btn && ul) handleBranchClick(ancEl, btn, icon, ul);
-      }
-    });
-
-    // Also expand the matched node's immediate parent if needed so the node itself shows
-    const parentId = GENEALOGY.primaryParentById ? GENEALOGY.primaryParentById[id] : null;
-    if (parentId) {
-      const parentEl = treeRoot.querySelector('[data-id="' + parentId + '"]');
-      if (parentEl && parentEl.getAttribute("aria-expanded") !== "true") {
-        const btn  = parentEl.querySelector(":scope > .ft-card");
-        const icon = btn ? btn.querySelector(".ft-expand-icon") : null;
-        const ul   = parentEl.querySelector(":scope > .ft-children");
-        if (btn && ul) handleBranchClick(parentEl, btn, icon, ul);
-      }
+  function expandNodeIfCollapsed(ancEl) {
+    if (!ancEl) return;
+    const btn = ancEl.querySelector(":scope > .ft-card");
+    if (!btn || btn.getAttribute("aria-expanded") !== "false") return;
+    if (ancEl.classList.contains("ft-node--root")) {
+      const ul     = ancEl.querySelector(":scope > .ft-children");
+      const helper = ancEl.querySelector(".ft-helper");
+      toggleRoot(ancEl, btn, ul, helper);
+    } else {
+      const icon = btn.querySelector(".ft-expand-icon");
+      const ul   = ancEl.querySelector(":scope > .ft-children");
+      // Use openBranch, not toggleBranch — otherwise multi-match search
+      // reveals would collapse previously-opened sibling branches.
+      if (ul) openBranch(ancEl, btn, icon, ul);
     }
   }
 
-  function runSearch(query) {
-    // Clear previous highlights
+  function ensureVisible(id) {
+    const ancestorIds = getAncestorIds(id);
+    ancestorIds.forEach(function (ancId) {
+      const ancEl = treeRoot.querySelector('[data-id="' + ancId + '"]');
+      expandNodeIfCollapsed(ancEl);
+    });
+    const parentId = GENEALOGY.primaryParentById ? GENEALOGY.primaryParentById[id] : null;
+    if (parentId) {
+      expandNodeIfCollapsed(treeRoot.querySelector('[data-id="' + parentId + '"]'));
+    }
+  }
+
+  function announceSearch(count, query) {
+    if (!searchStatus) return;
+    if (!query) {
+      searchStatus.textContent = "";
+      lastAnnouncedCount = -1;
+      return;
+    }
+    if (count === lastAnnouncedCount) return;
+    lastAnnouncedCount = count;
+    let message;
+    if (count === 0)      message = "No results found.";
+    else if (count === 1) message = "1 result found.";
+    else                  message = count + " results found.";
+    searchStatus.textContent = message;
+  }
+
+  function runSearch(rawQuery) {
+    const query = (rawQuery || "").trim();
+
+    // Clear previous highlights up front.
     treeRoot.querySelectorAll(".ft-match").forEach(function (el) {
       el.classList.remove("ft-match");
     });
 
     if (!query) {
       treeRoot.classList.remove("ft-search-active");
+      announceSearch(0, "");
+      rootAutoExpanded = false;
       return;
     }
 
@@ -405,71 +372,148 @@
       return label.includes(lower);
     });
 
-    // If few matches and root has been expanded, ensure branches are open
-    const rootEl    = treeRoot.querySelector('[data-id="' + GENEALOGY.ROOT_ID + '"]');
-    const rootOpen  = rootEl && rootEl.getAttribute("aria-expanded") === "true";
+    // Auto-expand root when the user begins a meaningful search and root
+    // is still collapsed — otherwise matches can never surface.
+    const rootEl   = treeRoot.querySelector('[data-id="' + GENEALOGY.ROOT_ID + '"]');
+    const rootBtn  = rootEl ? rootEl.querySelector(":scope > .ft-card") : null;
+    const rootOpen = rootBtn && rootBtn.getAttribute("aria-expanded") === "true";
 
-    if (matches.length < 20 && rootOpen) {
-      matches.forEach(function (id) {
-        ensureVisible(id);
-      });
+    if (!rootOpen && matches.length > 0 && !rootAutoExpanded) {
+      expandNodeIfCollapsed(rootEl);
+      rootAutoExpanded = true;
     }
 
-    // Highlight matches that are now in the DOM
+    const rootOpenNow = rootBtn && rootBtn.getAttribute("aria-expanded") === "true";
+
+    // Expand ancestor paths when the match set is small enough to be useful.
+    if (matches.length > 0 && matches.length < 20 && rootOpenNow) {
+      matches.forEach(function (id) { ensureVisible(id); });
+    }
+
+    // Highlight whatever is now rendered.
     matches.forEach(function (id) {
       const el = treeRoot.querySelector('[data-id="' + id + '"]');
       if (el) el.classList.add("ft-match");
     });
+
+    announceSearch(matches.length, query);
   }
 
-  searchInput.addEventListener("input", function () {
-    clearTimeout(searchTimer);
-    const query = searchInput.value.trim();
-    searchTimer = setTimeout(function () { runSearch(query); }, 200);
-  });
+  if (searchInput) {
+    searchInput.addEventListener("input", function () {
+      clearTimeout(searchTimer);
+      const query = searchInput.value;
+      searchTimer = setTimeout(function () { runSearch(query); }, 200);
+    });
+  }
 
-  // ── Mode switching ───────────────────────────────────────────────────────────
+  // ── Tab (mode) switching ────────────────────────────────────────────────────
 
-  function activateMode(mode) {
-    const isTree    = mode === "tree";
-    const isNetwork = mode === "network";
+  function shouldInjectIframe() {
+    return !isMobile();
+  }
 
-    tileBtns.forEach(function (btn) {
-      const isActive = btn.getAttribute("data-mode") === mode;
-      btn.classList.toggle("is-active", isActive);
-      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+  function syncNetworkPanelView() {
+    if (!networkPanel) return;
+    const mobile = isMobile();
+    if (networkShell)    networkShell.hidden    = mobile;
+    if (networkFallback) networkFallback.hidden = !mobile;
+    if (!mobile && !networkInjected && !networkPanel.hasAttribute("hidden")) {
+      injectNetworkIframe();
+    }
+  }
+
+  function injectNetworkIframe() {
+    if (networkInjected || !networkShell) return;
+    const iframe = document.createElement("iframe");
+    iframe.src   = "../network/mokyr-genealogy.html";
+    iframe.title = "Joel Mokyr academic genealogy visualization";
+    iframe.setAttribute("loading", "lazy");
+    networkShell.appendChild(iframe);
+    networkInjected = true;
+  }
+
+  function activateMode(mode, options) {
+    const opts        = options || {};
+    const focusPanel  = !!opts.focusPanel;
+    const updateHash  = opts.updateHash !== false;
+    const isTree      = mode === "tree";
+    const isNetwork   = mode === "network";
+
+    tabs.forEach(function (tab) {
+      const tabMode   = tab.getAttribute("data-ft-mode");
+      const isActive  = tabMode === mode;
+      tab.classList.toggle("is-active", isActive);
+      tab.setAttribute("aria-selected", isActive ? "true" : "false");
+      tab.setAttribute("tabindex", isActive ? "0" : "-1");
     });
 
     if (isTree) {
       treePanel.removeAttribute("hidden");
-      networkPanel.setAttribute("hidden", "");
-    } else {
+      if (networkPanel) networkPanel.setAttribute("hidden", "");
+    } else if (isNetwork) {
+      if (networkPanel) networkPanel.removeAttribute("hidden");
       treePanel.setAttribute("hidden", "");
-      networkPanel.removeAttribute("hidden");
+      // Sync visibility of shell vs fallback based on viewport.
+      syncNetworkPanelView();
+      if (shouldInjectIframe()) injectNetworkIframe();
     }
 
-    // Lazy-inject network iframe
-    if (isNetwork && !networkInjected) {
-      const iframe = document.createElement("iframe");
-      iframe.src   = "../network/mokyr-genealogy.html";
-      iframe.title = "Joel Mokyr academic genealogy visualization";
-      networkShell.appendChild(iframe);
-      networkInjected = true;
+    if (updateHash) {
+      history.replaceState(null, "", isNetwork ? "#network" : "#tree");
     }
 
-    history.replaceState(null, "", isNetwork ? "#network" : "#tree");
+    if (focusPanel) {
+      const panel = isNetwork ? networkPanel : treePanel;
+      if (panel && typeof panel.focus === "function") {
+        panel.focus({ preventScroll: true });
+      }
+    }
   }
 
-  tileBtns.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      activateMode(btn.getAttribute("data-mode"));
+  function focusTab(tab) {
+    if (!tab) return;
+    tab.focus();
+    activateMode(tab.getAttribute("data-ft-mode"), { focusPanel: false });
+  }
+
+  tabs.forEach(function (tab, index) {
+    tab.addEventListener("click", function () {
+      activateMode(tab.getAttribute("data-ft-mode"), { focusPanel: false });
+    });
+    tab.addEventListener("keydown", function (e) {
+      const key = e.key;
+      if (key === "ArrowRight" || key === "ArrowDown") {
+        e.preventDefault();
+        focusTab(tabs[(index + 1) % tabs.length]);
+      } else if (key === "ArrowLeft" || key === "ArrowUp") {
+        e.preventDefault();
+        focusTab(tabs[(index - 1 + tabs.length) % tabs.length]);
+      } else if (key === "Home") {
+        e.preventDefault();
+        focusTab(tabs[0]);
+      } else if (key === "End") {
+        e.preventDefault();
+        focusTab(tabs[tabs.length - 1]);
+      } else if (key === "Enter" || key === " ") {
+        e.preventDefault();
+        activateMode(tab.getAttribute("data-ft-mode"), { focusPanel: true });
+      }
     });
   });
 
-  // ── Init ─────────────────────────────────────────────────────────────────────
+  // React to viewport crossing the mobile breakpoint while network panel is open.
+  if (typeof MOBILE_MQ.addEventListener === "function") {
+    MOBILE_MQ.addEventListener("change", function () {
+      if (networkPanel && !networkPanel.hasAttribute("hidden")) {
+        syncNetworkPanelView();
+      }
+    });
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────────
 
   function init() {
-    // Guard: if GENEALOGY is not yet defined, bail gracefully
     if (typeof GENEALOGY === "undefined") {
       console.warn("family-tree.js: GENEALOGY global not found. Is genealogy-data.js loaded?");
       return;
@@ -477,12 +521,11 @@
 
     buildRootNode();
 
-    // Hash-based initial mode
     const hash = window.location.hash;
     if (hash === "#network") {
-      activateMode("network");
+      activateMode("network", { updateHash: false });
     } else {
-      activateMode("tree");
+      activateMode("tree", { updateHash: false });
     }
   }
 
