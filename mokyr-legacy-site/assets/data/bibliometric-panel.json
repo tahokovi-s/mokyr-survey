@@ -48601,6 +48601,63 @@
           "primary_topic": "Agricultural Economics and Practices"
         }
       ]
+    },
+    {
+      "node_id": "M-jieun-kim",
+      "name": "Jieun Kim",
+      "first_name": "Jieun",
+      "last_name": "Kim",
+      "generation": "3",
+      "advisor": "Peter Lorentzen",
+      "phd_institution": "University of California, Berkeley",
+      "phd_year": "2021",
+      "current_employer": "",
+      "match_status": "unmatched",
+      "match_confidence": 0.0,
+      "needs_manual_review": false,
+      "manual_decision": "",
+      "decision_source": "manual_add",
+      "public_ready": true,
+      "suspicious_flags": [],
+      "openalex": null
+    },
+    {
+      "node_id": "M-sarah-lee",
+      "name": "Sarah Lee",
+      "first_name": "Sarah",
+      "last_name": "Lee",
+      "generation": "3",
+      "advisor": "Peter Lorentzen",
+      "phd_institution": "University of California, Berkeley",
+      "phd_year": "",
+      "current_employer": "",
+      "match_status": "unmatched",
+      "match_confidence": 0.0,
+      "needs_manual_review": false,
+      "manual_decision": "",
+      "decision_source": "manual_add",
+      "public_ready": true,
+      "suspicious_flags": [],
+      "openalex": null
+    },
+    {
+      "node_id": "M-xi-lu",
+      "name": "Xi Lu",
+      "first_name": "Xi",
+      "last_name": "Lu",
+      "generation": "3",
+      "advisor": "Peter Lorentzen",
+      "phd_institution": "University of California, Berkeley",
+      "phd_year": "2017",
+      "current_employer": "",
+      "match_status": "unmatched",
+      "match_confidence": 0.0,
+      "needs_manual_review": false,
+      "manual_decision": "",
+      "decision_source": "manual_add",
+      "public_ready": true,
+      "suspicious_flags": [],
+      "openalex": null
     }
   ]
 }
