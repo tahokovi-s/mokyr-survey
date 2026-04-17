@@ -8,6 +8,9 @@
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, notranslate">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/styles.css">
+  <noscript>
+    <style>[data-reveal], [data-reveal-group] > * { opacity: 1 !important; transform: none !important; }</style>
+  </noscript>
 </head>
 <body class="page-home">
   <div class="page-shell">
@@ -16,30 +19,79 @@
 
     <header class="site-header minimal-header" data-reveal>
       <a class="wordmark" href="./" aria-label="Home">
-        <span class="wordmark-mark">M</span>
+        <span class="wordmark-mark" aria-hidden="true">M</span>
         <span class="wordmark-text">
-          <span class="wordmark-title">Celebrating 80 Years of Joel Mokyr</span>
+          <span class="wordmark-title">Joel Mokyr</span>
           <span class="wordmark-subtitle">An 80th Birthday Celebration</span>
         </span>
       </a>
+      <a class="header-link" href="about/">
+        About
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </a>
     </header>
 
-    <main class="hero-layout minimal-home-layout">
-      <section class="hero-copy minimal-home-copy" data-reveal>
+    <main class="home-main">
+      <section class="home-hero" data-reveal>
         <p class="eyebrow">Welcome</p>
-        <h1>Celebrating 80 Years of Joel Mokyr</h1>
-        <p class="home-subtitle">An 80th Birthday Celebration</p>
+        <h1>Joel Mokyr, at 80.</h1>
+        <p class="home-subtitle">Four generations. 382 scholars.</p>
+      </section>
 
-        <div class="action-stack minimal-action-stack" data-reveal-group>
-          <a class="action-card action-primary" href="family/">
-            <span class="action-label">Joel's Academic Family</span>
-          </a>
-          <a class="action-card" href="shape/">
-            <span class="action-label">Joel's Academic Family by the Numbers</span>
-          </a>
+      <section class="home-stat-strip" aria-label="Lineage at a glance" data-reveal>
+        <div class="stat-grid">
+          <div class="stat-item">
+            <span class="stat-number">382</span>
+            <span class="stat-label">Scholars</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">4</span>
+            <span class="stat-label">Generations</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">76</span>
+            <span class="stat-label">First-gen students</span>
+          </div>
         </div>
       </section>
+
+      <section class="home-pathways" aria-label="Exploration pathways">
+        <a class="pathway-card pathway-card--primary" href="family/" data-reveal>
+          <span class="card-eyebrow">Featured view</span>
+          <h2 class="card-title">Joel's Academic Family</h2>
+          <p class="card-body">Browse the lineage, generation by generation.</p>
+          <p class="card-ministat">382 people &middot; 4 generations &middot; Search + branch view</p>
+          <span class="card-action">
+            Enter
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </span>
+        </a>
+
+        <a class="pathway-card pathway-card--secondary" href="shape/" data-reveal>
+          <span class="card-eyebrow">Companion piece</span>
+          <h2 class="card-title">By the Numbers</h2>
+          <p class="card-body">The shape of a lineage, by the numbers.</p>
+          <p class="card-ministat">11 panels &middot; Scroll narrative</p>
+          <span class="card-action">
+            Read
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </span>
+        </a>
+      </section>
     </main>
+
+    <footer class="site-footer">
+      <p class="footer-credit">For Joel's 80th. Survey led by Ran Abramitzky.</p>
+    </footer>
   </div>
 
   <script src="assets/site.js"></script>

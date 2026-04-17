@@ -504,6 +504,249 @@ body.page-section h2 {
   line-height: 1.55;
 }
 
+/* ══ Home v3 editorial layout (light cream + Joel backdrop) ══════════════ */
+
+/* Main container on home mirrors the site-header's centering constraints. */
+.page-home .home-main {
+  position: relative;
+  z-index: 1;
+  width: min(calc(100% - 48px), var(--max-width));
+  margin: 0 auto;
+}
+
+/* About-style forward link on the right of the home header. */
+.header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+.header-link:hover { color: var(--text); }
+.header-link svg { transition: transform 180ms ease; }
+.header-link:hover svg { transform: translateX(3px); }
+
+/* Left-aligned editorial hero. Serif H1 inherited from Phase 0 override. */
+.home-hero {
+  max-width: 820px;
+  margin: 40px 0 48px;
+}
+
+.page-home .home-hero h1 {
+  font-size: clamp(2.75rem, 6vw + 0.5rem, 5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 10px 0 20px;
+  max-width: 16ch;
+}
+
+.home-hero .home-subtitle {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-weight: 400;
+  font-size: clamp(1.125rem, 2vw + 0.5rem, 1.65rem);
+  line-height: 1.4;
+  color: var(--muted);
+  max-width: 44ch;
+  margin: 0;
+  padding-left: 22px;
+  border-left: 2px solid var(--line);
+}
+
+/* Three-up hairline stat strip. */
+.home-stat-strip {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin: 0 0 56px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.stat-item {
+  padding: 30px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-right: 1px solid var(--line);
+}
+.stat-item:last-child { border-right: none; }
+
+.stat-number {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: clamp(2.25rem, 4vw, 3.25rem);
+  line-height: 1;
+  color: var(--text);
+  font-weight: 400;
+}
+
+.stat-label {
+  font-size: 0.76rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 500;
+}
+
+/* Asymmetric 2fr / 1fr pathway grid. */
+.home-pathways {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 22px;
+  margin-bottom: 64px;
+}
+
+.pathway-card {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: 38px;
+  box-shadow: var(--card-shadow);
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 240ms ease;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.pathway-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--line-strong);
+  box-shadow: 0 24px 50px rgba(16, 18, 22, 0.08);
+}
+
+.pathway-card:focus-visible {
+  outline: 3px solid rgba(214, 188, 123, 0.6);
+  outline-offset: 3px;
+}
+
+/* Primary pathway carries a persistent gold top accent. */
+.pathway-card--primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: var(--accent);
+  opacity: 0.85;
+}
+
+.card-eyebrow {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent-deep);
+  font-weight: 600;
+  margin: 0 0 18px;
+}
+
+.pathway-card--secondary .card-eyebrow {
+  color: var(--muted);
+}
+
+.card-title {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-weight: 400;
+  color: var(--text);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+}
+
+.pathway-card--primary .card-title {
+  font-size: clamp(1.75rem, 3vw, 2.4rem);
+}
+.pathway-card--secondary .card-title {
+  font-size: clamp(1.45rem, 2.5vw, 1.9rem);
+}
+
+.card-body {
+  color: var(--muted);
+  font-size: clamp(1rem, 1.4vw, 1.15rem);
+  line-height: 1.55;
+  margin: 0 0 28px;
+  flex-grow: 1;
+}
+
+.card-ministat {
+  margin: 0 0 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 0.72rem;
+  color: var(--soft);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
+  align-self: flex-start;
+}
+
+.pathway-card:hover .card-action {
+  background: var(--text);
+  color: #ffffff;
+  border-color: var(--text);
+}
+
+.pathway-card:hover .card-action svg {
+  transform: translateX(3px);
+}
+
+.card-action svg {
+  transition: transform 180ms ease;
+}
+
+/* Quiet single-line footer. */
+.site-footer {
+  position: relative;
+  z-index: 1;
+  width: min(calc(100% - 48px), var(--max-width));
+  margin: 0 auto;
+  padding: 28px 0 40px;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  color: var(--soft);
+}
+
+.footer-credit { margin: 0; }
+
+/* Responsive: stack pathways and stats under 760px. */
+@media (max-width: 760px) {
+  .home-pathways {
+    grid-template-columns: 1fr;
+  }
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+  .stat-item {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .stat-item:last-child { border-bottom: none; }
+  .pathway-card {
+    padding: 28px;
+  }
+}
+
 .placeholder-panel {
   padding: 18px 18px 20px;
   border-radius: var(--radius-md);
