@@ -669,31 +669,78 @@ body.page-section h2 {
 
 .shape-progress-nav {
   display: grid;
-  gap: 6px;
+  gap: 1.25rem;
 }
 
+/* Two-level TOC: chapter wrapper contains a head-anchor plus nested sub-links. */
+.shape-progress-chapter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.shape-progress-chapter-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: var(--text);
+  padding: 0.375rem 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.25rem;
+}
+
+.shape-progress-chapter-head:hover .shape-progress-chapter-title {
+  color: var(--accent-deep);
+}
+
+.shape-progress-chapter-num {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: 0.78rem;
+  color: var(--muted);
+  min-width: 1.25rem;
+}
+
+.shape-progress-chapter-title {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: 1rem;
+  line-height: 1.2;
+  color: var(--text);
+  transition: color 180ms ease;
+}
+
+.shape-progress-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0 0 0 1.75rem;
+  list-style: none;
+}
+
+/* .shape-progress-item is the panel sub-link (kept for back-compat with
+   data-story-nav-item pairing in site.js). Restyled from the flat-pill
+   design to a v3 sub-link: left-border accent on active, smaller type. */
 .shape-progress-item {
   display: block;
-  padding: 9px 12px;
-  border-radius: 999px;
-  color: #5a5c60;
-  border: 1px solid transparent;
-  font-size: 0.96rem;
-  transition: color 180ms ease, border-color 180ms ease, background 180ms ease, transform 180ms ease;
+  padding: 0.25rem 0.75rem;
+  margin-left: -0.5rem;
+  border-left: 1px solid transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: color 180ms ease, border-color 180ms ease;
 }
 
 .shape-progress-item:hover {
-  color: #101216;
-  background: rgba(255, 255, 255, 0.64);
-  border-color: rgba(16, 18, 22, 0.08);
-  transform: translateX(2px);
+  color: var(--text);
+  border-left-color: var(--line-strong);
 }
 
 .shape-progress-item.is-active {
-  color: #ffffff;
-  background: #101216;
-  border-color: #101216;
-  box-shadow: 0 12px 24px rgba(16, 18, 22, 0.16);
+  color: var(--text);
+  border-left-color: var(--accent);
+  font-weight: 500;
 }
 
 .shape-story {
