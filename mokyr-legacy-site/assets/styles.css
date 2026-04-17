@@ -2246,8 +2246,32 @@ body.page-section h2 {
   min-height: 140px;
 }
 
+/* Full-width gold top accent marks the primary/featured tab persistently.
+   Brightens slightly when active; hidden on mobile's pill layout. */
+.ft-tab--primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: var(--accent);
+  border-top-left-radius: var(--radius-md);
+  border-top-right-radius: var(--radius-md);
+  opacity: 0.85;
+  transition: opacity 180ms ease;
+}
+
+.ft-tab--primary.is-active::before {
+  opacity: 1;
+}
+
+/* Secondary tab: opaque white with soft shadow (not semi-transparent).
+   Reads as a solid card, matching the v3 home pathway-card--secondary. */
 .ft-tab--secondary {
   min-height: 140px;
+  background: #ffffff;
+  box-shadow: var(--card-shadow);
 }
 
 .ft-tab-eyebrow {
@@ -2674,6 +2698,11 @@ body.page-section h2 {
   .ft-kicker-strip {
     font-size: 0.92rem;
     padding: 12px 14px;
+  }
+
+  /* Gold top accent would clash with the mobile pill design. */
+  .ft-tab--primary::before {
+    display: none;
   }
 
   /* Chooser → segmented-control-style pill with equal-width tabs. */
