@@ -95,19 +95,26 @@ const GENEALOGY = (() => {
     _primaryChildren[parentId].push(childId);
   }
 
-  // ── descendant counts (primary tree only, cycle-safe) ──
+  // ── descendant counts (full closure through all advisor edges, dedup by person) ──
+  // Walks childrenById (all advisor edges, already deduped) from each node, counting
+  // each reachable descendant exactly once. A co-advised student contributes to every
+  // ancestor that reaches them — matching the semantic meaning of "descendant".
   const descendantCountById = {};
-  function _countDesc(id, visiting) {
-    if (id in descendantCountById) return descendantCountById[id];
-    if (visiting.has(id)) return 0;
-    visiting.add(id);
-    const kids  = _primaryChildren[id] || [];
-    let   total = kids.length;
-    for (const kid of kids) total += _countDesc(kid, visiting);
-    descendantCountById[id] = total;
-    return total;
+  for (const node of RAW_NODES) {
+    const visited = new Set();
+    const stack = [node.id];
+    while (stack.length) {
+      const cur = stack.pop();
+      const kids = childrenById[cur] || [];
+      for (const kid of kids) {
+        if (!visited.has(kid)) {
+          visited.add(kid);
+          stack.push(kid);
+        }
+      }
+    }
+    descendantCountById[node.id] = visited.size;
   }
-  for (const node of RAW_NODES) _countDesc(node.id, new Set());
 
   return {
     ROOT_ID,
