@@ -17,6 +17,19 @@
   --radius-md: 16px;
 }
 
+/* Light-theme token remap for editorial pages (home + all .page-section pages).
+   Keeps :root dark-token defaults intact for any future dark surface. */
+body.page-home,
+body.page-section {
+  --bg: #fbfbf8;
+  --text: #101216;
+  --muted: rgba(16, 18, 22, 0.64);
+  --soft: rgba(16, 18, 22, 0.44);
+  --line: rgba(16, 18, 22, 0.08);
+  --line-strong: rgba(16, 18, 22, 0.15);
+  --card-shadow: 0 16px 40px rgba(16, 18, 22, 0.06);
+}
+
 *,
 *::before,
 *::after {
@@ -356,6 +369,17 @@ h2 {
   color: #101216;
   letter-spacing: -0.04em;
   line-height: 0.94;
+}
+
+/* Editorial v3 direction: Iowan serif for display headings on light pages.
+   Overrides the sans-serif default above for home + section pages. */
+body.page-home h1,
+body.page-home h2,
+body.page-section h1,
+body.page-section h2 {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
 }
 
 .home-subtitle {
