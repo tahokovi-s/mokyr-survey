@@ -315,11 +315,6 @@ a {
   max-width: 640px;
 }
 
-.minimal-home-copy {
-  text-align: center;
-  max-width: 980px;
-}
-
 .eyebrow,
 .placeholder-label {
   color: var(--accent);
@@ -407,14 +402,6 @@ body.page-section h2 {
   display: grid;
   gap: 14px;
   margin-top: 34px;
-}
-
-.minimal-action-stack {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 36px;
 }
 
 .action-card {
@@ -2253,15 +2240,6 @@ body.page-section h2 {
   .reach-anchor {
     gap: 14px;
     margin-top: 28px;
-  }
-
-  .page-home .minimal-action-stack {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .page-home .action-card {
-    width: 100%;
   }
 
   .shape-progress-nav {
