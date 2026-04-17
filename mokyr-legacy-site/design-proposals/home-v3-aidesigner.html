@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joel Mokyr | An 80th Birthday Celebration</title>
+
+    <!--
+    AIDesigner refinement v3 (run 56e0710f-c3e5-45b6-aa5b-24c02990bae0,
+    parent df27b7ab-478d-4ddf-99a4-a43eb000e538, desktop, 2026-04-17).
+
+    Changes from v2:
+    - Flipped to light cream theme (matches live /index.html)
+    - Reuses assets/images/joel-welcome-backdrop.jpg + joel-mokyr-168x210.jpg
+    - Copy cut hard: one-line hero subtitle, single-word CTAs, single-line footer
+    - Routes fixed to ../family/ and ../shape/
+    - Header link points to ../about/
+    - Preview-only reveal script at bottom so the file is viewable standalone
+
+    Known caveats before adoption:
+    - site.js toggles '.is-visible' on [data-reveal], NOT '.is-revealed'.
+      Rename the CSS selector (or the script class) during port.
+    - Strip the preview <script> at the bottom before integration.
+    - Background wash uses direct linear-gradient + url() on .hero-background.
+      The production pattern uses a .background-wash sibling div layered by the
+      page shell — consider matching that structure during port.
+    -->
+
+    <style>
+        /* ==========================================================================
+           DESIGN TOKENS (light theme)
+           ========================================================================== */
+        :root {
+            --bg: #fbfbf8;
+            --text: #101216;
+            --muted: rgba(16, 18, 22, 0.64);
+            --soft: rgba(16, 18, 22, 0.44);
+            --accent: #d6bc7b;
+            --line: rgba(16, 18, 22, 0.08);
+            --line-strong: rgba(16, 18, 22, 0.15);
+            --card-shadow: 0 16px 40px rgba(16, 18, 22, 0.06);
+            --max-width: 1240px;
+            --radius-xl: 32px;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        body, h1, h2, h3, p, ul, li, figure, figcaption, blockquote, dl, dd { margin: 0; padding: 0; }
+        a { text-decoration: none; color: inherit; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: "Neue Haas Grotesk Text Pro", "Avenir Next", "Helvetica Neue", sans-serif;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, .serif-text {
+            font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+            font-weight: 400;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0, 0, 0, 0);
+            white-space: nowrap; border: 0;
+        }
+
+        *:focus-visible {
+            outline: 3px solid rgba(214, 188, 123, 0.65) !important;
+            outline-offset: 3px !important;
+            border-radius: inherit;
+        }
+
+        /* ==========================================================================
+           REVEAL HOOKS (triggered by site.js in production — see caveats)
+           ========================================================================== */
+        [data-reveal] {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        [data-reveal].is-revealed,
+        .is-revealed[data-reveal] {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            [data-reveal],
+            [data-reveal].is-revealed {
+                opacity: 1 !important;
+                transform: none !important;
+                transition: none !important;
+            }
+        }
+
+        /* ==========================================================================
+           STRUCTURE
+           ========================================================================== */
+        .site-container {
+            width: 100%;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        @media (min-width: 768px) {
+            .site-container { padding: 0 3rem; }
+        }
+
+        .home-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 6rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* ==========================================================================
+           HERO + BACKDROP
+           ========================================================================== */
+        .hero-layer {
+            position: relative;
+            padding-bottom: 4rem;
+        }
+        @media (min-width: 768px) {
+            .hero-layer { padding-bottom: 5.5rem; }
+        }
+
+        .hero-background {
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            background-image:
+                linear-gradient(to bottom, rgba(251,251,248, 0.8) 0%, rgba(251,251,248, 0.34) 40%, rgba(251,251,248, 0.66) 80%, var(--bg) 100%),
+                url('../assets/images/joel-welcome-backdrop.jpg');
+            background-size: cover;
+            background-position: 62% 26%;
+            background-repeat: no-repeat;
+        }
+
+        /* ==========================================================================
+           HEADER
+           ========================================================================== */
+        .site-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 2rem;
+            padding-bottom: 4rem;
+            position: relative;
+            z-index: 20;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--line-strong);
+        }
+
+        .header-titles {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-name {
+            font-size: 1.125rem;
+            color: var(--text);
+            line-height: 1.1;
+        }
+
+        .header-subtitle {
+            font-size: 0.75rem;
+            color: var(--soft);
+            letter-spacing: 0.02em;
+        }
+
+        .header-link {
+            font-size: 0.875rem;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.3s ease;
+            font-weight: 500;
+        }
+        .header-link:hover { color: var(--text); }
+        .header-link:hover svg { transform: translateX(3px); }
+
+
+        /* ==========================================================================
+           HERO
+           ========================================================================== */
+        .home-hero {
+            max-width: 800px;
+            position: relative;
+        }
+
+        .home-hero h1 {
+            font-size: clamp(3rem, 6vw + 1rem, 5.5rem);
+            line-height: 1.05;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.25rem, 2.5vw, 1.875rem);
+            color: var(--muted);
+            line-height: 1.4;
+            max-width: 600px;
+            text-wrap: balance;
+        }
+
+        /* ==========================================================================
+           STAT STRIP
+           ========================================================================== */
+        .home-stat-strip {
+            border-top: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 4rem;
+            position: relative;
+        }
+        @media (min-width: 768px) {
+            .home-stat-strip { margin-bottom: 6rem; }
+        }
+
+        .stat-grid {
+            display: flex;
+            flex-direction: column;
+        }
+        @media (min-width: 768px) {
+            .stat-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .stat-item {
+            padding: 2.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            border-bottom: 1px solid var(--line);
+        }
+        @media (min-width: 768px) {
+            .stat-item {
+                padding: 3rem 2rem;
+                align-items: flex-start;
+                text-align: left;
+                border-bottom: none;
+                border-right: 1px solid var(--line);
+            }
+            .stat-item:last-child {
+                border-right: none;
+            }
+        }
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-number {
+            font-size: clamp(2.5rem, 4vw, 3.5rem);
+            line-height: 1.1;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.8125rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        /* ==========================================================================
+           PATHWAYS
+           ========================================================================== */
+        .home-pathways {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: stretch;
+        }
+        @media (min-width: 992px) {
+            .home-pathways {
+                grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+                gap: 2rem;
+            }
+        }
+
+        .pathway-card {
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-xl);
+            padding: 2.5rem;
+            box-shadow: var(--card-shadow);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+        }
+        @media (min-width: 768px) {
+            .pathway-card { padding: 3.5rem; }
+        }
+
+        .pathway-card:hover {
+            border-color: var(--line-strong);
+            transform: translateY(-4px);
+            box-shadow: 0 24px 50px rgba(16, 18, 22, 0.08);
+        }
+
+        .pathway-card--primary::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background-color: var(--accent);
+            opacity: 0.8;
+            transition: opacity 0.4s ease;
+        }
+        .pathway-card--primary:hover::before {
+            opacity: 1;
+        }
+
+        .card-eyebrow {
+            font-size: 0.6875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .card-title {
+            color: var(--text);
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .card-body {
+            color: var(--muted);
+            margin-bottom: 3rem;
+            flex-grow: 1;
+        }
+
+        .card-ministat {
+            border-top: 1px solid var(--line);
+            padding-top: 1.5rem;
+            margin-bottom: 2.5rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--soft);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+
+        .card-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+            background-color: transparent;
+            border: 1px solid var(--line-strong);
+            padding: 0.875rem 1.5rem;
+            border-radius: var(--radius-lg);
+            width: fit-content;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .pathway-card:hover .card-action {
+            background-color: var(--text);
+            color: #ffffff;
+            border-color: var(--text);
+        }
+        .pathway-card:hover .card-action svg {
+            transform: translateX(4px);
+        }
+
+        .pathway-card--primary .card-title {
+            font-size: clamp(2rem, 3.5vw, 2.75rem);
+        }
+        .pathway-card--primary .card-body {
+            font-size: clamp(1rem, 1.5vw, 1.25rem);
+            max-width: 90%;
+        }
+
+        .pathway-card--secondary .card-title {
+            font-size: clamp(1.75rem, 2.5vw, 2.25rem);
+        }
+        .pathway-card--secondary .card-body {
+            font-size: 1rem;
+            max-width: 100%;
+        }
+
+        /* ==========================================================================
+           FOOTER
+           ========================================================================== */
+        .site-footer {
+            padding: 2rem 0;
+            text-align: center;
+        }
+        @media (min-width: 768px) {
+            .site-footer {
+                text-align: left;
+            }
+        }
+
+        .footer-credit {
+            font-size: 0.8125rem;
+            color: var(--soft);
+        }
+
+        .icon-svg {
+            width: 20px;
+            height: 20px;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="hero-layer">
+        <div class="hero-background" aria-hidden="true"></div>
+
+        <header class="site-header site-container">
+            <div class="header-brand">
+                <img src="../assets/images/joel-mokyr-168x210.jpg" alt="Joel Mokyr portrait" class="header-avatar">
+                <div class="header-titles">
+                    <span class="header-name serif-text">Joel Mokyr</span>
+                    <span class="header-subtitle">An 80th Birthday Celebration</span>
+                </div>
+            </div>
+
+            <a href="../about/" class="header-link">
+                About
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </a>
+        </header>
+
+        <section class="home-hero site-container" data-reveal>
+            <h1 class="serif-text">Joel Mokyr, at 80.</h1>
+            <p class="hero-subtitle">
+                Four generations. 382 scholars.
+            </p>
+        </section>
+    </div>
+
+    <main class="home-main site-container">
+
+        <section class="home-stat-strip" data-reveal aria-label="Lineage statistics">
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <span class="stat-number serif-text">382</span>
+                    <span class="stat-label">Scholars</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number serif-text">4</span>
+                    <span class="stat-label">Generations</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number serif-text">76</span>
+                    <span class="stat-label">First-gen students</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="home-pathways" aria-labelledby="pathways-heading">
+            <h2 id="pathways-heading" class="sr-only">Exploration Pathways</h2>
+
+            <a href="../family/" class="pathway-card pathway-card--primary" aria-describedby="desc-primary" data-reveal>
+                <div class="card-eyebrow">Featured</div>
+                <h3 class="card-title serif-text">Joel's Academic Family</h3>
+                <p class="card-body">
+                    Browse the lineage, generation by generation.
+                </p>
+                <div id="desc-primary" class="card-ministat">
+                    382 people &middot; 4 generations
+                </div>
+                <div class="card-action">
+                    Enter
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </div>
+            </a>
+
+            <a href="../shape/" class="pathway-card pathway-card--secondary" aria-describedby="desc-secondary" data-reveal>
+                <div class="card-eyebrow">Companion Piece</div>
+                <h3 class="card-title serif-text">By the Numbers</h3>
+                <p class="card-body">
+                    The shape of a lineage, by the numbers.
+                </p>
+                <div id="desc-secondary" class="card-ministat">
+                    9 chapters
+                </div>
+                <div class="card-action">
+                    Read
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </div>
+            </a>
+        </section>
+
+    </main>
+
+    <footer class="site-footer site-container">
+        <p class="footer-credit">
+            For Joel's 80th. Survey led by Ran Abramitzky.
+        </p>
+    </footer>
+
+    <!--
+    Preview-only script: fires reveals when the file is opened directly.
+    Remove before integrating — site.js handles reveals in production
+    (it toggles '.is-visible'; rename the CSS selector or this class accordingly).
+    -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const elements = document.querySelectorAll('[data-reveal]');
+            elements.forEach((el, index) => {
+                setTimeout(() => el.classList.add('is-revealed'), 100 + (index * 150));
+            });
+        });
+    </script>
+</body>
+</html>
