@@ -207,35 +207,147 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mokyr Academic Genealogy</title>
 <style>
+  :root {{
+    --bg: #fbfbf8;
+    --text: #101216;
+    --muted: rgba(16, 18, 22, 0.64);
+    --soft: rgba(16, 18, 22, 0.44);
+    --line: rgba(16, 18, 22, 0.08);
+    --line-strong: rgba(16, 18, 22, 0.15);
+    --accent: #d6bc7b;
+    --accent-deep: #9b7f42;
+    --card-shadow: 0 16px 40px rgba(16, 18, 22, 0.06);
+    --radius-xl: 32px;
+    --radius-lg: 22px;
+    --radius-md: 16px;
+  }}
+
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ font-family: system-ui, sans-serif; background: #1a1a2e; color: #eee; overflow: hidden; }}
+  html {{ height: 100%; }}
+  body {{
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Neue Haas Grotesk Text Pro", "Avenir Next", "Helvetica Neue", sans-serif;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }}
+  a {{ color: inherit; text-decoration: none; }}
+
+  .site-header,
+  .site-footer {{
+    width: min(calc(100% - 48px), 1240px);
+    margin: 0 auto;
+    flex-shrink: 0;
+  }}
+  .site-header {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 24px 0 10px;
+  }}
+  .compact-header {{ padding-bottom: 0; }}
+  .wordmark {{
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+  }}
+  .wordmark-mark {{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(16, 18, 22, 0.12);
+    background: var(--accent);
+    box-shadow: 0 8px 20px rgba(17, 19, 24, 0.12);
+    color: #fbfbf8;
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1;
+  }}
+  .wordmark-text {{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }}
+  .wordmark-title {{
+    font-size: 0.98rem;
+    letter-spacing: 0;
+  }}
+  .wordmark-subtitle {{
+    color: rgba(16, 18, 22, 0.56);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }}
+  .back-link {{
+    padding: 11px 16px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.74);
+    color: var(--muted);
+    font-size: 0.92rem;
+    transition: border-color 180ms ease, transform 180ms ease, color 180ms ease;
+  }}
+  .back-link:hover {{
+    color: var(--text);
+    border-color: var(--line-strong);
+    transform: translateY(-1px);
+  }}
+
+  #viz-shell {{
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }}
 
   #controls {{
     position: absolute; top: 12px; left: 12px; z-index: 10;
     display: flex; flex-direction: column; align-items: flex-start;
   }}
-  #controls label {{ font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }}
-  #controls input[type=checkbox] {{ width: 15px; height: 15px; cursor: pointer; }}
+  #controls label {{
+    font-size: 13px;
+    line-height: 1.45;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text);
+  }}
+  #controls input[type=checkbox] {{
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    accent-color: var(--accent-deep);
+  }}
   #settings-trigger {{
     width: 40px;
     height: 40px;
-    border: 1px solid rgba(255,255,255,0.16);
+    border: 1px solid var(--line);
     border-radius: 999px;
     padding: 0;
-    background: rgba(8, 12, 28, 0.82);
-    color: #f4f7ff;
+    background: #ffffff;
+    color: var(--text);
     font-size: 20px;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+    box-shadow: var(--card-shadow);
+    transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
   }}
   #settings-trigger.active {{
-    background: rgba(74, 158, 255, 0.24);
-    border-color: rgba(74, 158, 255, 0.45);
-    color: #fff;
+    background: rgba(214, 188, 123, 0.16);
+    border-color: rgba(214, 188, 123, 0.42);
+    color: var(--accent-deep);
   }}
   #settings-panel {{
     position: absolute;
@@ -246,57 +358,86 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     gap: 8px;
     min-width: 250px;
     padding: 12px 14px 14px;
-    background: rgba(8, 12, 28, 0.9);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 14px;
-    box-shadow: 0 18px 40px rgba(0,0,0,0.35);
-    backdrop-filter: blur(18px);
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
   }}
   #settings-panel[hidden] {{ display: none; }}
   .settings-title {{
     font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #95a0bf;
+    letter-spacing: 0.2em;
+    color: rgba(16, 18, 22, 0.46);
     margin-bottom: 2px;
   }}
   #search {{
-    padding: 5px 8px; border-radius: 5px; border: 1px solid #555;
-    background: #2a2a3e; color: #eee; font-size: 13px; width: 100%;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    width: 100%;
   }}
-  #search::placeholder {{ color: #888; }}
+  #search::placeholder {{ color: var(--soft); }}
 
   #legend {{
     position: absolute; bottom: 16px; left: 12px; z-index: 10;
-    background: rgba(0,0,0,0.6); border-radius: 8px; padding: 10px 14px;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--card-shadow);
+    padding: 10px 14px;
     font-size: 12px;
+    max-width: min(280px, calc(100vw - 24px));
   }}
-  #legend h3 {{ font-size: 12px; color: #aaa; margin-bottom: 6px; }}
+  #legend h3 {{
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }}
   .legend-item {{ display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }}
+  .legend-item:last-child {{ margin-bottom: 0; }}
   .legend-dot {{ width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }}
 
   #tooltip {{
     position: absolute; pointer-events: none; z-index: 20;
-    background: rgba(0,0,0,0.85); color: #eee;
-    padding: 8px 12px; border-radius: 6px; font-size: 13px;
+    background: #ffffff;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
+    padding: 8px 12px; font-size: 13px;
     max-width: 280px; line-height: 1.5;
     display: none;
   }}
 
   #stats {{
     position: absolute; top: 12px; right: 12px; z-index: 10;
-    background: rgba(0,0,0,0.5); border-radius: 8px;
-    padding: 8px 14px; font-size: 12px; color: #aaa;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow: var(--card-shadow);
+    padding: 10px 16px;
+    font-size: 12px;
+    color: var(--muted);
+  }}
+  #stats span {{
+    color: var(--text);
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-size: 1.05rem;
   }}
 
   #person-panel {{
     position: absolute; top: 64px; right: 12px; bottom: 12px; z-index: 10;
     width: min(360px, calc(100vw - 24px));
-    background: rgba(8, 12, 28, 0.9);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 16px;
-    box-shadow: 0 18px 40px rgba(0,0,0,0.35);
-    backdrop-filter: blur(18px);
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
     display: flex; flex-direction: column; gap: 16px;
     padding: 16px;
     overflow: hidden;
@@ -306,25 +447,31 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   }}
   .panel-eyebrow {{
     font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
-    color: #8fb7ff; margin-bottom: 6px;
+    color: rgba(16, 18, 22, 0.46); margin-bottom: 6px;
   }}
   #person-title {{
-    font-size: 24px; line-height: 1.1; color: #fff;
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-size: 24px; line-height: 1.1; color: var(--text); font-weight: 400;
   }}
   #person-subtitle {{
-    margin-top: 6px; font-size: 13px; color: #aeb7d1;
+    margin-top: 6px; font-size: 13px; color: var(--muted);
   }}
   #panel-close {{
-    border: 0; border-radius: 999px;
+    border: 1px solid var(--line); border-radius: 999px;
     padding: 8px 12px;
-    background: rgba(255,255,255,0.1);
-    color: #eaf0ff; font-size: 12px; cursor: pointer;
+    background: #ffffff;
+    color: var(--muted); font-size: 12px; cursor: pointer;
+    transition: border-color 180ms ease, color 180ms ease;
+  }}
+  #panel-close:hover:not(:disabled) {{
+    color: var(--text);
+    border-color: var(--line-strong);
   }}
   #panel-close:disabled {{
     opacity: 0.45; cursor: default;
   }}
   #person-empty {{
-    color: #c2cae1; font-size: 14px; line-height: 1.55;
+    color: var(--muted); font-size: 14px; line-height: 1.55;
   }}
   #person-content {{
     overflow-y: auto;
@@ -337,18 +484,18 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     gap: 10px;
   }}
   .detail-item {{
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--bg);
+    border: 1px solid var(--line);
     border-radius: 12px;
     padding: 10px 12px;
     min-height: 72px;
   }}
   .detail-label {{
     font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
-    color: #95a0bf; margin-bottom: 8px;
+    color: var(--muted); margin-bottom: 8px;
   }}
   .detail-value {{
-    font-size: 14px; line-height: 1.4; color: #fff; font-weight: 600;
+    font-size: 14px; line-height: 1.4; color: var(--text); font-weight: 600;
     word-break: break-word;
   }}
   .panel-section {{
@@ -356,46 +503,91 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   }}
   .panel-section h3 {{
     font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;
-    color: #95a0bf;
+    color: var(--muted);
   }}
   .relationship-list {{
     display: flex; flex-direction: column; gap: 8px;
   }}
   .relationship-item {{
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--bg);
+    border: 1px solid var(--line);
     border-radius: 12px;
     padding: 10px 12px;
-    color: #f6f8ff;
+    color: var(--text);
     line-height: 1.4;
   }}
   .relationship-empty {{
-    color: #b5bdd4;
+    color: var(--muted);
     font-size: 14px;
   }}
 
-  svg {{ width: 100vw; height: 100vh; display: block; }}
-  .link {{ stroke: #888; stroke-opacity: 0.45; fill: none; }}
-  .link.q12a {{ stroke-dasharray: 4 3; stroke-opacity: 0.3; }}
+  #graph {{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }}
+  .link {{ stroke: rgba(16, 18, 22, 0.12); stroke-opacity: 1; fill: none; }}
+  /* 0.6 compensates for base .link alpha drop to 0.12; preserves medium/high-confidence distinction. */
+  .link.q12a {{ stroke-dasharray: 4 3; stroke-opacity: 0.6; }}
   .node circle {{ stroke-width: 1.5px; cursor: pointer; }}
   .node.hidden {{ display: none; }}
   .node.dimmed circle {{ opacity: 0.2; }}
   .node.dimmed text {{ opacity: 0.15; }}
   .node text {{
-    font-size: 10px; fill: #ddd; pointer-events: none;
-    paint-order: stroke; stroke: #1a1a2e; stroke-width: 3px;
+    font-family: "Neue Haas Grotesk Text Pro", "Avenir Next", "Helvetica Neue", sans-serif;
+    font-size: 11px; fill: var(--text); pointer-events: none;
+    paint-order: stroke; stroke: #fbfbf8; stroke-width: 3px;
   }}
-  .highlighted circle {{ stroke: #fff !important; stroke-width: 2.5px !important; }}
+  .highlighted circle {{ stroke: var(--accent) !important; stroke-width: 2.5px !important; }}
   .node.selected circle {{
-    stroke: #fff !important; stroke-width: 3.5px !important;
-    filter: drop-shadow(0 0 12px rgba(255,255,255,0.4));
+    stroke: rgba(214, 188, 123, 0.6) !important; stroke-width: 3.5px !important;
   }}
-  .node.selected text {{ fill: #fff; font-weight: 700; }}
+  .node.selected text {{ fill: var(--text); font-weight: 700; }}
+
+  .site-footer {{
+    padding: 16px 0 24px;
+    border-top: 1px solid var(--line);
+    font-size: 0.8rem;
+    color: var(--soft);
+  }}
+  .footer-credit {{ margin: 0; }}
 
   @media (max-width: 900px) {{
     #person-panel {{
       top: auto; left: 12px; right: 12px; bottom: 12px; width: auto;
       max-height: min(46vh, 380px);
+    }}
+  }}
+
+  @media (max-width: 760px) {{
+    .site-header,
+    .site-footer {{
+      width: min(calc(100% - 32px), 1240px);
+    }}
+    .site-header {{
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 18px 0 8px;
+    }}
+    .site-footer {{
+      padding: 14px 0 18px;
+    }}
+    .wordmark {{
+      gap: 12px;
+    }}
+    .wordmark-mark {{
+      width: 34px;
+      height: 34px;
+      font-size: 0.94rem;
+    }}
+    .wordmark-title {{
+      font-size: 0.94rem;
+    }}
+    .wordmark-subtitle {{
+      font-size: 0.68rem;
     }}
   }}
 
@@ -406,6 +598,9 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     #person-panel {{
       max-height: 52vh;
     }}
+    #stats {{
+      max-width: calc(100vw - 24px);
+    }}
     .detail-grid {{
       grid-template-columns: 1fr;
     }}
@@ -414,54 +609,71 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
 </head>
 <body>
 
-<div id="controls">
-  <button id="settings-trigger" type="button" aria-expanded="false" aria-controls="settings-panel" aria-label="Settings">&#9881;</button>
-  <div id="settings-panel" hidden>
-    <div class="settings-title">Settings</div>
-    <input id="search" type="text" placeholder="Search by name…">
-    <label>
-      <input type="checkbox" id="showMokyrDirect"> Show only Mokyr direct links
-    </label>
-    <label>
-      <input type="checkbox" id="showLabels" checked> Show name labels
-    </label>
-    <label>
-      <input type="checkbox" id="showMedium"> Show medium-confidence links
-    </label>
-  </div>
-</div>
+<header class="site-header compact-header">
+  <a class="wordmark" href="../" aria-label="Return to home">
+    <span class="wordmark-mark">M</span>
+    <span class="wordmark-text">
+      <span class="wordmark-title">Joel Mokyr</span>
+      <span class="wordmark-subtitle">An 80th Birthday Celebration</span>
+    </span>
+  </a>
+  <a class="back-link" href="../">Back to welcome</a>
+</header>
 
-<div id="legend">
-  <h3>Generation</h3>
-  <div class="legend-item"><div class="legend-dot" style="background:#f5c518"></div> Gen 0 — Joel Mokyr (root)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div> Gen 1 — Direct students</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#50c878"></div> Gen 2</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#ff8c42"></div> Gen 3</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#aaa"></div> Gen 4+</div>
-</div>
-
-<div id="stats">
-  <span id="stat-nodes"></span> nodes &nbsp;·&nbsp;
-  <span id="stat-edges"></span> edges
-</div>
-
-<aside id="person-panel" aria-live="polite">
-  <div class="panel-header">
-    <div>
-      <div class="panel-eyebrow">Person Details</div>
-      <h3 id="person-title">Select a person</h3>
-      <div id="person-subtitle">Click a node to inspect the latest details and direct relationships.</div>
+<main id="viz-shell">
+  <div id="controls">
+    <button id="settings-trigger" type="button" aria-expanded="false" aria-controls="settings-panel" aria-label="Settings">&#9881;</button>
+    <div id="settings-panel" hidden>
+      <div class="settings-title">Settings</div>
+      <input id="search" type="text" placeholder="Search by name…">
+      <label>
+        <input type="checkbox" id="showMokyrDirect"> Show only Mokyr direct links
+      </label>
+      <label>
+        <input type="checkbox" id="showLabels" checked> Show name labels
+      </label>
+      <label>
+        <input type="checkbox" id="showMedium"> Show medium-confidence links
+      </label>
     </div>
-    <button id="panel-close" type="button" disabled>Clear</button>
   </div>
-  <div id="person-empty">
-    The panel will show person-level metadata from the node file plus direct advisors and direct students from the current network edges.
-  </div>
-  <div id="person-content" hidden></div>
-</aside>
 
-<div id="tooltip"></div>
-<svg id="graph"></svg>
+  <div id="legend">
+    <h3>Generation</h3>
+    <div class="legend-item"><div class="legend-dot" style="background:#d6bc7b"></div> Gen 0 — Joel Mokyr (root)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1f242d"></div> Gen 1 — Direct students</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4a5161"></div> Gen 2</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#8a92a3"></div> Gen 3</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c9ced8"></div> Gen 4+</div>
+  </div>
+
+  <div id="stats">
+    <span id="stat-nodes"></span> nodes &nbsp;·&nbsp;
+    <span id="stat-edges"></span> edges
+  </div>
+
+  <aside id="person-panel" aria-live="polite">
+    <div class="panel-header">
+      <div>
+        <div class="panel-eyebrow">Person Details</div>
+        <h3 id="person-title">Select a person</h3>
+        <div id="person-subtitle">Click a node to inspect the latest details and direct relationships.</div>
+      </div>
+      <button id="panel-close" type="button" disabled>Clear</button>
+    </div>
+    <div id="person-empty">
+      The panel will show person-level metadata from the node file plus direct advisors and direct students from the current network edges.
+    </div>
+    <div id="person-content" hidden></div>
+  </aside>
+
+  <div id="tooltip"></div>
+  <svg id="graph"></svg>
+</main>
+
+<footer class="site-footer">
+  <p class="footer-credit">For Joel's 80th. Survey led by Ran Abramitzky.</p>
+</footer>
 
 <script>
 // ── inline D3 ──────────────────────────────────────────────────────────────
@@ -529,14 +741,14 @@ function buildRelationshipMaps(edges) {{
 const RELATIONSHIPS = buildRelationshipMaps(NETWORK_EDGES);
 
 const GEN_COLOR = {{
-  0: '#f5c518',
-  1: '#4a9eff',
-  2: '#50c878',
-  3: '#ff8c42',
+  0: '#d6bc7b',
+  1: '#1f242d',
+  2: '#4a5161',
+  3: '#8a92a3',
 }};
 function nodeColor(d) {{
-  if (d.generation === null || d.generation === undefined) return '#888';
-  return GEN_COLOR[d.generation] || '#aaa';
+  if (d.generation === null || d.generation === undefined) return '#c9ced8';
+  return GEN_COLOR[d.generation] || '#c9ced8';
 }}
 function nodeRadius(d) {{
   if (d.id === 'JM-ROOT') return 18;
@@ -575,6 +787,7 @@ function visibleEdges(vids) {{
 // ── D3 setup ───────────────────────────────────────────────────────────────
 const svg = d3.select('#graph');
 const g   = svg.append('g');
+const vizShellEl = document.getElementById('viz-shell');
 const panelTitleEl = document.getElementById('person-title');
 const panelSubtitleEl = document.getElementById('person-subtitle');
 const panelEmptyEl = document.getElementById('person-empty');
@@ -592,7 +805,7 @@ svg.append('defs').append('marker')
   .attr('orient', 'auto')
   .append('path')
     .attr('d', 'M0,-5L10,0L0,5')
-    .attr('fill', '#888');
+    .attr('fill', 'rgba(16, 18, 22, 0.12)');
 
 // Zoom + pan
 const zoom = d3.zoom()
@@ -606,8 +819,8 @@ const nodeG = g.append('g').attr('class', 'nodes');
 let simulation;
 
 function render() {{
-  const W = window.innerWidth;
-  const H = window.innerHeight;
+  const W = vizShellEl.clientWidth || window.innerWidth;
+  const H = vizShellEl.clientHeight || window.innerHeight;
 
   const vids   = visibleNodeIds();
   if (selectedNodeId && !vids.has(selectedNodeId)) {{
