@@ -236,6 +236,8 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   a {{ color: inherit; text-decoration: none; }}
 
   .site-header,
+  .viz-controls,
+  .legend-strip,
   .site-footer {{
     width: min(calc(100% - 48px), 1240px);
     margin: 0 auto;
@@ -308,109 +310,125 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     overflow: hidden;
   }}
 
-  #controls {{
-    position: absolute; top: 12px; left: 12px; z-index: 10;
-    display: flex; flex-direction: column; align-items: flex-start;
-  }}
-  #controls label {{
-    font-size: 13px;
-    line-height: 1.45;
-    cursor: pointer;
+  .viz-controls {{
     display: flex;
     align-items: center;
-    gap: 6px;
-    color: var(--text);
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0 16px;
   }}
-  #controls input[type=checkbox] {{
-    width: 15px;
-    height: 15px;
-    cursor: pointer;
-    accent-color: var(--accent-deep);
+  .viz-controls-right {{
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
   }}
-  #settings-trigger {{
-    width: 40px;
-    height: 40px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 0;
-    background: #ffffff;
-    color: var(--text);
-    font-size: 20px;
-    line-height: 1;
+  .privacy-pill {{
+    position: relative;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: var(--card-shadow);
-    transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
-  }}
-  #settings-trigger.active {{
-    background: rgba(214, 188, 123, 0.16);
-    border-color: rgba(214, 188, 123, 0.42);
-    color: var(--accent-deep);
-  }}
-  #settings-panel {{
-    position: absolute;
-    top: 50px;
-    left: 0;
-    display: flex;
-    flex-direction: column;
     gap: 8px;
-    min-width: 250px;
-    padding: 12px 14px 14px;
-    background: #ffffff;
+    padding: 11px 16px;
     border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--card-shadow);
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease;
   }}
-  #settings-panel[hidden] {{ display: none; }}
-  .settings-title {{
+  .privacy-pill:hover {{
+    border-color: var(--line-strong);
+    transform: translateY(-1px);
+  }}
+  .privacy-pill.active {{
+    border-color: var(--accent);
+    color: var(--accent-deep);
+    background: rgba(214, 188, 123, 0.08);
+  }}
+  .privacy-pill:focus-within {{
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(214, 188, 123, 0.18);
+  }}
+  .privacy-pill input[type=checkbox] {{
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
+  }}
+  .pill-label {{
     font-size: 12px;
+    line-height: 1;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: rgba(16, 18, 22, 0.46);
-    margin-bottom: 2px;
+  }}
+  .viz-search-wrap {{
+    display: flex; flex-direction: column; align-items: flex-start;
   }}
   #search {{
-    padding: 8px 10px;
-    border-radius: 12px;
+    width: min(420px, 100%);
+    padding: 12px 18px;
+    border-radius: 999px;
     border: 1px solid var(--line);
-    background: var(--bg);
+    background: #ffffff;
     color: var(--text);
-    font-size: 13px;
-    width: 100%;
+    font-size: 14px;
+    box-shadow: var(--card-shadow);
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+  }}
+  #search:focus {{
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(214, 188, 123, 0.18);
   }}
   #search::placeholder {{ color: var(--soft); }}
 
-  #legend {{
-    position: absolute; bottom: 16px; left: 12px; z-index: 10;
-    background: #ffffff;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    box-shadow: var(--card-shadow);
-    padding: 10px 14px;
-    font-size: 12px;
-    max-width: min(280px, calc(100vw - 24px));
+  .legend-strip {{
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 12px;
   }}
-  #legend h3 {{
+  .legend-strip-inner {{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }}
+  .legend-strip-inner::-webkit-scrollbar {{ display: none; }}
+  .legend-entry {{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12px;
     color: var(--muted);
-    margin-bottom: 6px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    flex-shrink: 0;
   }}
-  .legend-item {{ display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }}
-  .legend-item:last-child {{ margin-bottom: 0; }}
-  .legend-dot {{ width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }}
+  .legend-entry strong {{
+    color: var(--text);
+  }}
+  .legend-divider {{
+    color: var(--soft);
+    flex-shrink: 0;
+  }}
+  .legend-dot {{ width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }}
 
   #tooltip {{
     position: absolute; pointer-events: none; z-index: 20;
     background: #ffffff;
     color: var(--text);
     border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
-    padding: 8px 12px; font-size: 13px;
+    padding: 10px 14px; font-size: 13px;
     max-width: 280px; line-height: 1.5;
     display: none;
   }}
@@ -436,25 +454,28 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     width: min(360px, calc(100vw - 24px));
     background: #ffffff;
     border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-xl);
     box-shadow: var(--card-shadow);
     display: flex; flex-direction: column; gap: 16px;
-    padding: 16px;
+    padding: 38px;
     overflow: hidden;
   }}
   .panel-header {{
     display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
   }}
-  .panel-eyebrow {{
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
-    color: rgba(16, 18, 22, 0.46); margin-bottom: 6px;
+  .eyebrow {{
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(16, 18, 22, 0.46);
+    margin-bottom: 8px;
   }}
   #person-title {{
     font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
     font-size: 24px; line-height: 1.1; color: var(--text); font-weight: 400;
   }}
   #person-subtitle {{
-    margin-top: 6px; font-size: 13px; color: var(--muted);
+    margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.5;
   }}
   #panel-close {{
     border: 1px solid var(--line); border-radius: 999px;
@@ -475,43 +496,43 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   }}
   #person-content {{
     overflow-y: auto;
-    display: flex; flex-direction: column; gap: 16px;
+    display: flex; flex-direction: column; gap: 18px;
     padding-right: 4px;
   }}
   .detail-grid {{
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 12px;
   }}
   .detail-item {{
-    background: var(--bg);
+    background: #ffffff;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     padding: 10px 12px;
-    min-height: 72px;
+    min-height: 68px;
   }}
   .detail-label {{
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
     color: var(--muted); margin-bottom: 8px;
   }}
   .detail-value {{
-    font-size: 14px; line-height: 1.4; color: var(--text); font-weight: 600;
+    font-size: 14px; line-height: 1.4; color: var(--text); font-weight: 500;
     word-break: break-word;
   }}
   .panel-section {{
-    display: flex; flex-direction: column; gap: 10px;
+    display: flex; flex-direction: column; gap: 12px;
   }}
   .panel-section h3 {{
-    font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
     color: var(--muted);
   }}
   .relationship-list {{
     display: flex; flex-direction: column; gap: 8px;
   }}
   .relationship-item {{
-    background: var(--bg);
+    background: #ffffff;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     padding: 10px 12px;
     color: var(--text);
     line-height: 1.4;
@@ -528,9 +549,10 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     height: 100%;
     display: block;
   }}
-  .link {{ stroke: rgba(16, 18, 22, 0.12); stroke-opacity: 1; fill: none; }}
-  /* 0.6 compensates for base .link alpha drop to 0.12; preserves medium/high-confidence distinction. */
-  .link.q12a {{ stroke-dasharray: 4 3; stroke-opacity: 0.6; }}
+  .link {{ stroke: rgba(16, 18, 22, 0.12); stroke-width: 1; fill: none; }}
+  .link.highlighted {{ stroke: rgba(214, 188, 123, 0.55); stroke-width: 1.5; }}
+  /* 0.5 multiplies the base 0.12 alpha to ~0.06, preserving medium/high-confidence distinction without dashes. */
+  .link.q12a {{ stroke-dasharray: none; stroke-opacity: 0.5; }}
   .node circle {{ stroke-width: 1.5px; cursor: pointer; }}
   .node.hidden {{ display: none; }}
   .node.dimmed circle {{ opacity: 0.2; }}
@@ -555,14 +577,20 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   .footer-credit {{ margin: 0; }}
 
   @media (max-width: 900px) {{
+    .legend-strip {{
+      margin-bottom: 8px;
+    }}
     #person-panel {{
       top: auto; left: 12px; right: 12px; bottom: 12px; width: auto;
       max-height: min(46vh, 380px);
+      padding: 28px;
     }}
   }}
 
   @media (max-width: 760px) {{
     .site-header,
+    .viz-controls,
+    .legend-strip,
     .site-footer {{
       width: min(calc(100% - 32px), 1240px);
     }}
@@ -574,6 +602,19 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     }}
     .site-footer {{
       padding: 14px 0 18px;
+    }}
+    .viz-controls {{
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+      padding: 10px 0 14px;
+    }}
+    .viz-controls-right {{
+      justify-content: flex-start;
+    }}
+    .viz-search-wrap,
+    #search {{
+      width: 100%;
     }}
     .wordmark {{
       gap: 12px;
@@ -592,11 +633,12 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   }}
 
   @media (max-width: 560px) {{
-    #settings-panel {{
-      min-width: min(250px, calc(100vw - 24px));
+    .privacy-pill {{
+      padding: 10px 14px;
     }}
     #person-panel {{
       max-height: 52vh;
+      padding: 24px;
     }}
     #stats {{
       max-width: calc(100vw - 24px);
@@ -620,33 +662,41 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   <a class="back-link" href="../">Back to welcome</a>
 </header>
 
+<div class="viz-controls" aria-label="Network controls">
+  <div class="viz-search-wrap">
+    <input id="search" type="text" placeholder="Search by name…">
+  </div>
+  <div class="viz-controls-right">
+    <label class="privacy-pill">
+      <input type="checkbox" id="showMokyrDirect">
+      <span class="pill-label">Mokyr-direct only</span>
+    </label>
+    <label class="privacy-pill">
+      <input type="checkbox" id="showLabels" checked>
+      <span class="pill-label">Labels</span>
+    </label>
+    <label class="privacy-pill">
+      <input type="checkbox" id="showMedium">
+      <span class="pill-label">Medium-confidence</span>
+    </label>
+  </div>
+</div>
+
+<div class="legend-strip" aria-label="Generation legend">
+  <div class="legend-strip-inner">
+    <div class="legend-entry"><span class="legend-dot" style="background:#d6bc7b"></span><strong>Joel</strong></div>
+    <span class="legend-divider" aria-hidden="true">&middot;</span>
+    <div class="legend-entry"><span class="legend-dot" style="background:#1f242d"></span><strong>Gen 1</strong></div>
+    <span class="legend-divider" aria-hidden="true">&middot;</span>
+    <div class="legend-entry"><span class="legend-dot" style="background:#4a5161"></span><strong>Gen 2</strong></div>
+    <span class="legend-divider" aria-hidden="true">&middot;</span>
+    <div class="legend-entry"><span class="legend-dot" style="background:#8a92a3"></span><strong>Gen 3</strong></div>
+    <span class="legend-divider" aria-hidden="true">&middot;</span>
+    <div class="legend-entry"><span class="legend-dot" style="background:#c9ced8"></span><strong>Gen 4+</strong></div>
+  </div>
+</div>
+
 <main id="viz-shell">
-  <div id="controls">
-    <button id="settings-trigger" type="button" aria-expanded="false" aria-controls="settings-panel" aria-label="Settings">&#9881;</button>
-    <div id="settings-panel" hidden>
-      <div class="settings-title">Settings</div>
-      <input id="search" type="text" placeholder="Search by name…">
-      <label>
-        <input type="checkbox" id="showMokyrDirect"> Show only Mokyr direct links
-      </label>
-      <label>
-        <input type="checkbox" id="showLabels" checked> Show name labels
-      </label>
-      <label>
-        <input type="checkbox" id="showMedium"> Show medium-confidence links
-      </label>
-    </div>
-  </div>
-
-  <div id="legend">
-    <h3>Generation</h3>
-    <div class="legend-item"><div class="legend-dot" style="background:#d6bc7b"></div> Gen 0 — Joel Mokyr (root)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#1f242d"></div> Gen 1 — Direct students</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#4a5161"></div> Gen 2</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#8a92a3"></div> Gen 3</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#c9ced8"></div> Gen 4+</div>
-  </div>
-
   <div id="stats">
     <span id="stat-nodes"></span> nodes &nbsp;·&nbsp;
     <span id="stat-edges"></span> edges
@@ -655,7 +705,7 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   <aside id="person-panel" aria-live="polite">
     <div class="panel-header">
       <div>
-        <div class="panel-eyebrow">Person Details</div>
+        <div class="eyebrow">Person Details</div>
         <h3 id="person-title">Select a person</h3>
         <div id="person-subtitle">Click a node to inspect the latest details and direct relationships.</div>
       </div>
@@ -760,7 +810,6 @@ function nodeRadius(d) {{
 let showMokyrDirect = false;
 let showLabels  = true;
 let showMedium  = false;
-let showSettings = false;
 let searchTerm  = '';
 let selectedNodeId = null;
 
@@ -793,8 +842,7 @@ const panelSubtitleEl = document.getElementById('person-subtitle');
 const panelEmptyEl = document.getElementById('person-empty');
 const panelContentEl = document.getElementById('person-content');
 const panelCloseEl = document.getElementById('panel-close');
-const settingsTriggerEl = document.getElementById('settings-trigger');
-const settingsPanelEl = document.getElementById('settings-panel');
+const controlPillInputs = Array.from(document.querySelectorAll('.privacy-pill input[type="checkbox"]'));
 
 // Arrowhead marker
 svg.append('defs').append('marker')
@@ -945,12 +993,6 @@ function clearSelection() {{
   renderPersonPanel();
 }}
 
-function renderSettingsPanel() {{
-  settingsPanelEl.hidden = !showSettings;
-  settingsTriggerEl.classList.toggle('active', showSettings);
-  settingsTriggerEl.setAttribute('aria-expanded', showSettings ? 'true' : 'false');
-}}
-
 function formatGeneration(generation) {{
   if (generation === null || generation === undefined) return '';
   if (generation === 0) return 'Generation 0 (root)';
@@ -959,6 +1001,14 @@ function formatGeneration(generation) {{
 
 function displayValue(value, fallback = '') {{
   return value && String(value).trim() ? String(value).trim() : fallback;
+}}
+
+function formatPersonSubtitle(node) {{
+  const summary = displayValue(node.employer) || displayValue(node.institution);
+  const location = [displayValue(node.us_state), displayValue(node.country)].filter(Boolean).join(', ');
+  const parts = [summary, location].filter(Boolean);
+  if (parts.length) return parts.join(' • ');
+  return formatGeneration(node.generation) || 'No additional details available.';
 }}
 
 function relatedNodes(map, nodeId) {{
@@ -1030,7 +1080,7 @@ function renderPersonPanel() {{
   }}
 
   panelTitleEl.textContent = node.label;
-  panelSubtitleEl.textContent = formatGeneration(node.generation);
+  panelSubtitleEl.textContent = formatPersonSubtitle(node);
   panelEmptyEl.hidden = true;
   panelContentEl.hidden = false;
   panelCloseEl.disabled = false;
@@ -1112,19 +1162,25 @@ function dragended(event, d) {{
   d.fx = null; d.fy = null;
 }}
 
+function syncControlPills() {{
+  controlPillInputs.forEach(input => {{
+    const pill = input.closest('.privacy-pill');
+    if (pill) pill.classList.toggle('active', input.checked);
+  }});
+}}
+
 // ── controls ───────────────────────────────────────────────────────────────
-settingsTriggerEl.addEventListener('click', () => {{
-  showSettings = !showSettings;
-  renderSettingsPanel();
-}});
 document.getElementById('showMokyrDirect').addEventListener('change', e => {{
+  syncControlPills();
   showMokyrDirect = e.target.checked; render();
 }});
 document.getElementById('showLabels').addEventListener('change', e => {{
+  syncControlPills();
   showLabels = e.target.checked;
   nodeG.selectAll('g.node text').style('display', showLabels ? null : 'none');
 }});
 document.getElementById('showMedium').addEventListener('change', e => {{
+  syncControlPills();
   showMedium = e.target.checked; render();
 }});
 document.getElementById('search').addEventListener('input', e => {{
@@ -1139,7 +1195,7 @@ window.addEventListener('keydown', event => {{
 window.addEventListener('resize', render);
 
 // ── initial render ─────────────────────────────────────────────────────────
-renderSettingsPanel();
+syncControlPills();
 render();
 </script>
 </body>
