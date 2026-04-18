@@ -10,6 +10,7 @@ import json
 import sys
 import hashlib
 import argparse
+import base64
 import re
 from datetime import datetime
 from pathlib import Path
@@ -142,6 +143,12 @@ def _safe_json(obj) -> str:
     return s.replace("</", "<\\/")
 
 
+def _data_url(path: Path, mime_type: str) -> str:
+    data = path.read_bytes()
+    encoded = base64.b64encode(data).decode('ascii')
+    return f"data:{mime_type};base64,{encoded}"
+
+
 def _load_nodes(nodes_csv: Path) -> list:
     """Load node rows; exclude email from output."""
     nodes = []
@@ -198,6 +205,10 @@ def _load_edges(edges_csv: Path) -> list:
 def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     nodes_json = _safe_json(nodes)
     edges_json = _safe_json(edges)
+    wordmark_photo_data_url = _data_url(
+        PROJECT_ROOT / "mokyr-legacy-site/assets/images/joel-mokyr-168x210.jpg",
+        "image/jpeg",
+    )
 
     return f"""<!DOCTYPE html>
 <!-- INTERNAL USE ONLY: personal academic data. Do not distribute. -->
@@ -220,6 +231,8 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     --radius-xl: 32px;
     --radius-lg: 22px;
     --radius-md: 16px;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-card: cubic-bezier(0.16, 1, 0.3, 1);
   }}
 
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -231,13 +244,15 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     font-family: "Neue Haas Grotesk Text Pro", "Avenir Next", "Helvetica Neue", sans-serif;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }}
   a {{ color: inherit; text-decoration: none; }}
 
   .site-header,
   .viz-controls,
   .legend-strip,
+  .viz-intro-inner,
   .site-footer {{
     width: min(calc(100% - 48px), 1240px);
     margin: 0 auto;
@@ -263,15 +278,18 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     width: 38px;
     height: 38px;
     flex-shrink: 0;
+    overflow: hidden;
     border-radius: 50%;
-    border: 1px solid rgba(16, 18, 22, 0.12);
-    background: var(--accent);
+    border: 1.5px solid rgba(16, 18, 22, 0.12);
+    background-color: #c3ab77;
+    background-image: url("{wordmark_photo_data_url}");
+    background-position: center 18%;
+    background-repeat: no-repeat;
+    background-size: cover;
     box-shadow: 0 8px 20px rgba(17, 19, 24, 0.12);
-    color: #fbfbf8;
-    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1;
+    color: transparent;
+    font-size: 0;
+    line-height: 0;
   }}
   .wordmark-text {{
     display: flex;
@@ -295,7 +313,10 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     background: rgba(255, 255, 255, 0.74);
     color: var(--muted);
     font-size: 0.92rem;
-    transition: border-color 180ms ease, transform 180ms ease, color 180ms ease;
+    transition:
+      border-color 200ms var(--ease-out),
+      color 200ms var(--ease-out),
+      transform 200ms var(--ease-out);
   }}
   .back-link:hover {{
     color: var(--text);
@@ -305,9 +326,30 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
 
   #viz-shell {{
     position: relative;
-    flex: 1;
+    flex: 0 0 auto;
     min-height: 0;
     overflow: hidden;
+  }}
+
+  .viz-intro {{
+    width: 100%;
+    flex-shrink: 0;
+    padding: 28px 0;
+  }}
+  .viz-intro-title {{
+    margin: 6px 0 10px;
+    color: var(--text);
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-size: 2.25rem;
+    font-weight: 400;
+    line-height: 1.04;
+  }}
+  .viz-intro-lead {{
+    max-width: 58ch;
+    margin: 0;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.6;
   }}
 
   .viz-controls {{
@@ -334,7 +376,11 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     background: #ffffff;
     color: var(--muted);
     cursor: pointer;
-    transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease;
+    transition:
+      border-color 200ms var(--ease-out),
+      background 200ms var(--ease-out),
+      color 200ms var(--ease-out),
+      transform 200ms var(--ease-out);
   }}
   .privacy-pill:hover {{
     border-color: var(--line-strong);
@@ -380,7 +426,9 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     color: var(--text);
     font-size: 14px;
     box-shadow: var(--card-shadow);
-    transition: border-color 180ms ease, box-shadow 180ms ease;
+    transition:
+      border-color 200ms var(--ease-out),
+      box-shadow 200ms var(--ease-out);
   }}
   #search:focus {{
     outline: none;
@@ -392,7 +440,6 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   .legend-strip {{
     border-top: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
-    margin-bottom: 12px;
   }}
   .legend-strip-inner {{
     display: flex;
@@ -459,6 +506,15 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     display: flex; flex-direction: column; gap: 16px;
     padding: 38px;
     overflow: hidden;
+    opacity: 0.98;
+    transform: translateY(8px);
+    transition:
+      transform 240ms var(--ease-card),
+      opacity 240ms var(--ease-card);
+  }}
+  #person-panel.is-open {{
+    opacity: 1;
+    transform: translateY(0);
   }}
   .panel-header {{
     display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
@@ -482,7 +538,9 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     padding: 8px 12px;
     background: #ffffff;
     color: var(--muted); font-size: 12px; cursor: pointer;
-    transition: border-color 180ms ease, color 180ms ease;
+    transition:
+      border-color 200ms var(--ease-out),
+      color 200ms var(--ease-out);
   }}
   #panel-close:hover:not(:disabled) {{
     color: var(--text);
@@ -549,11 +607,24 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     height: 100%;
     display: block;
   }}
-  .link {{ stroke: rgba(16, 18, 22, 0.12); stroke-width: 1; fill: none; }}
+  .link {{
+    stroke: rgba(16, 18, 22, 0.12);
+    stroke-width: 1;
+    fill: none;
+    transition:
+      opacity 220ms var(--ease-out),
+      stroke 220ms var(--ease-out);
+  }}
   .link.highlighted {{ stroke: rgba(214, 188, 123, 0.55); stroke-width: 1.5; }}
-  /* 0.5 multiplies the base 0.12 alpha to ~0.06, preserving medium/high-confidence distinction without dashes. */
+  /* Fainter stroke for edges sourced from Q12a free-text listings (edge_type='q12a'); 0.5 * 0.12 base alpha = ~0.06 effective. */
   .link.q12a {{ stroke-dasharray: none; stroke-opacity: 0.5; }}
-  .node circle {{ stroke-width: 1.5px; cursor: pointer; }}
+  .node circle {{
+    stroke-width: 1.5px;
+    cursor: pointer;
+    transition:
+      opacity 220ms var(--ease-out),
+      stroke 220ms var(--ease-out);
+  }}
   .node.hidden {{ display: none; }}
   .node.dimmed circle {{ opacity: 0.2; }}
   .node.dimmed text {{ opacity: 0.15; }}
@@ -561,6 +632,9 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     font-family: "Neue Haas Grotesk Text Pro", "Avenir Next", "Helvetica Neue", sans-serif;
     font-size: 11px; fill: var(--text); pointer-events: none;
     paint-order: stroke; stroke: #fbfbf8; stroke-width: 3px;
+    transition:
+      opacity 220ms var(--ease-out),
+      fill 220ms var(--ease-out);
   }}
   .highlighted circle {{ stroke: var(--accent) !important; stroke-width: 2.5px !important; }}
   .node.selected circle {{
@@ -577,9 +651,6 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   .footer-credit {{ margin: 0; }}
 
   @media (max-width: 900px) {{
-    .legend-strip {{
-      margin-bottom: 8px;
-    }}
     #person-panel {{
       top: auto; left: 12px; right: 12px; bottom: 12px; width: auto;
       max-height: min(46vh, 380px);
@@ -591,6 +662,7 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     .site-header,
     .viz-controls,
     .legend-strip,
+    .viz-intro-inner,
     .site-footer {{
       width: min(calc(100% - 32px), 1240px);
     }}
@@ -608,6 +680,12 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
       align-items: stretch;
       gap: 12px;
       padding: 10px 0 14px;
+    }}
+    .viz-intro {{
+      padding: 20px 0;
+    }}
+    .viz-intro-title {{
+      font-size: 1.5rem;
     }}
     .viz-controls-right {{
       justify-content: flex-start;
@@ -668,16 +746,12 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   </div>
   <div class="viz-controls-right">
     <label class="privacy-pill">
-      <input type="checkbox" id="showMokyrDirect">
-      <span class="pill-label">Mokyr-direct only</span>
-    </label>
-    <label class="privacy-pill">
-      <input type="checkbox" id="showLabels" checked>
+      <input type="checkbox" id="showLabels">
       <span class="pill-label">Labels</span>
     </label>
     <label class="privacy-pill">
-      <input type="checkbox" id="showMedium">
-      <span class="pill-label">Medium-confidence</span>
+      <input type="checkbox" id="layoutConcentric" checked aria-label="Concentric layout active. Press Enter to switch to force layout.">
+      <span class="pill-label">Concentric</span>
     </label>
   </div>
 </div>
@@ -695,6 +769,14 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     <div class="legend-entry"><span class="legend-dot" style="background:#c9ced8"></span><strong>Gen 4+</strong></div>
   </div>
 </div>
+
+<section class="viz-intro" aria-label="Network introduction">
+  <div class="viz-intro-inner">
+    <div class="eyebrow">The Network</div>
+    <h1 class="viz-intro-title">Four generations, charted.</h1>
+    <p class="viz-intro-lead">388 scholars, traced through Joel's advising lineage.</p>
+  </div>
+</section>
 
 <main id="viz-shell">
   <div id="stats">
@@ -767,9 +849,6 @@ const NETWORK_EDGES = RAW_EDGES.filter(edge => (
 ));
 
 const NODE_BY_ID = new Map(NETWORK_NODES.map(node => [node.id, node]));
-const MOKYR_DIRECT_IDS = new Set(
-  ['JM-ROOT', ...NETWORK_EDGES.filter(edge => edge.source === 'JM-ROOT').map(edge => edge.target)]
-);
 
 function buildRelationshipMaps(edges) {{
   const advisorsByNode = new Map();
@@ -807,28 +886,32 @@ function nodeRadius(d) {{
 }}
 
 // ── state ──────────────────────────────────────────────────────────────────
-let showMokyrDirect = false;
-let showLabels  = true;
-let showMedium  = false;
+let showLabels  = false;
 let searchTerm  = '';
+let layoutMode  = 'concentric';
 let selectedNodeId = null;
+let hoveredNodeId = null;
+
+let simulation;
+let currentNodeSelection = null;
+let currentLinkSelection = null;
+let currentNeighborIds = new Map();
+let currentAlwaysVisibleLabelIds = new Set();
+let currentSimNodes = [];
+let currentSimEdges = [];
+let currentShellWidth = 0;
+let currentShellHeight = 0;
 
 // ── build visible sets ─────────────────────────────────────────────────────
 function visibleNodeIds() {{
-  let visibleNodes = NETWORK_NODES.filter(n => (
+  return new Set(NETWORK_NODES.filter(n => (
     n.id === 'JM-ROOT' || n.is_respondent || n.show_nonrespondent
-  ));
-
-  if (showMokyrDirect) {{
-    visibleNodes = visibleNodes.filter(n => MOKYR_DIRECT_IDS.has(n.id));
-  }}
-
-  return new Set(visibleNodes.map(n => n.id));
+  )).map(n => n.id));
 }}
 function visibleEdges(vids) {{
   return NETWORK_EDGES.filter(e => {{
     if (!vids.has(e.source) || !vids.has(e.target)) return false;
-    if (!showMedium && e.confidence === 'medium') return false;
+    if (e.confidence === 'medium') return false;
     return true;
   }});
 }}
@@ -837,11 +920,14 @@ function visibleEdges(vids) {{
 const svg = d3.select('#graph');
 const g   = svg.append('g');
 const vizShellEl = document.getElementById('viz-shell');
+const footerEl = document.querySelector('.site-footer');
+const panelEl = document.getElementById('person-panel');
 const panelTitleEl = document.getElementById('person-title');
 const panelSubtitleEl = document.getElementById('person-subtitle');
 const panelEmptyEl = document.getElementById('person-empty');
 const panelContentEl = document.getElementById('person-content');
 const panelCloseEl = document.getElementById('panel-close');
+const layoutToggleEl = document.getElementById('layoutConcentric');
 const controlPillInputs = Array.from(document.querySelectorAll('.privacy-pill input[type="checkbox"]'));
 
 // Arrowhead marker
@@ -864,15 +950,122 @@ svg.call(zoom);
 const linkG = g.append('g').attr('class', 'links');
 const nodeG = g.append('g').attr('class', 'nodes');
 
-let simulation;
+function buildNeighborIds(edges) {{
+  const neighborIds = new Map();
+
+  function ensureSet(nodeId) {{
+    if (!neighborIds.has(nodeId)) neighborIds.set(nodeId, new Set());
+    return neighborIds.get(nodeId);
+  }}
+
+  edges.forEach(edge => {{
+    ensureSet(edge.source).add(edge.target);
+    ensureSet(edge.target).add(edge.source);
+  }});
+
+  return neighborIds;
+}}
+
+function edgeEndpointId(endpoint) {{
+  return typeof endpoint === 'object' ? endpoint.id : endpoint;
+}}
+
+function syncShellHeight() {{
+  const shellTop = vizShellEl.getBoundingClientRect().top;
+  const footerHeight = footerEl ? footerEl.getBoundingClientRect().height : 0;
+  const availableHeight = Math.max(420, Math.floor(window.innerHeight - shellTop - footerHeight));
+  vizShellEl.style.height = availableHeight + 'px';
+  return {{
+    width: vizShellEl.clientWidth || window.innerWidth,
+    height: vizShellEl.clientHeight || availableHeight,
+  }};
+}}
+
+function ringRadius(generation, width, height) {{
+  const radii = [0, 180, 320, 460, 580];
+  const normalizedGeneration = Math.max(0, Math.min(4, Number(generation) || 0));
+  if (normalizedGeneration === 0) return 0;
+
+  const viewportMin = Math.min(window.innerWidth || width, window.innerHeight || height);
+  const scale = Math.min(1, viewportMin / 900);
+  return radii[normalizedGeneration] * scale;
+}}
+
+function fitGraphToViewport(width, height) {{
+  if (layoutMode === 'concentric') {{
+    const rootNode = currentSimNodes.find(node => node.id === 'JM-ROOT');
+    if (rootNode) {{
+      const padding = 40;
+      const maxDx = d3.max(currentSimNodes, node => Math.abs((node.x || 0) - rootNode.x) + nodeRadius(node) + 18) || 1;
+      const maxDy = d3.max(currentSimNodes, node => Math.abs((node.y || 0) - rootNode.y) + nodeRadius(node) + 18) || 1;
+      const scale = Math.min(
+        (width - padding * 2) / (maxDx * 2),
+        (height - padding * 2) / (maxDy * 2)
+      );
+      const targetCenterX = width / 2;
+      const targetCenterY = window.innerWidth <= 900 ? height * 0.32 : height / 2;
+      const tx = targetCenterX - scale * rootNode.x;
+      const ty = targetCenterY - scale * rootNode.y;
+
+      svg.transition()
+        .duration(240)
+        .ease(d3.easeCubicOut)
+        .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+      return;
+    }}
+  }}
+
+  const bbox = g.node().getBBox();
+  if (!bbox.width || !bbox.height) return;
+
+  const scale = Math.min(width / bbox.width, height / bbox.height) * 0.85;
+  const tx = (width - scale * (bbox.x * 2 + bbox.width)) / 2;
+  const ty = (height - scale * (bbox.y * 2 + bbox.height)) / 2;
+
+  svg.transition()
+    .duration(240)
+    .ease(d3.easeCubicOut)
+    .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}}
+
+function applyLayoutForces(width, height) {{
+  currentShellWidth = width;
+  currentShellHeight = height;
+  if (!simulation) return;
+
+  const linkStrength = layoutMode === 'concentric' ? 0.1 : 0.5;
+  const chargeStrength = layoutMode === 'concentric' ? -60 : -220;
+  const collidePadding = layoutMode === 'concentric' ? 6 : 8;
+
+  simulation
+    .force('link', d3.forceLink(currentSimEdges).id(d => d.id).distance(80).strength(linkStrength))
+    .force('charge', d3.forceManyBody().strength(chargeStrength))
+    .force('collide', d3.forceCollide().radius(d => nodeRadius(d) + collidePadding));
+
+  if (layoutMode === 'concentric') {{
+    simulation.force('center', null);
+    simulation.force(
+      'radial',
+      d3.forceRadial(d => ringRadius(d.generation, width, height), width / 2, height / 2).strength(0.8)
+    );
+  }} else {{
+    simulation.force('radial', null);
+    simulation.force('center', d3.forceCenter(width / 2, height / 2));
+  }}
+}}
 
 function render() {{
-  const W = vizShellEl.clientWidth || window.innerWidth;
-  const H = vizShellEl.clientHeight || window.innerHeight;
+  const shellSize = syncShellHeight();
+  const W = shellSize.width;
+  const H = shellSize.height;
 
   const vids   = visibleNodeIds();
   if (selectedNodeId && !vids.has(selectedNodeId)) {{
     selectedNodeId = null;
+  }}
+  if (hoveredNodeId && !vids.has(hoveredNodeId)) {{
+    hoveredNodeId = null;
+    hideTooltip();
   }}
   const vNodes = NETWORK_NODES.filter(n => vids.has(n.id));
   const vEdges = visibleEdges(vids);
@@ -885,6 +1078,13 @@ function render() {{
   }}));
   const simNodes = Array.from(nodeById.values());
 
+  currentNeighborIds = buildNeighborIds(vEdges);
+  currentAlwaysVisibleLabelIds = new Set(
+    simNodes.filter(d => Number(d.generation) === 0).map(d => d.id)
+  );
+  currentSimNodes = simNodes;
+  currentSimEdges = simEdges;
+
   // Update stats
   document.getElementById('stat-nodes').textContent = simNodes.length;
   document.getElementById('stat-edges').textContent = simEdges.length;
@@ -893,11 +1093,8 @@ function render() {{
   if (simulation) simulation.stop();
 
   simulation = d3.forceSimulation(simNodes)
-    .force('link', d3.forceLink(simEdges).id(d => d.id).distance(80).strength(0.5))
-    .force('charge', d3.forceManyBody().strength(-220))
-    .force('center', d3.forceCenter(W / 2, H / 2))
-    .force('collide', d3.forceCollide().radius(d => nodeRadius(d) + 8))
     .alphaDecay(0.03);
+  applyLayoutForces(W, H);
 
   // ── links ──────────────────────────────────────────────────────────────
   const link = linkG.selectAll('line')
@@ -905,6 +1102,7 @@ function render() {{
     .join('line')
       .attr('class', e => 'link' + (e.edge_type === 'q12a' ? ' q12a' : ''))
       .attr('marker-end', 'url(#arrow)');
+  currentLinkSelection = link;
 
   // ── nodes ──────────────────────────────────────────────────────────────
   const node = nodeG.selectAll('g.node')
@@ -922,11 +1120,13 @@ function render() {{
             if (event.defaultPrevented) return;
             selectNode(d.id);
           }})
-          .on('mousemove', showTooltip)
-          .on('mouseleave', hideTooltip);
+          .on('mouseenter', handleNodeEnter)
+          .on('mousemove', handleNodeMove)
+          .on('mouseleave', handleNodeLeave);
         return ng;
       }}
     );
+  currentNodeSelection = node;
 
   node.select('circle')
     .attr('r', nodeRadius)
@@ -935,10 +1135,9 @@ function render() {{
 
   node.select('text')
     .attr('x', d => nodeRadius(d) + 4)
-    .text(d => d.label)
-    .style('display', showLabels ? null : 'none');
+    .text(d => d.label);
 
-  updateNodeStyles(node);
+  updateGraphState();
   renderPersonPanel();
 
   simulation.on('tick', () => {{
@@ -948,17 +1147,12 @@ function render() {{
       .attr('x2', d => d.target.x)
       .attr('y2', d => d.target.y);
     node.attr('transform', d => `translate(${{d.x}},${{d.y}})`);
+    updateLabelVisibility();
   }});
 
   // Fit to viewport after initial settle
   simulation.on('end', () => {{
-    const bbox = g.node().getBBox();
-    if (!bbox.width) return;
-    const scale  = Math.min(W / bbox.width, H / bbox.height) * 0.85;
-    const tx = (W - scale * (bbox.x * 2 + bbox.width))  / 2;
-    const ty = (H - scale * (bbox.y * 2 + bbox.height)) / 2;
-    svg.transition().duration(600)
-       .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+    fitGraphToViewport(W, H);
   }});
 }}
 
@@ -970,26 +1164,59 @@ function matchesSearch(d, q) {{
       || (d.us_state || '').toLowerCase().includes(q);
 }}
 
-function updateNodeStyles(node) {{
+function updateLabelVisibility() {{
+  if (!currentNodeSelection) return;
+
+  if (showLabels) {{
+    currentNodeSelection.select('text').style('display', null);
+    return;
+  }}
+
+  const visibleLabelIds = new Set(currentAlwaysVisibleLabelIds);
+  [hoveredNodeId, selectedNodeId].filter(Boolean).forEach(nodeId => {{
+    visibleLabelIds.add(nodeId);
+    (currentNeighborIds.get(nodeId) || []).forEach(relatedNodeId => visibleLabelIds.add(relatedNodeId));
+  }});
+
+  currentNodeSelection.select('text')
+    .style('display', d => visibleLabelIds.has(d.id) ? null : 'none');
+}}
+
+function updateGraphState() {{
+  if (!currentNodeSelection) return;
+
   const q = searchTerm.trim().toLowerCase();
-  node.each(function(d) {{
+  const focusedNodeIds = new Set([hoveredNodeId, selectedNodeId].filter(Boolean));
+
+  currentNodeSelection.each(function(d) {{
     const match = q ? matchesSearch(d, q) : false;
     d3.select(this)
       .classed('highlighted', q ? match : false)
       .classed('dimmed', q ? !match : false)
       .classed('selected', d.id === selectedNodeId);
   }});
+
+  if (currentLinkSelection) {{
+    currentLinkSelection.classed('highlighted', d => {{
+      if (!focusedNodeIds.size) return false;
+      const sourceId = edgeEndpointId(d.source);
+      const targetId = edgeEndpointId(d.target);
+      return focusedNodeIds.has(sourceId) || focusedNodeIds.has(targetId);
+    }});
+  }}
+
+  updateLabelVisibility();
 }}
 
 function selectNode(nodeId) {{
   selectedNodeId = nodeId;
-  updateNodeStyles(nodeG.selectAll('g.node'));
+  updateGraphState();
   renderPersonPanel();
 }}
 
 function clearSelection() {{
   selectedNodeId = null;
-  updateNodeStyles(nodeG.selectAll('g.node'));
+  updateGraphState();
   renderPersonPanel();
 }}
 
@@ -1069,6 +1296,7 @@ function buildRelationshipSection(title, people) {{
 function renderPersonPanel() {{
   const node = selectedNodeId ? NODE_BY_ID.get(selectedNodeId) : null;
   panelContentEl.replaceChildren();
+  panelEl.classList.toggle('is-open', Boolean(node));
 
   if (!node) {{
     panelTitleEl.textContent = 'Select a person';
@@ -1134,6 +1362,16 @@ function showTooltip(event, d) {{
   _moveTooltip(event);
 }}
 
+function handleNodeEnter(event, d) {{
+  hoveredNodeId = d.id;
+  showTooltip(event, d);
+  updateGraphState();
+}}
+
+function handleNodeMove(event) {{
+  _moveTooltip(event);
+}}
+
 function _moveTooltip(event) {{
   const x = event.clientX + 14;
   const y = event.clientY - 10;
@@ -1145,6 +1383,12 @@ function _moveTooltip(event) {{
 
 function hideTooltip() {{
   tooltipEl.style.display = 'none';
+}}
+
+function handleNodeLeave() {{
+  hoveredNodeId = null;
+  hideTooltip();
+  updateGraphState();
 }}
 
 svg.on('mousemove', (event) => {{
@@ -1167,25 +1411,39 @@ function syncControlPills() {{
     const pill = input.closest('.privacy-pill');
     if (pill) pill.classList.toggle('active', input.checked);
   }});
+
+  if (layoutToggleEl) {{
+    layoutToggleEl.setAttribute(
+      'aria-label',
+      layoutToggleEl.checked
+        ? 'Concentric layout active. Press Enter to switch to force layout.'
+        : 'Force layout active. Press Enter to switch to concentric layout.'
+    );
+  }}
 }}
 
 // ── controls ───────────────────────────────────────────────────────────────
-document.getElementById('showMokyrDirect').addEventListener('change', e => {{
-  syncControlPills();
-  showMokyrDirect = e.target.checked; render();
-}});
 document.getElementById('showLabels').addEventListener('change', e => {{
   syncControlPills();
   showLabels = e.target.checked;
-  nodeG.selectAll('g.node text').style('display', showLabels ? null : 'none');
+  updateLabelVisibility();
 }});
-document.getElementById('showMedium').addEventListener('change', e => {{
+layoutToggleEl.addEventListener('change', e => {{
   syncControlPills();
-  showMedium = e.target.checked; render();
+  layoutMode = e.target.checked ? 'concentric' : 'force';
+  applyLayoutForces(currentShellWidth || vizShellEl.clientWidth || window.innerWidth, currentShellHeight || vizShellEl.clientHeight || window.innerHeight);
+  if (simulation) simulation.alpha(1).restart();
 }});
 document.getElementById('search').addEventListener('input', e => {{
   searchTerm = e.target.value;
-  updateNodeStyles(nodeG.selectAll('g.node'));
+  updateGraphState();
+}});
+controlPillInputs.forEach(input => {{
+  input.addEventListener('keydown', event => {{
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    event.currentTarget.click();
+  }});
 }});
 panelCloseEl.addEventListener('click', clearSelection);
 window.addEventListener('keydown', event => {{
