@@ -981,7 +981,6 @@ body.page-section h2 {
   grid-template-columns: minmax(0, 0.82fr) minmax(520px, 1.18fr);
 }
 
-.page-shape #hubs,
 .page-shape #cohorts {
   grid-template-columns: 1fr;
   gap: 24px;
@@ -990,7 +989,6 @@ body.page-section h2 {
   padding-top: 26px;
 }
 
-.page-shape #hubs .story-copy,
 .page-shape #cohorts .story-copy {
   max-width: 720px;
 }
@@ -998,11 +996,6 @@ body.page-section h2 {
 .page-shape #generations .story-copy {
   align-self: start;
   padding-top: 24px;
-}
-
-.page-shape #works .story-copy {
-  align-self: end;
-  padding-bottom: 44px;
 }
 
 .page-shape #syllabi .story-copy,
@@ -1098,12 +1091,6 @@ body.page-section h2 {
     linear-gradient(180deg, rgba(251, 251, 248, 0.28) 0%, rgba(251, 251, 248, 0.08) 42%, rgba(251, 251, 248, 0.26) 100%);
 }
 
-.story-panel-backdrop-branches {
-  --section-photo: url("./images/numbers-branches-dialogue.jpg");
-  --section-photo-position: 52% 46%;
-  --section-photo-opacity: 0.5;
-}
-
 .story-panel-backdrop-timeline {
   --section-photo: url("./images/numbers-cohorts-lecture-stage.jpg");
   --section-photo-position: 44% 32%;
@@ -1111,12 +1098,6 @@ body.page-section h2 {
   --section-photo-overlay:
     linear-gradient(90deg, rgba(251, 251, 248, 0.62) 0%, rgba(251, 251, 248, 0.42) 34%, rgba(251, 251, 248, 0.08) 64%, rgba(251, 251, 248, 0.22) 100%),
     linear-gradient(180deg, rgba(251, 251, 248, 0.24) 0%, rgba(251, 251, 248, 0.06) 42%, rgba(251, 251, 248, 0.22) 100%);
-}
-
-.story-panel-backdrop-hubs {
-  --section-photo: url("./images/numbers-training-hubs-china.jpg");
-  --section-photo-position: 50% 34%;
-  --section-photo-opacity: 0.48;
 }
 
 .story-panel-backdrop-impact {
@@ -1135,15 +1116,6 @@ body.page-section h2 {
   --section-photo-overlay:
     linear-gradient(90deg, rgba(251, 251, 248, 0.72) 0%, rgba(251, 251, 248, 0.56) 36%, rgba(251, 251, 248, 0.2) 64%, rgba(251, 251, 248, 0.32) 100%),
     linear-gradient(180deg, rgba(251, 251, 248, 0.34) 0%, rgba(251, 251, 248, 0.12) 44%, rgba(251, 251, 248, 0.3) 100%);
-}
-
-.story-panel-backdrop-works {
-  --section-photo: url("./images/numbers-reach-sweden.jpg");
-  --section-photo-position: 58% 42%;
-  --section-photo-opacity: 0.42;
-  --section-photo-overlay:
-    linear-gradient(90deg, rgba(251, 251, 248, 0.7) 0%, rgba(251, 251, 248, 0.54) 36%, rgba(251, 251, 248, 0.18) 64%, rgba(251, 251, 248, 0.3) 100%),
-    linear-gradient(180deg, rgba(251, 251, 248, 0.3) 0%, rgba(251, 251, 248, 0.1) 42%, rgba(251, 251, 248, 0.28) 100%);
 }
 
 .story-panel-backdrop-reach {
@@ -1214,13 +1186,11 @@ body.page-section h2 {
 }
 
 .page-shape #impact .story-visual,
-.page-shape #works .story-visual,
 .page-shape #reach .story-visual {
   background: rgba(255, 255, 255, 0.88);
 }
 
 .page-shape #cohorts .story-visual,
-.page-shape #hubs .story-visual,
 .page-shape #generations .story-visual,
 .page-shape #syllabi .story-visual,
 .page-shape #lineage .story-visual {
@@ -1773,28 +1743,8 @@ body.page-section h2 {
   overflow-wrap: normal;
 }
 
-#hubs .hub-grid-hubs {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-}
-
-#hubs .hub-card {
-  padding: 22px 24px 24px;
-  border-radius: 26px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 248, 246, 0.9));
-}
-
-#hubs .hub-card h3 {
-  font-size: clamp(1.42rem, 1.1vw + 1.05rem, 1.9rem);
-}
-
 .hub-value {
   font-size: clamp(1.65rem, 3vw, 2.4rem);
-}
-
-#hubs .hub-value {
-  margin-top: 10px;
-  font-size: clamp(2rem, 3.2vw, 3rem);
 }
 
 .shape-mini-card-grid {
@@ -1885,10 +1835,6 @@ body.page-section h2 {
   gap: 16px;
 }
 
-#works .shape-work-stack {
-  gap: 18px;
-}
-
 .shape-work-card {
   display: grid;
   gap: 8px;
@@ -1896,10 +1842,6 @@ body.page-section h2 {
   border-radius: 24px;
   background: #ffffff;
   border: 1px solid rgba(16, 18, 22, 0.08);
-}
-
-#works .shape-work-card {
-  padding: 24px 24px 26px;
 }
 
 .shape-work-head {
@@ -2042,10 +1984,6 @@ body.page-section h2 {
   .page-shape #generations,
   .page-shape #syllabi {
     grid-template-columns: minmax(0, 0.82fr) minmax(480px, 1.18fr);
-  }
-
-  #hubs .hub-grid-hubs {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
