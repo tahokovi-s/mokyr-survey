@@ -1118,6 +1118,15 @@ body.page-section h2 {
     linear-gradient(180deg, rgba(251, 251, 248, 0.34) 0%, rgba(251, 251, 248, 0.12) 44%, rgba(251, 251, 248, 0.3) 100%);
 }
 
+.story-panel-backdrop-jobs {
+  --section-photo: url("./images/numbers-structure-discussion.jpg");
+  --section-photo-position: 48% 40%;
+  --section-photo-opacity: 0.44;
+  --section-photo-overlay:
+    linear-gradient(90deg, rgba(251, 251, 248, 0.7) 0%, rgba(251, 251, 248, 0.54) 36%, rgba(251, 251, 248, 0.18) 64%, rgba(251, 251, 248, 0.3) 100%),
+    linear-gradient(180deg, rgba(251, 251, 248, 0.32) 0%, rgba(251, 251, 248, 0.1) 42%, rgba(251, 251, 248, 0.28) 100%);
+}
+
 .story-panel-backdrop-reach {
   --section-photo: url("./images/numbers-overview-audience.jpg");
   --section-photo-position: 56% 32%;
@@ -1475,14 +1484,6 @@ body.page-section h2 {
   color: #101216;
   font-size: 1.1rem;
   font-weight: 600;
-}
-
-/* Joel row highlight in syllabi leaderboard */
-.rank-row-joel .rank-copy strong {
-  color: #8b6a14;
-}
-.rank-row-joel .rank-bar-fill {
-  background: linear-gradient(90deg, #a07010 0%, #c89a38 100%);
 }
 
 /* OS syllabi comparison bars (in story-copy) */
@@ -1970,17 +1971,17 @@ body.page-section h2 {
   padding: 26px 24px;
 }
 
-#syllabi .rank-list {
-  gap: 12px;
+#jobs .story-visual {
+  padding: 26px 24px;
 }
 
-#syllabi .rank-row {
-  grid-template-columns: minmax(170px, 205px) minmax(0, 1fr) auto;
+#jobs .rank-row {
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) auto;
   gap: 14px;
 }
 
-#syllabi .rank-copy span {
-  font-size: 0.94rem;
+#jobs .rank-copy strong {
+  line-height: 1.45;
 }
 
 #syllabi .os-compare {
