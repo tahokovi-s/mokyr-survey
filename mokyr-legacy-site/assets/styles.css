@@ -1486,65 +1486,17 @@ body.page-section h2 {
   font-weight: 600;
 }
 
-/* OS syllabi comparison bars (in story-copy) */
-.os-compare {
-  margin-top: 28px;
+.shape-syllabi-panel {
   display: grid;
-  gap: 14px;
+  gap: 20px;
 }
-.os-compare-row {
-  display: grid;
-  grid-template-columns: 100px minmax(0, 1fr) 52px;
-  gap: 12px;
-  align-items: center;
+
+.shape-stat-grid-syllabi {
+  margin-top: 0;
 }
-.os-compare-label {
-  font-size: 0.88rem;
-  color: rgba(16, 18, 22, 0.64);
-  line-height: 1.4;
-}
-.os-compare-bar {
-  position: relative;
-  height: 14px;
-  border-radius: 999px;
-  background: rgba(16, 18, 22, 0.08);
-  overflow: hidden;
-}
-.os-compare-stack {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  overflow: hidden;
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 900ms cubic-bezier(0.18, 0.9, 0.2, 1);
-}
-.os-compare-segment {
-  flex: var(--segment-share) 1 0%;
-  min-width: 0;
-  height: 100%;
-}
-.os-compare-fill-joel {
-  background: linear-gradient(90deg, #a07010 0%, #c89a38 100%);
-}
-.os-compare-fill-g1 {
-  background: #111318;
-}
-.os-compare-fill-g2 {
-  background: #4b5563;
-}
-.os-compare-fill-g3 {
-  background: #9ca3af;
-}
-.is-visible .os-compare-stack {
-  transform: scaleX(var(--bar-scale));
-}
-.os-compare-value {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #101216;
-  text-align: right;
+
+.shape-syllabi-kicker {
+  margin-top: 0;
 }
 
 .shape-lineage-panel {
@@ -1997,14 +1949,6 @@ body.page-section h2 {
   line-height: 1.45;
 }
 
-#syllabi .os-compare {
-  margin-top: 24px;
-}
-
-#syllabi .os-compare-label {
-  color: rgba(16, 18, 22, 0.72);
-}
-
 #reach .country-panel {
   gap: 20px;
 }
@@ -2035,14 +1979,6 @@ body.page-section h2 {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   line-height: 1.55;
-}
-
-/* ── Syllabi rebalance ────────────────────────────────────────────────────── */
-#syllabi .syllabi-compare {
-  margin-top: 0;
-  margin-bottom: 22px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid rgba(16, 18, 22, 0.08);
 }
 
 @media (max-width: 1280px) {
@@ -2376,8 +2312,7 @@ body.page-section h2 {
   }
   .generation-bar-fill { transform: scaleY(1) !important; }
   .rank-bar-fill,
-  .country-bar-fill,
-  .os-compare-stack {
+  .country-bar-fill {
     transform: scaleX(var(--bar-scale, 1)) !important;
   }
 }
