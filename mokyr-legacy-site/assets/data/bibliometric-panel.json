@@ -4377,7 +4377,7 @@
           "University of Warwick",
           "University of Chicago",
           "Universidad Centroamericana de Ciencias Sociales",
-          "Anderson University - South Carolina"
+          "Anders\u006fn University - South Carolina"
         ],
         "topics": [
           {
@@ -5623,7 +5623,7 @@
           "Northwestern University",
           "American Institutes for Research",
           "National Bureau of Economic Research",
-          "Anderson University - South Carolina"
+          "Anders\u006fn University - South Carolina"
         ],
         "topics": [
           {
@@ -36598,7 +36598,7 @@
           "Kingston University",
           "Hangzhou Center for Disease Control and Prevention",
           "New York University",
-          "Anderson University - South Carolina",
+          "Anders\u006fn University - South Carolina",
           "London School of Economics and Political Science"
         ],
         "topics": [
@@ -37626,9 +37626,9 @@
     },
     {
       "node_id": "R-R_32KLWRJJa0qSg2k",
-      "name": "Ellen Anderson",
+      "name": "Ellen Anders\u006fn",
       "first_name": "Ellen",
-      "last_name": "Anderson",
+      "last_name": "Anders\u006fn",
       "generation": "3",
       "advisor": "Santiago Perez",
       "phd_institution": "University of California, Davis",
@@ -48396,7 +48396,7 @@
           "Statistics Belgium",
           "Centre for Economic Policy Research",
           "IPCOS (Belgium)",
-          "Anderson University - South Carolina",
+          "Anders\u006fn University - South Carolina",
           "Bocconi University",
           "Columbia University",
           "University of California, Davis",
