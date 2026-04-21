@@ -564,10 +564,10 @@ body.page-section h2 {
   font-weight: 500;
 }
 
-/* Asymmetric 2fr / 1fr pathway grid. */
+/* Peer pathway grid: two equal-width cards. */
 .home-pathways {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 22px;
   margin-bottom: 64px;
 }
@@ -600,18 +600,6 @@ body.page-section h2 {
   outline-offset: 3px;
 }
 
-/* Primary pathway carries a persistent gold top accent. */
-.pathway-card--primary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background-color: var(--accent);
-  opacity: 0.85;
-}
-
 .card-eyebrow {
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -621,10 +609,6 @@ body.page-section h2 {
   margin: 0 0 18px;
 }
 
-.pathway-card--secondary .card-eyebrow {
-  color: var(--muted);
-}
-
 .card-title {
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
   font-weight: 400;
@@ -632,13 +616,7 @@ body.page-section h2 {
   line-height: 1.15;
   letter-spacing: -0.01em;
   margin: 0 0 12px;
-}
-
-.pathway-card--primary .card-title {
   font-size: clamp(1.75rem, 3vw, 2.4rem);
-}
-.pathway-card--secondary .card-title {
-  font-size: clamp(1.45rem, 2.5vw, 1.9rem);
 }
 
 .card-body {
