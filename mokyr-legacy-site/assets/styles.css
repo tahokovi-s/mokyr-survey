@@ -1553,7 +1553,7 @@ body.page-section h2 {
 }
 
 .page-shape #lineage .ft-chooser {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--lineage-tab-count, 4), minmax(0, 1fr));
   gap: 12px;
   margin: 0;
   padding: 0;
@@ -1567,7 +1567,8 @@ body.page-section h2 {
   padding: 18px 18px 16px;
   background: rgba(255, 255, 255, 0.72);
   box-shadow: none;
-  text-align: left;
+  text-align: center;
+  justify-items: center;
 }
 
 .page-shape #lineage .ft-tab:hover {
@@ -1578,19 +1579,18 @@ body.page-section h2 {
   box-shadow: 0 14px 32px rgba(16, 18, 22, 0.08);
 }
 
-.page-shape #lineage .ft-tab-eyebrow,
-.page-shape #lineage .ft-tab-desc {
-  display: block;
-}
-
 .page-shape #lineage .ft-tab-label {
   font-size: 1rem;
+  font-weight: 700;
   line-height: 1.35;
 }
 
-.page-shape #lineage .ft-tab-desc {
-  font-size: 0.78rem;
-  max-width: none;
+.page-shape #lineage .chain-gen,
+.page-shape #lineage .chain-name,
+.page-shape #lineage .chain-meta,
+.page-shape #lineage .chain-count,
+.page-shape #lineage .chain-glue {
+  overflow-wrap: anywhere;
 }
 
 .shape-lineage-view {
