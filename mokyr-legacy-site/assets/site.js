@@ -128,3 +128,85 @@ if (storySteps.length && storyNavItems.length) {
 
   storySteps.forEach((step) => storyObserver.observe(step));
 }
+
+const lineagePanel = document.querySelector("#lineage");
+const lineageTabs = lineagePanel
+  ? [...lineagePanel.querySelectorAll('[role="tab"]')]
+  : [];
+
+if (lineageTabs.length) {
+  const activateLineageTab = (tab, options) => {
+    const opts = options || {};
+    const focusPanel = !!opts.focusPanel;
+
+    lineageTabs.forEach((candidate) => {
+      const panelId = candidate.getAttribute("aria-controls");
+      const panel = panelId ? document.getElementById(panelId) : null;
+      const isActive = candidate === tab;
+
+      candidate.classList.toggle("is-active", isActive);
+      candidate.setAttribute("aria-selected", isActive ? "true" : "false");
+      candidate.setAttribute("tabindex", isActive ? "0" : "-1");
+
+      if (!panel) {
+        return;
+      }
+
+      if (isActive) {
+        panel.removeAttribute("hidden");
+      } else {
+        panel.setAttribute("hidden", "");
+      }
+    });
+
+    if (focusPanel) {
+      const panelId = tab.getAttribute("aria-controls");
+      const panel = panelId ? document.getElementById(panelId) : null;
+      if (panel && typeof panel.focus === "function") {
+        panel.focus({ preventScroll: true });
+      }
+    }
+  };
+
+  const focusLineageTab = (tab) => {
+    if (!tab) {
+      return;
+    }
+
+    tab.focus();
+    activateLineageTab(tab, { focusPanel: false });
+  };
+
+  lineageTabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => {
+      activateLineageTab(tab, { focusPanel: false });
+    });
+
+    tab.addEventListener("keydown", (event) => {
+      const { key } = event;
+
+      if (key === "ArrowRight" || key === "ArrowDown") {
+        event.preventDefault();
+        focusLineageTab(lineageTabs[(index + 1) % lineageTabs.length]);
+      } else if (key === "ArrowLeft" || key === "ArrowUp") {
+        event.preventDefault();
+        focusLineageTab(lineageTabs[(index - 1 + lineageTabs.length) % lineageTabs.length]);
+      } else if (key === "Home") {
+        event.preventDefault();
+        focusLineageTab(lineageTabs[0]);
+      } else if (key === "End") {
+        event.preventDefault();
+        focusLineageTab(lineageTabs[lineageTabs.length - 1]);
+      } else if (key === "Enter" || key === " ") {
+        event.preventDefault();
+        activateLineageTab(tab, { focusPanel: true });
+      }
+    });
+  });
+
+  const initialLineageTab =
+    lineageTabs.find((tab) => tab.getAttribute("aria-selected") === "true") ||
+    lineageTabs[0];
+
+  activateLineageTab(initialLineageTab, { focusPanel: false });
+}

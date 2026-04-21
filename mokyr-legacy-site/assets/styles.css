@@ -1546,11 +1546,66 @@ body.page-section h2 {
   text-align: right;
 }
 
+.shape-lineage-panel {
+  display: grid;
+  gap: 20px;
+}
+
+.page-shape #lineage .ft-chooser {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.page-shape #lineage .ft-tab {
+  min-height: 0;
+  gap: 6px;
+  padding: 18px 18px 16px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: none;
+  text-align: left;
+}
+
+.page-shape #lineage .ft-tab:hover {
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.page-shape #lineage .ft-tab.is-active {
+  box-shadow: 0 14px 32px rgba(16, 18, 22, 0.08);
+}
+
+.page-shape #lineage .ft-tab-eyebrow,
+.page-shape #lineage .ft-tab-desc {
+  display: block;
+}
+
+.page-shape #lineage .ft-tab-label {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.page-shape #lineage .ft-tab-desc {
+  font-size: 0.78rem;
+  max-width: none;
+}
+
+.shape-lineage-view {
+  display: grid;
+  gap: 18px;
+}
+
 /* Lineage chain */
 .chain-rail {
   display: grid;
   gap: 0;
   max-width: 440px;
+}
+
+.page-shape #lineage .chain-rail {
+  max-width: 520px;
 }
 .chain-glue {
   margin: 0;
@@ -2195,6 +2250,10 @@ body.page-section h2 {
   .shape-work-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .page-shape #lineage .ft-chooser {
+    grid-template-columns: 1fr;
   }
 
   .story-stat-card-hero {

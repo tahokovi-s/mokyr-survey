@@ -309,44 +309,168 @@
             <p class="eyebrow">Lineage</p>
             <h2>Ideas carried four generations forward.</h2>
             <p class="lead section-lead">
-              One teaching chain across four generations.
+              Browse three teaching chains across four generations.
             </p>
           </div>
 
-          <div class="story-visual" data-reveal>
-            <div class="chain-rail" aria-label="Intellectual lineage chain">
-              <div class="chain-node chain-node-root">
-                <span class="chain-gen">Joel Mokyr</span>
-                <strong class="chain-name">The Lever of Riches</strong>
-                <span class="chain-meta">Oxford University Press, 1990</span>
-                <span class="chain-count">2,638 syllabus appearances</span>
-              </div>
-              <div class="chain-arrow" aria-hidden="true"></div>
-              <p class="chain-glue">Mokyr → Greif · Northwestern</p>
-              <div class="chain-node">
-                <span class="chain-gen">Gen 1 · Avner Greif</span>
-                <strong class="chain-name">Institutions and the Path to the Modern Economy</strong>
-                <span class="chain-meta">Cambridge University Press, 2006</span>
-                <span class="chain-count">1,627 syllabus appearances</span>
-              </div>
-              <div class="chain-arrow" aria-hidden="true"></div>
-              <p class="chain-glue">Greif → Jha · Stanford</p>
-              <div class="chain-node">
-                <span class="chain-gen">Gen 2 · Saumitra Jha</span>
-                <strong class="chain-name">Financial Asset Holdings and Political Attitudes</strong>
-                <span class="chain-meta">Quarterly Journal of Economics 130(3), 2015</span>
-                <span class="chain-count">248 syllabus appearances</span>
-              </div>
-              <div class="chain-arrow" aria-hidden="true"></div>
-              <p class="chain-glue">Jha → Kosec · Stanford</p>
-              <div class="chain-node">
-                <span class="chain-gen">Gen 3 · Katrina Kosec</span>
-                <strong class="chain-name">Heat Stress Increases Long-Term Human Migration in Rural Pakistan</strong>
-                <span class="chain-meta">Nature Climate Change 4, 2014</span>
-                <span class="chain-count">30 syllabus appearances</span>
-              </div>
+          <div class="story-visual shape-lineage-panel" data-reveal>
+            <div class="ft-chooser shape-lineage-chooser" role="tablist" aria-label="Choose a lineage example">
+              <button id="lineage-tab-greif"
+                      class="ft-tab shape-lineage-tab is-active"
+                      role="tab"
+                      type="button"
+                      aria-selected="true"
+                      aria-controls="lineage-panel-greif"
+                      tabindex="0">
+                <span class="ft-tab-eyebrow">Default chain</span>
+                <span class="ft-tab-label">Mokyr → Greif → Jha → Kosec</span>
+                <span class="ft-tab-desc">A four-generation line anchored by the current Greif/Jha/Kosec example.</span>
+              </button>
+              <button id="lineage-tab-cullen"
+                      class="ft-tab shape-lineage-tab"
+                      role="tab"
+                      type="button"
+                      aria-selected="false"
+                      aria-controls="lineage-panel-cullen"
+                      tabindex="-1">
+                <span class="ft-tab-eyebrow">Alternate chain</span>
+                <span class="ft-tab-label">Mokyr → Abramitzky → Cullen → Townsend</span>
+                <span class="ft-tab-desc">An Abramitzky branch that reaches through Harvard to Berkeley.</span>
+              </button>
+              <button id="lineage-tab-perez"
+                      class="ft-tab shape-lineage-tab"
+                      role="tab"
+                      type="button"
+                      aria-selected="false"
+                      aria-controls="lineage-panel-perez"
+                      tabindex="-1">
+                <span class="ft-tab-eyebrow">Alternate chain</span>
+                <span class="ft-tab-label">Mokyr → Abramitzky → Perez → Anderson</span>
+                <span class="ft-tab-desc">A second Abramitzky branch ending with a public-sector and industry-facing path.</span>
+              </button>
             </div>
-            <p class="shape-source-note">Source: Open Syllabus Analytics.</p>
+
+            <section id="lineage-panel-greif"
+                     class="shape-lineage-view"
+                     role="tabpanel"
+                     aria-labelledby="lineage-tab-greif"
+                     tabindex="-1">
+              <div class="chain-rail" aria-label="Joel Mokyr to Katrina Kosec lineage chain">
+                <div class="chain-node chain-node-root">
+                  <span class="chain-gen">Joel Mokyr</span>
+                  <strong class="chain-name">The Lever of Riches</strong>
+                  <span class="chain-meta">Oxford University Press, 1990</span>
+                  <span class="chain-count">2,638 syllabus appearances</span>
+                </div>
+                <div class="chain-arrow" aria-hidden="true"></div>
+                <p class="chain-glue">Mokyr → Greif</p>
+                <div class="chain-node">
+                  <span class="chain-gen">Gen 1 · Avner Greif</span>
+                  <strong class="chain-name">Institutions and the Path to the Modern Economy</strong>
+                  <span class="chain-meta">Cambridge University Press, 2006</span>
+                  <span class="chain-count">1,627 syllabus appearances</span>
+                </div>
+                <div class="chain-arrow" aria-hidden="true"></div>
+                <p class="chain-glue">Greif → Jha</p>
+                <div class="chain-node">
+                  <span class="chain-gen">Gen 2 · Saumitra Jha</span>
+                  <strong class="chain-name">Financial Asset Holdings and Political Attitudes</strong>
+                  <span class="chain-meta">Quarterly Journal of Economics 130(3), 2015</span>
+                  <span class="chain-count">248 syllabus appearances</span>
+                </div>
+                <div class="chain-arrow" aria-hidden="true"></div>
+                <p class="chain-glue">Jha → Kosec</p>
+                <div class="chain-node">
+                  <span class="chain-gen">Gen 3 · Katrina Kosec</span>
+                  <strong class="chain-name">Heat Stress Increases Long-Term Human Migration in Rural Pakistan</strong>
+                  <span class="chain-meta">Nature Climate Change 4, 2014</span>
+                  <span class="chain-count">30 syllabus appearances</span>
+                </div>
+              </div>
+              <p class="shape-source-note">Source: Open Syllabus Analytics. This chain has public Open Syllabus hooks at each step: Joel Mokyr → Avner Greif → Saumitra Jha → Katrina Kosec. Counts shown are each scholar&rsquo;s total syllabus appearances.</p>
+            </section>
+
+            <section id="lineage-panel-cullen"
+                     class="shape-lineage-view"
+                     role="tabpanel"
+                     aria-labelledby="lineage-tab-cullen"
+                     tabindex="-1"
+                     hidden>
+              <div class="chain-rail" aria-label="Joel Mokyr to Wilbur Townsend lineage chain">
+                <div class="chain-node chain-node-root">
+                  <span class="chain-gen">Joel Mokyr</span>
+                  <strong class="chain-name">The Lever of Riches</strong>
+                  <span class="chain-meta">Oxford University Press, 1990</span>
+                  <span class="chain-count">2,638 syllabus appearances</span>
+                </div>
+                <div class="chain-arrow" aria-hidden="true"></div>
+                <p class="chain-glue">Mokyr → Abramitzky</p>
+                <div class="chain-node">
+                  <span class="chain-gen">Gen 1 · Ran Abramitzky</span>
+                  <strong class="chain-name">Europe&rsquo;s Tired, Poor, Huddled Masses</strong>
+                  <span class="chain-meta">2010</span>
+                  <span class="chain-count">284 syllabus appearances</span>
+                </div>
+                <div class="chain-arrow" aria-hidden="true"></div>
+                <p class="chain-glue">Abramitzky → Cullen</p>
+                <div class="chain-node">
+                  <span class="chain-gen">Gen 2 · Zoe Cullen</span>
+                  <strong class="chain-name">The Old Boys&rsquo; Club: Schmoozing and the Gender Gap</strong>
+                  <span class="chain-meta">2019</span>
+                  <span class="chain-count">5 syllabus appearances</span>
+                </div>
+                <div class="chain-arrow" aria-hidden="true"></div>
+                <p class="chain-glue">Cullen → Townsend</p>
+                <div class="chain-node">
+                  <span class="chain-gen">Gen 3 · Wilbur Townsend</span>
+                  <strong class="chain-name">Social Capital I: Measurement and Associations With Economic Mobility</strong>
+                  <span class="chain-meta">2022</span>
+                  <span class="chain-count">33 syllabus appearances</span>
+                </div>
+              </div>
+              <p class="shape-source-note">Source: Open Syllabus Analytics. This chain has public Open Syllabus hooks at each step: Joel Mokyr → Ran Abramitzky → Zoe Cullen → Wilbur Townsend. Counts shown are each scholar&rsquo;s total syllabus appearances.</p>
+            </section>
+
+            <section id="lineage-panel-perez"
+                     class="shape-lineage-view"
+                     role="tabpanel"
+                     aria-labelledby="lineage-tab-perez"
+                     tabindex="-1"
+                     hidden>
+              <div class="chain-rail" aria-label="Joel Mokyr to Ellen Anderson lineage chain">
+                <div class="chain-node chain-node-root">
+                  <span class="chain-gen">Joel Mokyr</span>
+                  <strong class="chain-name">The Lever of Riches</strong>
+                  <span class="chain-meta">Oxford University Press, 1990</span>
+                  <span class="chain-count">2,638 syllabus appearances</span>
+                </div>
+                <div class="chain-arrow" aria-hidden="true"></div>
+                <p class="chain-glue">Mokyr → Abramitzky</p>
+                <div class="chain-node">
+                  <span class="chain-gen">Gen 1 · Ran Abramitzky</span>
+                  <strong class="chain-name">Europe&rsquo;s Tired, Poor, Huddled Masses</strong>
+                  <span class="chain-meta">2010</span>
+                  <span class="chain-count">284 syllabus appearances</span>
+                </div>
+                <div class="chain-arrow" aria-hidden="true"></div>
+                <p class="chain-glue">Abramitzky → Perez</p>
+                <div class="chain-node">
+                  <span class="chain-gen">Gen 2 · Santiago Perez</span>
+                  <strong class="chain-name">Intergenerational Occupational Mobility Across Three Continents</strong>
+                  <span class="chain-meta">The Journal of Economic History, 2019</span>
+                  <span class="chain-count">31 syllabus appearances</span>
+                </div>
+                <div class="chain-arrow" aria-hidden="true"></div>
+                <p class="chain-glue">Perez → Anderson</p>
+                <div class="chain-node">
+                  <span class="chain-gen">Gen 3 · Ellen Anderson</span>
+                  <strong class="chain-name">Judging Bertha Wilson: Law as Large as Life</strong>
+                  <span class="chain-meta">University of Toronto Press, 2001</span>
+                  <span class="chain-count">3 syllabus appearances</span>
+                </div>
+              </div>
+              <p class="shape-source-note">Source: Open Syllabus Analytics. This chain has public Open Syllabus hooks at each step: Joel Mokyr → Ran Abramitzky → Santiago Perez → Ellen Anderson. Counts shown are each scholar&rsquo;s total syllabus appearances.</p>
+            </section>
           </div>
         </section>
 
