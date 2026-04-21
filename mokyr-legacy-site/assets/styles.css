@@ -2339,7 +2339,7 @@ body.page-section h2 {
 /* ── Mode chooser (tablist) ─────────────────────────────────────────────── */
 .ft-chooser {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin: 28px 0 24px;
 }
@@ -2378,56 +2378,23 @@ body.page-section h2 {
   box-shadow: 0 18px 38px rgba(16, 18, 22, 0.08);
 }
 
-.ft-tab--primary {
-  padding: 26px 28px;
-  min-height: 140px;
-}
-
-/* Full-width gold top accent marks the primary/featured tab persistently.
-   Brightens slightly when active; hidden on mobile's pill layout. */
-.ft-tab--primary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background-color: var(--accent);
-  border-top-left-radius: var(--radius-md);
-  border-top-right-radius: var(--radius-md);
-  opacity: 0.85;
-  transition: opacity 180ms ease;
-}
-
-.ft-tab--primary.is-active::before {
-  opacity: 1;
-}
-
-/* Secondary tab: opaque white with soft shadow (not semi-transparent).
-   Reads as a solid card, matching the v3 home pathway-card--secondary. */
+/* Family tab peer treatment: equal padding, min-height, and chrome on both
+   tabs. Primary / secondary modifier classes stay in the HTML for easy
+   opt-back-in, but carry no visual weight difference at this layer. */
+.ft-tab--primary,
 .ft-tab--secondary {
+  padding: 26px 28px;
   min-height: 140px;
   background: #ffffff;
   box-shadow: var(--card-shadow);
 }
 
-.ft-tab-eyebrow {
-  color: rgba(16, 18, 22, 0.46);
-  font-size: 0.72rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
 .ft-tab-label {
   display: block;
-  font-size: 1.18rem;
+  font-size: 1.42rem;
   font-weight: 600;
   color: #101216;
   letter-spacing: -0.01em;
-}
-
-.ft-tab--primary .ft-tab-label {
-  font-size: 1.42rem;
 }
 
 .ft-tab-desc {
@@ -2436,18 +2403,6 @@ body.page-section h2 {
   line-height: 1.5;
   color: rgba(16, 18, 22, 0.58);
   max-width: 46ch;
-}
-
-.ft-tab--secondary .ft-tab-desc {
-  font-size: 0.8rem;
-}
-
-.ft-tab-stat {
-  margin-top: auto;
-  padding-top: 8px;
-  font-size: 0.78rem;
-  color: rgba(16, 18, 22, 0.5);
-  letter-spacing: 0.02em;
 }
 
 /* ── Panel frame (shared glass-panel shell for tree + network) ──────────── */
@@ -2837,11 +2792,6 @@ body.page-section h2 {
     padding: 12px 14px;
   }
 
-  /* Gold top accent would clash with the mobile pill design. */
-  .ft-tab--primary::before {
-    display: none;
-  }
-
   /* Chooser → segmented-control-style pill with equal-width tabs. */
   .ft-chooser {
     grid-template-columns: 1fr 1fr;
@@ -2873,11 +2823,8 @@ body.page-section h2 {
     box-shadow: 0 4px 10px rgba(16, 18, 22, 0.08);
   }
 
-  .ft-tab-eyebrow,
-  .ft-tab-desc,
-  .ft-tab-stat { display: none; }
+  .ft-tab-desc { display: none; }
 
-  .ft-tab--primary .ft-tab-label,
   .ft-tab-label {
     font-size: 0.92rem;
     font-weight: 600;
