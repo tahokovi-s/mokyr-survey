@@ -1579,6 +1579,19 @@ body.page-section h2 {
   box-shadow: 0 14px 32px rgba(16, 18, 22, 0.08);
 }
 
+.page-shape #lineage .ft-tab-chain {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(16, 18, 22, 0.55);
+  line-height: 1.25;
+}
+
+.page-shape #lineage .ft-tab.is-active .ft-tab-chain {
+  color: rgba(16, 18, 22, 0.72);
+}
+
 .page-shape #lineage .ft-tab-label {
   font-size: 1rem;
   font-weight: 700;
