@@ -2053,6 +2053,13 @@ body.page-section h2 {
   gap: 14px;
 }
 
+.country-list--expanded {
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+}
+
 .country-row {
   display: grid;
   grid-template-columns: minmax(120px, 180px) minmax(0, 1fr) auto;
