@@ -804,7 +804,7 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
 </main>
 
 <footer class="site-footer">
-  <p class="footer-credit">For Joel's 80th. Survey led by Ran Abramitzky.</p>
+  <p class="footer-credit">For Joel's 80th. Project led by Ran Abramitzky. I thank Jensen Ahokovi for his superb assistance.</p>
 </footer>
 
 <script>
