@@ -22,6 +22,7 @@
   const searchStatus    = document.getElementById("ft-search-status");
 
   const MOBILE_MQ = window.matchMedia("(max-width: 639px)");
+  const REDUCED_MOTION_MQ = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   // ── State ───────────────────────────────────────────────────────────────────
   let networkInjected    = false;
@@ -32,6 +33,12 @@
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   function isMobile() { return MOBILE_MQ.matches; }
+  function prefersReducedMotion() { return REDUCED_MOTION_MQ.matches; }
+
+  function firstRenderedChildCard(ul) {
+    if (!ul) return null;
+    return ul.querySelector(":scope > .ft-node > .ft-card") || ul;
+  }
 
   function buildMeta(node) {
     const inst = node.institution || node.employer || "";
@@ -243,7 +250,7 @@
       btn.setAttribute("aria-expanded", "true");
       btn.classList.add("is-expanded");
       if (helper) helper.hidden = true;
-      if (isMobile()) scrollTargetIntoView(ul);
+      if (isMobile()) scrollTargetIntoView(firstRenderedChildCard(ul), "start");
     }
   }
 
@@ -275,18 +282,21 @@
       });
     }
     openBranch(li, btn, expandIcon, ul);
-    if (isMobile()) scrollTargetIntoView(ul);
+    if (isMobile()) scrollTargetIntoView(firstRenderedChildCard(ul), "start");
   }
 
-  function scrollTargetIntoView(target) {
+  function scrollTargetIntoView(target, block) {
     if (!target) return;
-    // Defer to next frame so the newly-rendered rows have laid out.
+    // Defer two frames so nested branches have fully laid out before scroll.
     requestAnimationFrame(function () {
-      try {
-        target.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      } catch (_) {
-        target.scrollIntoView();
-      }
+      requestAnimationFrame(function () {
+        const behavior = prefersReducedMotion() ? "auto" : "smooth";
+        try {
+          target.scrollIntoView({ behavior: behavior, block: block || "nearest", inline: "nearest" });
+        } catch (_) {
+          target.scrollIntoView();
+        }
+      });
     });
   }
 

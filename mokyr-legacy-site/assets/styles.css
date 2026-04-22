@@ -2934,6 +2934,10 @@ body.page-section h2 {
     padding: 12px 14px;
   }
 
+  .page-family .page-shell {
+    overflow: visible;
+  }
+
   /* Chooser → segmented-control-style pill with equal-width tabs. */
   .ft-chooser {
     grid-template-columns: 1fr 1fr;
@@ -2976,6 +2980,9 @@ body.page-section h2 {
   .ft-panel-frame {
     padding: 18px;
     border-radius: 24px;
+    height: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .ft-tree-header {
@@ -2994,14 +3001,24 @@ body.page-section h2 {
 
   .ft-search { width: 100%; }
 
-  /* Compress tree indentation and allow labels to wrap. */
-  .ft-node:not(.ft-node--root) { padding-left: 14px; }
-
-  .ft-children {
-    margin-left: 6px;
+  .ft-tree-root {
+    max-height: none;
+    overflow: visible;
   }
 
-  .ft-children > .ft-node { padding-left: 10px; }
+  /* Compress tree indentation and allow labels to wrap. */
+  .ft-node:not(.ft-node--root) { padding-left: 10px; }
+
+  .ft-children {
+    margin-left: 2px;
+  }
+
+  .ft-children > .ft-node { padding-left: 8px; }
+
+  .ft-card,
+  .ft-children {
+    scroll-margin-top: 104px;
+  }
 
   .ft-card {
     padding: 10px 10px;
