@@ -135,7 +135,6 @@
     const node  = GENEALOGY.peopleById[id] || {};
     const desc  = GENEALOGY.descendantCountById[id] || 0;
     const meta  = buildMeta(node);
-    const coAdv = GENEALOGY.secondaryAdvisorById ? GENEALOGY.secondaryAdvisorById[id] : null;
     const hasChildren = desc > 0;
 
     const li = document.createElement("li");
@@ -187,13 +186,6 @@
     btn.appendChild(expandIcon);
     btn.appendChild(inner);
     li.appendChild(btn);
-
-    if (coAdv) {
-      const coNote = document.createElement("p");
-      coNote.className   = "ft-co-note";
-      coNote.textContent = "Also supervised by: " + coAdv;
-      li.appendChild(coNote);
-    }
 
     if (hasChildren) {
       const ul = document.createElement("ul");

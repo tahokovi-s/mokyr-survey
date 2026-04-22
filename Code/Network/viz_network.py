@@ -850,24 +850,71 @@ const NETWORK_EDGES = RAW_EDGES.filter(edge => (
 
 const NODE_BY_ID = new Map(NETWORK_NODES.map(node => [node.id, node]));
 
-function buildRelationshipMaps(edges) {{
-  const advisorsByNode = new Map();
-  const studentsByNode = new Map();
+function buildPrimaryParentByNode(nodes, edges) {{
+  const parentsByNode = new Map();
 
-  function ensureSet(map, key) {{
-    if (!map.has(key)) map.set(key, new Set());
-    return map.get(key);
+  function ensureParents(nodeId) {{
+    if (!parentsByNode.has(nodeId)) parentsByNode.set(nodeId, []);
+    return parentsByNode.get(nodeId);
   }}
 
   edges.forEach(edge => {{
-    ensureSet(studentsByNode, edge.source).add(edge.target);
-    ensureSet(advisorsByNode, edge.target).add(edge.source);
+    ensureParents(edge.target).push(edge.source);
+  }});
+
+  function selectPrimaryAdvisor(nodeId, parentIds) {{
+    const node = NODE_BY_ID.get(nodeId) || {{}};
+    const candidates = parentIds.map(parentId => {{
+      const parent = NODE_BY_ID.get(parentId) || {{}};
+      return {{
+        id: parentId,
+        label: parent.label || parentId,
+        generation: parent.generation ?? 99,
+        isRoot: parentId === 'JM-ROOT',
+      }};
+    }});
+    const rootCandidates = candidates.filter(candidate => candidate.isRoot);
+    const nonRootCandidates = candidates.filter(candidate => !candidate.isRoot);
+    let pool = candidates;
+    if (rootCandidates.length && nonRootCandidates.length) {{
+      if (node.generation === 1) return rootCandidates[0].id;
+      pool = nonRootCandidates;
+    }}
+    const maxGeneration = Math.max(...pool.map(candidate => candidate.generation));
+    const highestGeneration = pool.filter(candidate => candidate.generation === maxGeneration);
+    highestGeneration.sort((a, b) => a.label.localeCompare(b.label));
+    return highestGeneration[0].id;
+  }}
+
+  const primaryParentByNode = new Map();
+  nodes.forEach(node => {{
+    if (node.id === 'JM-ROOT') return;
+    const dedupedParents = [...new Set(parentsByNode.get(node.id) || [])];
+    if (!dedupedParents.length) return;
+    primaryParentByNode.set(
+      node.id,
+      dedupedParents.length === 1 ? dedupedParents[0] : selectPrimaryAdvisor(node.id, dedupedParents)
+    );
+  }});
+
+  return primaryParentByNode;
+}}
+
+function buildRelationshipMaps(nodes, edges) {{
+  const advisorsByNode = new Map();
+  const studentsByNode = new Map();
+  const primaryParentByNode = buildPrimaryParentByNode(nodes, edges);
+
+  primaryParentByNode.forEach((parentId, nodeId) => {{
+    advisorsByNode.set(nodeId, new Set([parentId]));
+    if (!studentsByNode.has(parentId)) studentsByNode.set(parentId, new Set());
+    studentsByNode.get(parentId).add(nodeId);
   }});
 
   return {{ advisorsByNode, studentsByNode }};
 }}
 
-const RELATIONSHIPS = buildRelationshipMaps(NETWORK_EDGES);
+const RELATIONSHIPS = buildRelationshipMaps(NETWORK_NODES, NETWORK_EDGES);
 
 const GEN_COLOR = {{
   0: '#d6bc7b',

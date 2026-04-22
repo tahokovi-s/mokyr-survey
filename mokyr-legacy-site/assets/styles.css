@@ -2780,14 +2780,6 @@ body.page-section h2 {
   flex-shrink: 0;
 }
 
-/* Co-advisor note */
-.ft-co-note {
-  margin: 2px 0 4px 28px;
-  font-size: 0.72rem;
-  color: rgba(16, 18, 22, 0.52);
-  font-style: italic;
-}
-
 /* Children list */
 .ft-children {
   list-style: none;

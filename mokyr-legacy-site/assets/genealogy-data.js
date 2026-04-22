@@ -72,22 +72,6 @@ const GENEALOGY = (() => {
     }
   }
 
-  // ── secondary advisor labels (for co-advised nodes) ──
-  const secondaryAdvisorById = {};
-  for (const node of RAW_NODES) {
-    const rawParents = _parentsRaw[node.id] || [];
-    const dedup      = [...new Set(rawParents)];
-    if (dedup.length <= 1) {
-      secondaryAdvisorById[node.id] = null;
-      continue;
-    }
-    const primary = primaryParentById[node.id];
-    const others  = dedup.filter(pid => pid !== primary);
-    secondaryAdvisorById[node.id] = others
-      .map(pid => (peopleById[pid] || {}).label || pid)
-      .join(', ');
-  }
-
   // ── primary children map ──
   const _primaryChildren = {};
   for (const [childId, parentId] of Object.entries(primaryParentById)) {
@@ -121,7 +105,6 @@ const GENEALOGY = (() => {
     peopleById,
     childrenById,
     primaryParentById,
-    secondaryAdvisorById,
     descendantCountById,
   };
 })();
