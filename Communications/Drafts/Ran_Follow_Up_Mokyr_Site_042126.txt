@@ -1,0 +1,30 @@
+Hi Ran (cc: Mi),
+
+Quick follow-up to your 4/17 note — I worked through all of the comments on "Joel's Legacy by the Numbers," and the preview is live at the same link whenever you have a minute. The page is now 9 panels instead of 11.
+
+Deletions: the "branches have grown further," "Training Hubs," and "papers doing the traveling" panels are gone; the H-index top-five line is gone; and the per-student ranking inside Syllabi is gone. Syllabi now just compares Joel (2,638 course syllabi) to all of his students combined (5,319), with a one-line kicker noting that Joel alone accounts for roughly one in every three syllabus appearances across the family.
+
+Renames: Structure is now "Number of students by generation"; Cohorts reads "Median PhD year" with no subtitle; and Generations is retitled to your suggested "The academic family continues to be productive."
+
+On your two questions:
+
+- Academia-only? No — the Generations panel includes every descendant we could match on Google Scholar, industry and public-sector included (Scott Baker at Kellogg, Zeki Kocaata at GSK, etc.). I tightened the source note on that panel to reflect that directly.
+
+- Other four-generation chains? Yes. Lineage now carries four peer tabs labeled by the chain's two middle scholars and the Gen 3 name: Greif · Jha · Kosec (the original), Abramitzky · Cullen · Townsend (Chetty et al., Nature 2022), Braggion · Dwarkasing · Kocaata (his Bonn PhD dissertation, "Essays on Empirical Banking," 2019 — Dwarkasing was the secondary supervisor), and Nye · Johnson · Teague (Constitutional Political Economy, 2020). I did try the Perez → one-of-Santi's-students angle you suggested. The one OS match we had for that chain — to a 2001 legal text — turned out to be a name collision rather than a real authorship, so I swapped it out for the Kocaata chain, which has the advantage of running through a non-Abramitzky, non-Greif Gen 1 line for diversity.
+
+Country map: moved up to Panel 3, right after Structure, and now shows the full 29-country list rather than the top 8.
+
+New jobs panel: added between Generations and Syllabi. 248 descendants with a known current role, across seven buckets — the largest are tenured/tenure-track faculty (125), PhD students (49), and industry (29). No imputation for people we couldn't verify.
+
+Two smaller housekeeping items you'll notice: (1) removed survey-jargon phrasing ("Q5b," "respondents who answered...") in favor of descendant-centric language throughout, and (2) on the welcome and /family/ pages, "Joel's Academic Family" and "By the Numbers" (and similarly "Family Tree" and "Network Map") now sit as equal-weight peer cards rather than one being featured and the other demoted.
+
+Heads down on the real-analysis midterm Thursday, but wanted to get this pass out before then. Let me know if anything else should shift.
+
+Jensen
+
+
+--
+T. M. Jensen Ahokovi | Predoctoral Research Fellow
+Stanford Institute for Economic Policy Research (SIEPR)
+Stanford GSB Initiative for Business, Taxation, and Society (STAX Lab)
+tahokovi@stanford.edu | tahokovi.github.io

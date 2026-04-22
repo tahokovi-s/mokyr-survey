@@ -1,0 +1,33 @@
+Subject: Weekly Update 4/17/26 re: Mokyr
+
+Hi Ran (cc: Mi),
+
+Quick follow-up on the thread below. The site is in much better shape than when I last sent the link, and worth another look when you have a few minutes. The "Joel's Legacy by the Numbers" page in particular now carries a rich set of descriptives on the tree.
+
+The page pairs the descriptives we can build from our survey data with two outside sources: Google Scholar and Open Syllabus. Over 3-4 days, I stood up teams of AI agents to scrape and reconcile Google Scholar profiles across the full tree, and along the way I came across Open Syllabus, which turned out to be a great second source for measuring reach through teaching rather than citation. Open Syllabus is a nonprofit that has collected and parsed millions of university course syllabi, so you can count how often a given author or book shows up as assigned reading — a teaching counterpart to what Google Scholar captures through citation. It was a fun application of the latest frontier LLMs, and it unlocked a layer of descriptives I did not expect to have ready this quickly! A few concrete examples:
+
+- Across the 154 scholars in the tree I could match on Google Scholar, lifetime citations across all Mokyr's descendants total 201,607, and 111,103 of those landed in the last five years.
+- The most-cited paper in the tree is "Measuring Economic Policy Uncertainty" by Baker, Bloom, and Davis (QJE 2016), at 17,159 cites. The connection to Joel runs Joel → you → Scott Baker. The Gen 3 featured paper on the page (Chetty et al., Nature 2022, on social capital and mobility) also runs through your line, via Zoe Cullen → Will Townsend.
+- Open Syllabus finds Joel on 2,638 distinct course syllabi. His students together show up on 5,319, so the next generation has collectively overtaken him as assigned reading. Greif alone is on 1,627 syllabi, about 60% of Joel's count on his own.
+- At the individual level, to give you a sense of what the per-person data looks like: your own Google Scholar profile pulls 6,605 lifetime citations, with 4,049 in the last five years — a higher recent share than the Gen 1 median — and Open Syllabus finds you on 284 distinct course pages, which is second only to Avner within Gen 1.
+
+There is more on the page: h-index and "recent share" of citations by generation, top training hubs by generation, a four-generation teaching chain that runs from Joel's Lever of Riches down to a Gen 3 Nature Climate Change paper, and a reach map across 29 countries.
+
+One design point worth flagging ahead of the conference. Each descriptive sits inside its own panel, and the panels activate as you scroll, so the page behaves less like a static document and more like a live slide deck. You could share your screen and scroll through the Legacy panels as a dynamic slideshow — numbers and charts animating in as you land on each section — rather than clicking through static slides. I think that will come through the first time you scroll through it yourself.
+
+One note from testing the site on my phone this week. Everything loads fine on mobile, but two things to flag:
+
+1. The network visualization is hard to use on a phone at the default size. On mobile, it is much better to tap the "Open full screen" button than to interact with it inside the embedded frame. Screenshot attached.
+2. The background images in the "Joel's Legacy by the Numbers" section are noticeably harder to see on mobile than on a laptop. That is on my list to tighten up.
+
+Neither blocks you from clicking through, and the laptop experience is still the intended one. Same preview link as before. Reactions on what feels most useful, and what additional descriptives would be worth prioritizing, would be welcome!
+
+Have a great weekend!
+
+Jensen
+
+--
+T. M. Jensen Ahokovi | Predoctoral Research Fellow
+Stanford Institute for Economic Policy Research (SIEPR)
+Stanford GSB Initiative for Business, Taxation, and Society (STAX Lab)
+tahokovi@stanford.edu | tahokovi.github.io
