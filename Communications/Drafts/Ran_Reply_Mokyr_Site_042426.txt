@@ -1,0 +1,33 @@
+Subject: Re: Two more things
+
+Hi Ran,
+
+Midterm's done — thank you for the encouragement. Here's the round-up of everything that changed since the 4/19 weekly update, plus answers to your three lineage questions from Wednesday night.
+
+From the 4/19 and 4/21 comments:
+
+- "FIRST-GEN STUDENTS" on the welcome page is now "Direct students."
+- Footer attribution updated across the site to: "For Joel's 80th. Project led by Ran Abramitzky. I thank Jensen Ahokovi for his superb assistance."
+- iPhone fixes: tier pages no longer have text overlap, and the family tree now scrolls deep enough to show Gen 3 on mobile.
+- The Santi "also supervised by Ran Abramitzky" labels are gone. Rather than chase the individual bad edges, I made a site-wide rule: we don't surface any co-advisor / secondary-advisor relationships anywhere in the UI. The bug is squashed by construction — any similar mislabel elsewhere is impossible to display now.
+- Home and Family pages: "Joel's Academic Family" / "By the Numbers" and "Family Tree" / "Network Map" now sit as equal-weight peer cards rather than primary-plus-secondary.
+
+On the three lineage questions from 4/22:
+
+1. Selection criterion — honest answer: the original four were editorial picks, not systematic. I've now switched to a rule we can defend: one chain per major Gen-1 sub-lineage, preferring chains where public bibliometric data is available at every node so the counts are verifiable. Under that rule the set is now Kosec (Greif branch), Townsend (Abramitzky branch A), Zaiour (Abramitzky branch B — your lineage, see below), and Teague (Nye branch).
+
+2. Your own lineage — Mokyr → Abramitzky → Perez → Reem Zaiour is now the third tab. It replaced the Kocaata chain, which I'd only included for non-Abramitzky/Greif diversity and which had been forcing the metric inconsistency you flagged (Zeki isn't on Open Syllabus or Google Scholar, so his card had to read "Supervised by N. Dwarkasing" in place of a count). For Reem's featured paper I picked her 2023 Journal of Population Economics piece on Covid-era migration — thematically in your and Santi's wheelhouse — rather than her most-cited paper, which is a gun-violence piece. Happy to swap to the most-cited if you'd rather.
+
+3. Metric consistency — every node on every chain now shows both syllabus appearances (Open Syllabus) and citations (Google Scholar). Early-career scholars show an em-dash where they're not yet indexed (Reem isn't on Open Syllabus yet, for example). Joel's row reads 2,638 syllabus appearances and 33,207 citations, pulled from his public GS profile earlier today.
+
+Still open from your 4/21 email:
+
+- Photos in the tree tooltip — feasible. I need a day or so on the backend to wire the photo field through the data pipeline and into the tooltip renderer; I'll have it in the preview by early next week.
+- Hosting — the site is on Netlify right now, and it's working well. We'll likely end up paying a small amount (not much) once we're ready to go public. If you'd like a cleaner URL for the event, we can register a custom domain — something like JoelMokyr80.com — and point Netlify at it. Happy to price that out if you want to go that route.
+- Physical tree — let me sit with this a bit longer before I recommend a direction. I'll come to our meeting with a concrete proposal.
+- Full-screen tree on desktop — easier to show than describe; let's walk through it in person. On mobile, I won't be able to get it fully pixel-perfect given viewport constraints, but I'll keep iterating.
+
+Preview is live at the usual link whenever you have a minute. Let me know when works for a walk-through.
+
+Thank you,
+Jensen
