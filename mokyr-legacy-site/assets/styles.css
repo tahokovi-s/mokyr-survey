@@ -1536,6 +1536,12 @@ body.page-section h2 {
   overflow-wrap: anywhere;
 }
 
+.chain-counts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .shape-lineage-view {
   display: grid;
   gap: 18px;
