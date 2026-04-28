@@ -46,27 +46,27 @@
 
       <!-- Mode chooser (real tablist) -->
       <div class="ft-chooser" role="tablist" aria-label="Choose a view" data-reveal>
-        <button id="ft-tab-tree"
-                class="ft-tab ft-tab--primary is-active"
+        <button id="ft-tab-network"
+                class="ft-tab ft-tab--secondary is-active"
                 role="tab"
                 type="button"
                 aria-selected="true"
-                aria-controls="ft-tree-panel"
-                data-ft-mode="tree"
+                aria-controls="ft-network-panel"
+                data-ft-mode="network"
                 tabindex="0">
-          <span class="ft-tab-label">Family Tree</span>
-          <span class="ft-tab-desc">Browse the lineage branch by branch &mdash; open Joel, then each student, generation by generation.</span>
+          <span class="ft-tab-label">Network Map</span>
+          <span class="ft-tab-desc">Force-directed view of the full graph.</span>
         </button>
-        <button id="ft-tab-network"
-                class="ft-tab ft-tab--secondary"
+        <button id="ft-tab-tree"
+                class="ft-tab ft-tab--primary"
                 role="tab"
                 type="button"
                 aria-selected="false"
-                aria-controls="ft-network-panel"
-                data-ft-mode="network"
+                aria-controls="ft-tree-panel"
+                data-ft-mode="tree"
                 tabindex="-1">
-          <span class="ft-tab-label">Network Map</span>
-          <span class="ft-tab-desc">Force-directed view of the full graph.</span>
+          <span class="ft-tab-label">Family Tree</span>
+          <span class="ft-tab-desc">Browse the lineage branch by branch &mdash; open Joel, then each student, generation by generation.</span>
         </button>
       </div>
 
@@ -75,7 +75,8 @@
                class="ft-panel ft-panel-frame"
                role="tabpanel"
                aria-labelledby="ft-tab-tree"
-               tabindex="-1">
+               tabindex="-1"
+               hidden>
         <header class="ft-tree-header">
           <div class="ft-tree-heading">
             <p class="ft-tree-eyebrow">Family Tree</p>
@@ -105,8 +106,7 @@
                class="ft-panel ft-panel-frame ft-network-panel"
                role="tabpanel"
                aria-labelledby="ft-tab-network"
-               tabindex="-1"
-               hidden>
+               tabindex="-1">
         <header class="ft-tree-header">
           <div class="ft-tree-heading">
             <p class="ft-tree-eyebrow">Network Map</p>

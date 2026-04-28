@@ -524,10 +524,10 @@
     buildRootNode();
 
     const hash = window.location.hash;
-    if (hash === "#network") {
-      activateMode("network", { updateHash: false });
-    } else {
+    if (hash === "#tree") {
       activateMode("tree", { updateHash: false });
+    } else {
+      activateMode("network", { updateHash: false });
     }
   }
 
