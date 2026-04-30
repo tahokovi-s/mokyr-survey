@@ -31,21 +31,21 @@
       <section class="home-hero" data-reveal>
         <p class="eyebrow">Welcome</p>
         <h1>Joel Mokyr, at 80.</h1>
-        <p class="home-subtitle">Four generations. 388 scholars.</p>
+        <p class="home-subtitle">Four generations. <span data-lineage-stat="scholarCount">380</span> scholars.</p>
       </section>
 
       <section class="home-stat-strip" aria-label="Lineage at a glance" data-reveal>
         <div class="stat-grid">
           <div class="stat-item">
-            <span class="stat-number">388</span>
+            <span class="stat-number" data-lineage-stat="scholarCount">380</span>
             <span class="stat-label">Scholars</span>
           </div>
           <div class="stat-item">
-            <span class="stat-number">4</span>
+            <span class="stat-number" data-lineage-stat="generationCount">4</span>
             <span class="stat-label">Generations</span>
           </div>
           <div class="stat-item">
-            <span class="stat-number">77</span>
+            <span class="stat-number" data-lineage-stat="directStudentCount">76</span>
             <span class="stat-label">Direct students</span>
           </div>
         </div>
@@ -55,7 +55,7 @@
         <a class="pathway-card pathway-card--primary" href="family/" data-reveal>
           <h2 class="card-title">Joel's Academic Family</h2>
           <p class="card-body">Browse the lineage, generation by generation.</p>
-          <p class="card-ministat">388 people &middot; 4 generations &middot; Search + branch view</p>
+          <p class="card-ministat"><span data-lineage-stat="scholarCount">380</span> scholars &middot; <span data-lineage-stat="generationCount">4</span> generations &middot; Search + branch view</p>
           <span class="card-action">
             Enter
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -85,6 +85,7 @@
     </footer>
   </div>
 
+  <script src="assets/lineage-stats.js?v=20260430b"></script>
   <script src="assets/site.js"></script>
 </body>
 </html>

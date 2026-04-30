@@ -8,6 +8,7 @@ optionally refreshes outreach-response tracking when raw exports are provided.
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -229,6 +230,8 @@ def main() -> None:
     third_generation = PROJECT_ROOT / "Data" / "Derived" / f"Third_Generation_Subtree_Sizes_{date_token}.csv"
     fourth_generation = PROJECT_ROOT / "Data" / "Derived" / f"Fourth_Generation_Subtree_Sizes_{date_token}.csv"
     html = PROJECT_ROOT / "Output" / f"mokyr-genealogy-{date_token}.html"
+    headshot_manifest = PROJECT_ROOT / "Data" / "Derived" / f"headshot_manifest_{date_token}.json"
+    site_network_html = PROJECT_ROOT / "mokyr-legacy-site" / "network" / "mokyr-genealogy.html"
 
     required_scripts = [
         PROJECT_ROOT / "Code" / "Network" / "build_network.py",
@@ -239,6 +242,8 @@ def main() -> None:
         PROJECT_ROOT / "Code" / "Network" / "describe_fourth_generation.py",
         PROJECT_ROOT / "Code" / "Network" / "build_master_list.py",
         PROJECT_ROOT / "Code" / "Network" / "build_outstanding_lists.py",
+        PROJECT_ROOT / "Code" / "Network" / "build_headshot_assets.py",
+        PROJECT_ROOT / "Code" / "Network" / "build_genealogy_data_asset.py",
         PROJECT_ROOT / "Code" / "Network" / "viz_network.py",
     ]
     if audit and manual_provenance:
@@ -373,6 +378,14 @@ def main() -> None:
     ]
     run_step("build_outstanding_lists", outstanding_cmd)
 
+    headshot_cmd = [
+        sys.executable,
+        "Code/Network/build_headshot_assets.py",
+        "--date", date_token,
+        "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
+    ]
+    run_step("build_headshot_assets", headshot_cmd)
+
     d3_path = resolve_project_path(args.d3_path) if args.d3_path else extract_d3_from_existing_html(date_token)
     viz_cmd = [
         sys.executable,
@@ -380,9 +393,25 @@ def main() -> None:
         "--date", date_token,
         "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
         "--edges", str(edges.relative_to(PROJECT_ROOT)),
+        "--photo-manifest", str(headshot_manifest.relative_to(PROJECT_ROOT)),
     ]
     append_path_arg(viz_cmd, "--d3-path", d3_path)
     run_step("viz_network", viz_cmd)
+
+    site_network_html.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(html, site_network_html)
+    print(f"Copied {html.relative_to(PROJECT_ROOT)} -> {site_network_html.relative_to(PROJECT_ROOT)}")
+
+    genealogy_data_cmd = [
+        sys.executable,
+        "Code/Network/build_genealogy_data_asset.py",
+        "--date", date_token,
+        "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
+        "--edges", str(edges.relative_to(PROJECT_ROOT)),
+        "--photo-manifest", str(headshot_manifest.relative_to(PROJECT_ROOT)),
+        "--output", "mokyr-legacy-site/assets/genealogy-data.js",
+    ]
+    run_step("build_genealogy_data_asset", genealogy_data_cmd)
 
     if audit and manual_provenance:
         validate_audit_cmd = [
@@ -444,7 +473,10 @@ def main() -> None:
         master,
         PROJECT_ROOT / "Data" / "Derived" / f"Outstanding_People_{date_token}_Validated.csv",
         PROJECT_ROOT / "Data" / "Derived" / f"Outstanding_Advisor_Summary_{date_token}_Validated.csv",
+        headshot_manifest,
         html,
+        site_network_html,
+        PROJECT_ROOT / "mokyr-legacy-site" / "assets" / "genealogy-data.js",
         PROJECT_ROOT / "Output" / f"First_Generation_Descriptives_{date_token}.md",
         PROJECT_ROOT / "Output" / f"Second_Generation_Descriptives_{date_token}.md",
         PROJECT_ROOT / "Output" / f"Descriptive_Input_Validation_{date_token}.md",

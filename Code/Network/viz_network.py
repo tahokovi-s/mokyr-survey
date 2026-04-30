@@ -5,24 +5,25 @@ viz_network.py — Render interactive genealogy HTML from Network_Nodes + Networ
 Output: Output/mokyr-genealogy-{date}.html  (self-contained, D3 inlined)
 """
 
-import csv
-import json
 import sys
 import hashlib
 import argparse
 import base64
-import re
-from datetime import datetime
 from pathlib import Path
+
+from genealogy_payload import (
+    PROJECT_ROOT,
+    assert_no_email_fields,
+    load_edges,
+    load_nodes,
+    resolve_network_date,
+    safe_json,
+)
 try:
     from urllib.request import urlopen, Request
     from urllib.error import URLError
 except ImportError:
     urlopen = None
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-_NODES_DATE_RE = re.compile(r"^Network_Nodes_(\d{6})\.csv$")
-_EDGES_DATE_RE = re.compile(r"^Network_Edges_(\d{6})\.csv$")
 
 D3_URL    = "https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"
 # SHA-256 of d3.min.js v7.9.0 from cdnjs.  Verified against CDN on first run.
@@ -32,63 +33,6 @@ D3_SHA256 = "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539"
 
 def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
-
-
-def _latest_matching_date(base_dir: Path, pattern: re.Pattern[str]) -> str | None:
-    if not base_dir.exists():
-        sys.exit(f"ERROR: Expected directory not found while inferring latest date: {base_dir}")
-    matches = []
-    for path in base_dir.iterdir():
-        match = pattern.match(path.name)
-        if not match:
-            continue
-        matches.append(match.group(1))
-    if not matches:
-        return None
-    return max(matches, key=lambda token: datetime.strptime(token, "%m%d%y"))
-
-
-def _extract_date_token(path_str: str | None) -> str | None:
-    if not path_str:
-        return None
-    match = re.search(r"(\d{6})", Path(path_str).name)
-    return match.group(1) if match else None
-
-
-def _resolve_viz_date(date_arg: str | None, nodes_arg: str | None, edges_arg: str | None) -> str:
-    if date_arg:
-        return date_arg
-
-    explicit_dates = {
-        token for token in (
-            _extract_date_token(nodes_arg),
-            _extract_date_token(edges_arg),
-        )
-        if token
-    }
-    if len(explicit_dates) > 1:
-        sys.exit(
-            "ERROR: --nodes and --edges imply different dates. "
-            "Pass --date explicitly or provide aligned inputs."
-        )
-    if explicit_dates:
-        return explicit_dates.pop()
-
-    derived_dir = PROJECT_ROOT / "Data" / "Derived"
-    latest_nodes = _latest_matching_date(derived_dir, _NODES_DATE_RE)
-    latest_edges = _latest_matching_date(derived_dir, _EDGES_DATE_RE)
-    if not latest_nodes or not latest_edges:
-        sys.exit(
-            "ERROR: Could not infer a default date from network inputs. "
-            "Pass --date explicitly."
-        )
-    if latest_nodes != latest_edges:
-        sys.exit(
-            "ERROR: Latest node and edge files have different dates "
-            f"({latest_nodes} vs {latest_edges}). Pass --date or explicit paths."
-        )
-    print(f"INFO: Using latest common network date: {latest_nodes}")
-    return latest_nodes
 
 
 def _fetch_d3(d3_path=None):
@@ -137,74 +81,15 @@ def _fetch_d3(d3_path=None):
     return data.decode('utf-8'), actual
 
 
-def _safe_json(obj) -> str:
-    """JSON-serialize and escape </  to prevent </script> breakout."""
-    s = json.dumps(obj, ensure_ascii=False)
-    return s.replace("</", "<\\/")
-
-
 def _data_url(path: Path, mime_type: str) -> str:
     data = path.read_bytes()
     encoded = base64.b64encode(data).decode('ascii')
     return f"data:{mime_type};base64,{encoded}"
 
 
-def _load_nodes(nodes_csv: Path) -> list:
-    """Load node rows; exclude email from output."""
-    nodes = []
-    with open(nodes_csv, newline='', encoding='utf-8') as f:
-        for row in csv.DictReader(f):
-            gen = row['generation']
-            try:
-                gen = int(gen)
-            except (ValueError, TypeError):
-                gen = None
-            populated_detail_fields = sum(
-                1
-                for value in (
-                    row['email'],
-                    row['phd_institution_canon'] or row['phd_institution_raw'],
-                    row['phd_year'],
-                    row['current_employer_canon'] or row['current_employer_raw'],
-                    row['country'],
-                    row['us_state'],
-                )
-                if str(value or '').strip()
-            )
-            nodes.append({
-                'id':           row['node_id'],
-                'label':        f"{row['first_name']} {row['last_name']}".strip(),
-                'generation':   gen,
-                'has_students': row['has_students'].lower() in ('true', '1', 'yes'),
-                'is_respondent': row['is_respondent'].lower() in ('true', '1', 'yes'),
-                'institution':  row['phd_institution_canon'] or row['phd_institution_raw'],
-                'employer':     row['current_employer_canon'] or row['current_employer_raw'],
-                'phd_year':     row['phd_year'],
-                'country':      row['country'],
-                'us_state':     row['us_state'],
-                'nonrespondent_field_count': populated_detail_fields,
-                'show_nonrespondent': populated_detail_fields >= 2,
-                # email intentionally excluded
-            })
-    return nodes
-
-
-def _load_edges(edges_csv: Path) -> list:
-    edges = []
-    with open(edges_csv, newline='', encoding='utf-8') as f:
-        for row in csv.DictReader(f):
-            edges.append({
-                'source':     row['source_id'],
-                'target':     row['target_id'],
-                'edge_type':  row['edge_type'],
-                'confidence': row['confidence'],
-            })
-    return edges
-
-
 def _build_html(nodes: list, edges: list, d3_js: str) -> str:
-    nodes_json = _safe_json(nodes)
-    edges_json = _safe_json(edges)
+    nodes_json = safe_json(nodes)
+    edges_json = safe_json(edges)
     wordmark_photo_data_url = _data_url(
         PROJECT_ROOT / "mokyr-legacy-site/assets/images/joel-mokyr-168x210.jpg",
         "image/jpeg",
@@ -519,6 +404,16 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   .panel-header {{
     display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
   }}
+  .panel-heading {{
+    min-width: 0;
+  }}
+  .panel-actions {{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+  }}
   .eyebrow {{
     font-size: 0.82rem;
     text-transform: uppercase;
@@ -533,6 +428,7 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   #person-subtitle {{
     margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.5;
   }}
+  #panel-minimize,
   #panel-close {{
     border: 1px solid var(--line); border-radius: 999px;
     padding: 8px 12px;
@@ -542,12 +438,38 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
       border-color 200ms var(--ease-out),
       color 200ms var(--ease-out);
   }}
+  #panel-minimize:hover,
   #panel-close:hover:not(:disabled) {{
     color: var(--text);
     border-color: var(--line-strong);
   }}
   #panel-close:disabled {{
     opacity: 0.45; cursor: default;
+  }}
+  #person-panel.is-minimized {{
+    top: auto;
+    bottom: 12px;
+    width: auto;
+    padding: 10px;
+    border-radius: 999px;
+    gap: 0;
+    opacity: 1;
+    transform: none;
+  }}
+  #person-panel.is-minimized .panel-header {{
+    align-items: center;
+    justify-content: center;
+  }}
+  #person-panel.is-minimized .panel-heading,
+  #person-panel.is-minimized #panel-close,
+  #person-panel.is-minimized #person-empty,
+  #person-panel.is-minimized #person-content {{
+    display: none;
+  }}
+  #person-panel.is-minimized #panel-minimize {{
+    color: var(--text);
+    border-color: var(--line-strong);
+    min-width: 86px;
   }}
   #person-empty {{
     color: var(--muted); font-size: 14px; line-height: 1.55;
@@ -599,6 +521,22 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     color: var(--muted);
     font-size: 14px;
   }}
+  .panel-portrait {{
+    width: 84px;
+    height: 84px;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border-radius: 50%;
+    border: 1.5px solid rgba(16, 18, 22, 0.12);
+    background: rgba(214, 188, 123, 0.12);
+    box-shadow: 0 12px 28px rgba(16, 18, 22, 0.08);
+  }}
+  .panel-portrait img {{
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }}
 
   #graph {{
     position: absolute;
@@ -625,8 +563,16 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
       opacity 220ms var(--ease-out),
       stroke 220ms var(--ease-out);
   }}
+  .node-photo {{
+    pointer-events: none;
+  }}
+  .node-photo-border {{
+    fill: none;
+    pointer-events: none;
+  }}
   .node.hidden {{ display: none; }}
   .node.dimmed circle {{ opacity: 0.2; }}
+  .node.dimmed image {{ opacity: 0.2; }}
   .node.dimmed text {{ opacity: 0.15; }}
   .node text {{
     font-family: "Neue Haas Grotesk Text Pro", "Avenir Next", "Helvetica Neue", sans-serif;
@@ -655,6 +601,13 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
       top: auto; left: 12px; right: 12px; bottom: 12px; width: auto;
       max-height: min(46vh, 380px);
       padding: 28px;
+    }}
+    #person-panel.is-minimized {{
+      left: auto;
+      right: 12px;
+      width: auto;
+      max-height: none;
+      padding: 10px;
     }}
   }}
 
@@ -750,6 +703,10 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
       <span class="pill-label">Labels</span>
     </label>
     <label class="privacy-pill">
+      <input type="checkbox" id="showPhotos">
+      <span class="pill-label">Photos</span>
+    </label>
+    <label class="privacy-pill">
       <input type="checkbox" id="layoutConcentric" checked aria-label="Concentric layout active. Press Enter to switch to force layout.">
       <span class="pill-label">Concentric</span>
     </label>
@@ -774,24 +731,27 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
   <div class="viz-intro-inner">
     <div class="eyebrow">The Network</div>
     <h1 class="viz-intro-title">Four generations, charted.</h1>
-    <p class="viz-intro-lead">388 scholars, traced through Joel's advising lineage.</p>
+    <p class="viz-intro-lead" id="viz-intro-lead">Scholars traced through Joel's advising lineage.</p>
   </div>
 </section>
 
 <main id="viz-shell">
   <div id="stats">
-    <span id="stat-nodes"></span> nodes &nbsp;·&nbsp;
+    <span id="stat-nodes"></span> scholars &nbsp;·&nbsp;
     <span id="stat-edges"></span> edges
   </div>
 
   <aside id="person-panel" aria-live="polite">
     <div class="panel-header">
-      <div>
+      <div class="panel-heading">
         <div class="eyebrow">Person Details</div>
         <h3 id="person-title">Select a person</h3>
         <div id="person-subtitle">Click a node to inspect the latest details and direct relationships.</div>
       </div>
-      <button id="panel-close" type="button" disabled>Clear</button>
+      <div class="panel-actions">
+        <button id="panel-minimize" type="button" aria-controls="person-panel" aria-expanded="true">Minimize</button>
+        <button id="panel-close" type="button" disabled>Close</button>
+      </div>
     </div>
     <div id="person-empty">
       The panel will show person-level metadata from the node file plus direct advisors and direct students from the current network edges.
@@ -934,14 +894,18 @@ function nodeRadius(d) {{
 
 // ── state ──────────────────────────────────────────────────────────────────
 let showLabels  = false;
+let showPhotos  = false;
 let searchTerm  = '';
 let layoutMode  = 'concentric';
 let selectedNodeId = null;
 let hoveredNodeId = null;
+let detailsPanelMinimized = false;
+const brokenPhotoNodeIds = new Set();
 
 let simulation;
 let currentNodeSelection = null;
 let currentLinkSelection = null;
+let currentPhotoClipSelection = null;
 let currentNeighborIds = new Map();
 let currentAlwaysVisibleLabelIds = new Set();
 let currentSimNodes = [];
@@ -949,11 +913,24 @@ let currentSimEdges = [];
 let currentShellWidth = 0;
 let currentShellHeight = 0;
 
+function hasDisplayPhoto(d) {{
+  return Boolean(showPhotos && d.photo_url && !brokenPhotoNodeIds.has(d.id));
+}}
+
+function displayRadius(d) {{
+  if (!hasDisplayPhoto(d)) return nodeRadius(d);
+  if (d.id === 'JM-ROOT') return 22;
+  if (d.has_students) return 16;
+  return 14;
+}}
+
+function photoClipId(d) {{
+  return 'photo-clip-' + String(d.id).replace(/[^A-Za-z0-9_-]/g, '-');
+}}
+
 // ── build visible sets ─────────────────────────────────────────────────────
 function visibleNodeIds() {{
-  return new Set(NETWORK_NODES.filter(n => (
-    n.id === 'JM-ROOT' || n.is_respondent || n.show_nonrespondent
-  )).map(n => n.id));
+  return new Set(NETWORK_NODES.map(n => n.id));
 }}
 function visibleEdges(vids) {{
   return NETWORK_EDGES.filter(e => {{
@@ -973,12 +950,16 @@ const panelTitleEl = document.getElementById('person-title');
 const panelSubtitleEl = document.getElementById('person-subtitle');
 const panelEmptyEl = document.getElementById('person-empty');
 const panelContentEl = document.getElementById('person-content');
+const panelMinimizeEl = document.getElementById('panel-minimize');
 const panelCloseEl = document.getElementById('panel-close');
+const introLeadEl = document.getElementById('viz-intro-lead');
 const layoutToggleEl = document.getElementById('layoutConcentric');
+const photoToggleEl = document.getElementById('showPhotos');
 const controlPillInputs = Array.from(document.querySelectorAll('.privacy-pill input[type="checkbox"]'));
 
 // Arrowhead marker
-svg.append('defs').append('marker')
+const defs = svg.append('defs');
+defs.append('marker')
   .attr('id', 'arrow')
   .attr('viewBox', '0 -5 10 10')
   .attr('refX', 20).attr('refY', 0)
@@ -1043,8 +1024,8 @@ function fitGraphToViewport(width, height) {{
     const rootNode = currentSimNodes.find(node => node.id === 'JM-ROOT');
     if (rootNode) {{
       const padding = 40;
-      const maxDx = d3.max(currentSimNodes, node => Math.abs((node.x || 0) - rootNode.x) + nodeRadius(node) + 18) || 1;
-      const maxDy = d3.max(currentSimNodes, node => Math.abs((node.y || 0) - rootNode.y) + nodeRadius(node) + 18) || 1;
+      const maxDx = d3.max(currentSimNodes, node => Math.abs((node.x || 0) - rootNode.x) + displayRadius(node) + 18) || 1;
+      const maxDy = d3.max(currentSimNodes, node => Math.abs((node.y || 0) - rootNode.y) + displayRadius(node) + 18) || 1;
       const scale = Math.min(
         (width - padding * 2) / (maxDx * 2),
         (height - padding * 2) / (maxDy * 2)
@@ -1087,7 +1068,7 @@ function applyLayoutForces(width, height) {{
   simulation
     .force('link', d3.forceLink(currentSimEdges).id(d => d.id).distance(80).strength(linkStrength))
     .force('charge', d3.forceManyBody().strength(chargeStrength))
-    .force('collide', d3.forceCollide().radius(d => nodeRadius(d) + collidePadding));
+    .force('collide', d3.forceCollide().radius(d => displayRadius(d) + collidePadding));
 
   if (layoutMode === 'concentric') {{
     simulation.force('center', null);
@@ -1133,8 +1114,12 @@ function render() {{
   currentSimEdges = simEdges;
 
   // Update stats
-  document.getElementById('stat-nodes').textContent = simNodes.length;
+  const visibleScholarCount = simNodes.filter(node => node.id !== 'JM-ROOT').length;
+  document.getElementById('stat-nodes').textContent = visibleScholarCount;
   document.getElementById('stat-edges').textContent = simEdges.length;
+  if (introLeadEl) {{
+    introLeadEl.textContent = `${{visibleScholarCount}} scholars across four generations, with Joel at the center.`;
+  }}
 
   // Stop previous simulation
   if (simulation) simulation.stop();
@@ -1152,13 +1137,33 @@ function render() {{
   currentLinkSelection = link;
 
   // ── nodes ──────────────────────────────────────────────────────────────
+  currentPhotoClipSelection = defs.selectAll('clipPath.node-photo-clip')
+    .data(simNodes.filter(d => d.photo_url), d => d.id)
+    .join(
+      enter => {{
+        const clip = enter.append('clipPath')
+          .attr('class', 'node-photo-clip')
+          .attr('clipPathUnits', 'userSpaceOnUse');
+        clip.append('circle');
+        return clip;
+      }},
+      update => update,
+      exit => exit.remove()
+    )
+    .attr('id', photoClipId);
+
   const node = nodeG.selectAll('g.node')
     .data(simNodes, d => d.id)
     .join(
       enter => {{
         const ng = enter.append('g').attr('class', 'node');
-        ng.append('circle');
-        ng.append('text').attr('dy', '0.35em').attr('x', d => nodeRadius(d) + 4);
+        ng.append('circle').attr('class', 'node-fill');
+        ng.append('image')
+          .attr('class', 'node-photo')
+          .attr('preserveAspectRatio', 'xMidYMid slice')
+          .on('error', handlePhotoError);
+        ng.append('circle').attr('class', 'node-photo-border');
+        ng.append('text').attr('dy', '0.35em').attr('x', d => displayRadius(d) + 4);
         ng.call(d3.drag()
           .on('start', dragstarted)
           .on('drag',  dragged)
@@ -1175,14 +1180,7 @@ function render() {{
     );
   currentNodeSelection = node;
 
-  node.select('circle')
-    .attr('r', nodeRadius)
-    .attr('fill', nodeColor)
-    .attr('stroke', d => d3.color(nodeColor(d)).brighter(0.4));
-
-  node.select('text')
-    .attr('x', d => nodeRadius(d) + 4)
-    .text(d => d.label);
+  updatePhotoLayers(node);
 
   updateGraphState();
   renderPersonPanel();
@@ -1201,6 +1199,50 @@ function render() {{
   simulation.on('end', () => {{
     fitGraphToViewport(W, H);
   }});
+}}
+
+function updatePhotoLayers(selection) {{
+  const nodeSelection = selection || currentNodeSelection;
+  if (!nodeSelection) return;
+
+  if (currentPhotoClipSelection) {{
+    currentPhotoClipSelection.select('circle')
+      .attr('r', displayRadius)
+      .attr('cx', 0)
+      .attr('cy', 0);
+  }}
+
+  nodeSelection.select('circle.node-fill')
+    .attr('r', displayRadius)
+    .attr('fill', nodeColor)
+    .attr('stroke', d => d3.color(nodeColor(d)).brighter(0.4));
+
+  nodeSelection.select('image.node-photo')
+    .style('display', d => hasDisplayPhoto(d) ? null : 'none')
+    .attr('href', d => hasDisplayPhoto(d) ? d.photo_url : null)
+    .attr('xlink:href', d => hasDisplayPhoto(d) ? d.photo_url : null)
+    .attr('clip-path', d => hasDisplayPhoto(d) ? `url(#${{photoClipId(d)}})` : null)
+    .attr('x', d => -displayRadius(d))
+    .attr('y', d => -displayRadius(d))
+    .attr('width', d => displayRadius(d) * 2)
+    .attr('height', d => displayRadius(d) * 2);
+
+  nodeSelection.select('circle.node-photo-border')
+    .attr('r', displayRadius)
+    .attr('stroke', d => hasDisplayPhoto(d) ? 'rgba(16, 18, 22, 0.22)' : d3.color(nodeColor(d)).brighter(0.4));
+
+  nodeSelection.select('text')
+    .attr('x', d => displayRadius(d) + 4)
+    .text(d => d.label);
+}}
+
+function handlePhotoError(event, d) {{
+  if (!d || !d.id) return;
+  brokenPhotoNodeIds.add(d.id);
+  updatePhotoLayers();
+  applyLayoutForces(currentShellWidth || vizShellEl.clientWidth || window.innerWidth, currentShellHeight || vizShellEl.clientHeight || window.innerHeight);
+  if (simulation) simulation.alpha(0.4).restart();
+  renderPersonPanel();
 }}
 
 function matchesSearch(d, q) {{
@@ -1340,6 +1382,37 @@ function buildRelationshipSection(title, people) {{
   return section;
 }}
 
+function buildPanelPortrait(node) {{
+  if (!node.photo_url || brokenPhotoNodeIds.has(node.id)) return null;
+
+  const portrait = document.createElement('div');
+  portrait.className = 'panel-portrait';
+
+  const img = document.createElement('img');
+  img.src = node.photo_url;
+  img.alt = '';
+  img.decoding = 'async';
+  img.addEventListener('error', () => {{
+    brokenPhotoNodeIds.add(node.id);
+    portrait.remove();
+    updatePhotoLayers();
+  }}, {{ once: true }});
+
+  portrait.appendChild(img);
+  return portrait;
+}}
+
+function setDetailsPanelMinimized(minimized) {{
+  detailsPanelMinimized = Boolean(minimized);
+  panelEl.classList.toggle('is-minimized', detailsPanelMinimized);
+  panelMinimizeEl.textContent = detailsPanelMinimized ? 'Details' : 'Minimize';
+  panelMinimizeEl.setAttribute(
+    'aria-label',
+    detailsPanelMinimized ? 'Show person details panel' : 'Minimize person details panel'
+  );
+  panelMinimizeEl.setAttribute('aria-expanded', detailsPanelMinimized ? 'false' : 'true');
+}}
+
 function renderPersonPanel() {{
   const node = selectedNodeId ? NODE_BY_ID.get(selectedNodeId) : null;
   panelContentEl.replaceChildren();
@@ -1359,6 +1432,11 @@ function renderPersonPanel() {{
   panelEmptyEl.hidden = true;
   panelContentEl.hidden = false;
   panelCloseEl.disabled = false;
+
+  const portrait = buildPanelPortrait(node);
+  if (portrait) {{
+    panelContentEl.appendChild(portrait);
+  }}
 
   const detailGrid = document.createElement('section');
   detailGrid.className = 'detail-grid';
@@ -1475,6 +1553,14 @@ document.getElementById('showLabels').addEventListener('change', e => {{
   showLabels = e.target.checked;
   updateLabelVisibility();
 }});
+photoToggleEl.addEventListener('change', e => {{
+  syncControlPills();
+  showPhotos = e.target.checked;
+  updatePhotoLayers();
+  applyLayoutForces(currentShellWidth || vizShellEl.clientWidth || window.innerWidth, currentShellHeight || vizShellEl.clientHeight || window.innerHeight);
+  if (simulation) simulation.alpha(0.8).restart();
+  updateGraphState();
+}});
 layoutToggleEl.addEventListener('change', e => {{
   syncControlPills();
   layoutMode = e.target.checked ? 'concentric' : 'force';
@@ -1492,6 +1578,9 @@ controlPillInputs.forEach(input => {{
     event.currentTarget.click();
   }});
 }});
+panelMinimizeEl.addEventListener('click', () => {{
+  setDetailsPanelMinimized(!detailsPanelMinimized);
+}});
 panelCloseEl.addEventListener('click', clearSelection);
 window.addEventListener('keydown', event => {{
   if (event.key === 'Escape') clearSelection();
@@ -1501,6 +1590,7 @@ window.addEventListener('resize', render);
 
 // ── initial render ─────────────────────────────────────────────────────────
 syncControlPills();
+setDetailsPanelMinimized(false);
 render();
 </script>
 </body>
@@ -1521,9 +1611,11 @@ def main():
                         help="Override path to Network_Nodes CSV")
     parser.add_argument('--edges', default=None,
                         help="Override path to Network_Edges CSV")
+    parser.add_argument('--photo-manifest', default=None,
+                        help="Override headshot manifest JSON path")
     args = parser.parse_args()
 
-    date = _resolve_viz_date(args.date, args.nodes, args.edges)
+    date = resolve_network_date(args.date, args.nodes, args.edges)
     nodes_csv  = PROJECT_ROOT / (args.nodes or f"Data/Derived/Network_Nodes_{date}.csv")
     edges_csv  = PROJECT_ROOT / (args.edges or f"Data/Derived/Network_Edges_{date}.csv")
     output_path = PROJECT_ROOT / (args.output or f"Output/mokyr-genealogy-{date}.html")
@@ -1536,14 +1628,13 @@ def main():
 
     # Load data
     print(f"Loading nodes : {nodes_csv}")
-    nodes = _load_nodes(nodes_csv)
+    nodes = load_nodes(nodes_csv, date_token=date, photo_manifest_path=args.photo_manifest)
     print(f"Loading edges : {edges_csv}")
-    edges = _load_edges(edges_csv)
+    edges = load_edges(edges_csv)
     print(f"  {len(nodes)} nodes, {len(edges)} edges")
 
     # Verify no emails in output data
-    for n in nodes:
-        assert 'email' not in n, "BUG: email field present in node output"
+    assert_no_email_fields(nodes)
 
     # Fetch/load D3
     d3_js, actual_hash = _fetch_d3(args.d3_path)

@@ -2731,6 +2731,47 @@ body.page-section h2 {
 .ft-card--root .ft-expand-icon { display: none; }
 .ft-expand-icon--leaf { color: rgba(16, 18, 22, 0.22); }
 
+/* Avatars */
+.ft-avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 1px solid rgba(16, 18, 22, 0.12);
+  background: rgba(214, 188, 123, 0.13);
+  color: rgba(16, 18, 22, 0.62);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ft-avatar--root {
+  width: 48px;
+  height: 48px;
+  flex-basis: 48px;
+  border-color: rgba(214, 188, 123, 0.5);
+  box-shadow: 0 8px 18px rgba(16, 18, 22, 0.10);
+}
+
+.ft-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.ft-avatar-fallback {
+  position: relative;
+  z-index: 0;
+}
+
 /* Card inner layout */
 .ft-card-inner {
   display: flex;

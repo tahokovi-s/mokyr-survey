@@ -49,6 +49,43 @@
     return "";
   }
 
+  function avatarInitials(node) {
+    const label = (node.label || "").trim();
+    if (!label) return "";
+    const parts = label.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function buildAvatar(node, options) {
+    const opts = options || {};
+    const avatar = document.createElement("span");
+    avatar.className = "ft-avatar" + (opts.root ? " ft-avatar--root" : "");
+    avatar.setAttribute("aria-hidden", "true");
+
+    const fallback = document.createElement("span");
+    fallback.className = "ft-avatar-fallback";
+    fallback.textContent = avatarInitials(node);
+    avatar.appendChild(fallback);
+
+    if (node.photo_url) {
+      const img = document.createElement("img");
+      img.src = node.photo_url;
+      img.alt = "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.addEventListener("error", function () {
+        img.remove();
+        avatar.classList.add("ft-avatar--fallback");
+      }, { once: true });
+      avatar.appendChild(img);
+    } else {
+      avatar.classList.add("ft-avatar--fallback");
+    }
+
+    return avatar;
+  }
+
   function sortByDescThenLabel(ids) {
     return ids.slice().sort(function (a, b) {
       const da = GENEALOGY.descendantCountById[a] || 0;
@@ -109,6 +146,7 @@
       inner.appendChild(badge);
     }
 
+    btn.appendChild(buildAvatar(node, { root: true }));
     btn.appendChild(inner);
     wrapper.appendChild(btn);
 
@@ -184,6 +222,7 @@
     }
 
     btn.appendChild(expandIcon);
+    btn.appendChild(buildAvatar(node));
     btn.appendChild(inner);
     li.appendChild(btn);
 

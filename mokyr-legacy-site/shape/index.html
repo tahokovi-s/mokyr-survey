@@ -74,27 +74,27 @@
             <p class="eyebrow">By the Numbers</p>
             <h1>A family, measured.</h1>
             <p class="lead section-lead">
-              382 scholars across four generations.
+              <span data-lineage-stat="scholarCount">380</span> scholars across four generations.
             </p>
           </div>
 
           <div class="story-visual shape-stat-grid shape-stat-grid-overview" data-reveal>
             <article class="story-stat-card shape-stat-card">
               <p class="story-stat-label">Mapped scholars</p>
-              <strong class="story-stat-value" data-count-to="382">382</strong>
+              <strong class="story-stat-value" data-count-to="380" data-lineage-stat="scholarCount">380</strong>
             </article>
             <article class="story-stat-card shape-stat-card">
               <p class="story-stat-label">Generations</p>
-              <strong class="story-stat-value" data-count-to="4">4</strong>
+              <strong class="story-stat-value" data-count-to="4" data-lineage-stat="generationCount">4</strong>
             </article>
             <article class="story-stat-card shape-stat-card">
               <p class="story-stat-label">Direct students</p>
-              <strong class="story-stat-value" data-count-to="76">76</strong>
+              <strong class="story-stat-value" data-count-to="76" data-lineage-stat="directStudentCount">76</strong>
             </article>
             <article class="story-stat-card shape-stat-card shape-stat-card-citation">
               <p class="story-stat-label shape-stat-label-wide">Citations (Google Scholar)</p>
               <strong class="story-stat-value" data-count-to="201607">201,607</strong>
-              <p class="shape-source-note">Across 154/382 scholars indexed on Google Scholar.</p>
+              <p class="shape-source-note">Across 154/<span data-lineage-stat="scholarCount">380</span> scholars indexed on Google Scholar.</p>
             </article>
           </div>
         </section>
@@ -104,7 +104,7 @@
             <p class="eyebrow">Structure</p>
             <h2>Number of students by generation</h2>
             <p class="lead section-lead">
-              How the 382 scholars distribute across four generations.
+              How the <span data-lineage-stat="scholarCount">380</span> scholars distribute across four generations.
             </p>
           </div>
 
@@ -114,28 +114,28 @@
                 <div class="generation-bar-track">
                   <div class="generation-bar-fill" style="--bar-scale: 0.41;"></div>
                 </div>
-                <strong class="generation-bar-value" data-count-to="76">76</strong>
+                <strong class="generation-bar-value" data-count-to="76" data-lineage-stat="generation1Count">76</strong>
                 <p class="generation-bar-label">Gen 1</p>
               </article>
               <article class="generation-bar">
                 <div class="generation-bar-track">
                   <div class="generation-bar-fill" style="--bar-scale: 1;"></div>
                 </div>
-                <strong class="generation-bar-value" data-count-to="186">186</strong>
+                <strong class="generation-bar-value" data-count-to="184" data-lineage-stat="generation2Count">184</strong>
                 <p class="generation-bar-label">Gen 2</p>
               </article>
               <article class="generation-bar">
                 <div class="generation-bar-track">
                   <div class="generation-bar-fill" style="--bar-scale: 0.62;"></div>
                 </div>
-                <strong class="generation-bar-value" data-count-to="115">115</strong>
+                <strong class="generation-bar-value" data-count-to="115" data-lineage-stat="generation3Count">115</strong>
                 <p class="generation-bar-label">Gen 3</p>
               </article>
               <article class="generation-bar">
                 <div class="generation-bar-track">
                   <div class="generation-bar-fill" style="--bar-scale: 0.03;"></div>
                 </div>
-                <strong class="generation-bar-value" data-count-to="5">5</strong>
+                <strong class="generation-bar-value" data-count-to="5" data-lineage-stat="generation4Count">5</strong>
                 <p class="generation-bar-label">Gen 4</p>
               </article>
             </div>
@@ -514,7 +514,7 @@
             <p class="lead section-lead">
               Citation is one channel; teaching is another. Open Syllabus finds Joel on 2,638 course pages; his students together on 5,319.
             </p>
-            <p class="shape-source-note">Source: Open Syllabus Analytics. 93 of 377 scholars evaluated (Gens 1–3 only; Gen 4 is not yet in the OS source base). Figures are lower bounds.</p>
+            <p class="shape-source-note">Source: Open Syllabus Analytics. 93 of <span data-lineage-stat="generationOneToThreeScholarCount">375</span> scholars evaluated (Gens 1–3 only; Gen 4 is not yet in the OS source base). Figures are lower bounds.</p>
           </div>
 
           <div class="story-visual shape-syllabi-panel" data-reveal>
@@ -609,6 +609,7 @@
     </main>
   </div>
 
+  <script src="../assets/lineage-stats.js?v=20260430b"></script>
   <script src="../assets/site.js"></script>
 </body>
 </html>
