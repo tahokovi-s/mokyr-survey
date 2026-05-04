@@ -467,7 +467,7 @@
   function injectNetworkIframe() {
     if (networkInjected || !networkShell) return;
     const iframe = document.createElement("iframe");
-    iframe.src   = "../network/mokyr-genealogy.html";
+    iframe.src   = "../network/mokyr-genealogy.html?embed=1";
     iframe.title = "Joel Mokyr academic genealogy visualization";
     iframe.setAttribute("loading", "lazy");
     networkShell.appendChild(iframe);

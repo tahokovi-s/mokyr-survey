@@ -132,6 +132,10 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     overflow-x: hidden;
     overflow-y: auto;
   }}
+  body.viz-fullscreen {{
+    height: 100vh;
+    overflow: hidden;
+  }}
   a {{ color: inherit; text-decoration: none; }}
 
   .site-header,
@@ -214,6 +218,70 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     flex: 0 0 auto;
     min-height: 0;
     overflow: hidden;
+  }}
+  body.viz-fullscreen #viz-shell {{
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    min-height: 100vh;
+    background: var(--bg);
+  }}
+
+  body.viz-fullscreen .site-header,
+  body.viz-fullscreen .viz-intro,
+  body.viz-fullscreen .site-footer {{
+    display: none;
+  }}
+
+  body.viz-fullscreen .viz-controls {{
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    z-index: 30;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+  }}
+  body.viz-fullscreen .viz-search-wrap,
+  body.viz-fullscreen .viz-controls-right {{
+    pointer-events: auto;
+  }}
+  body.viz-fullscreen #search {{
+    width: min(360px, calc(100vw - 28px));
+  }}
+  body.viz-fullscreen .legend-strip {{
+    position: fixed;
+    left: 50%;
+    bottom: 14px;
+    z-index: 30;
+    width: min(calc(100vw - 28px), 860px);
+    margin: 0;
+    transform: translateX(-50%);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: var(--card-shadow);
+    backdrop-filter: blur(16px);
+  }}
+  body.viz-fullscreen .legend-strip-inner {{
+    padding: 9px 16px;
+  }}
+  body.viz-fullscreen #stats {{
+    top: 74px;
+    right: 14px;
+  }}
+  body.viz-fullscreen #person-panel {{
+    top: 126px;
+    right: 14px;
+    bottom: 14px;
+  }}
+  body.viz-fullscreen #person-panel.is-minimized {{
+    top: auto;
+    bottom: 60px;
   }}
 
   .viz-intro {{
@@ -634,6 +702,22 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
       gap: 12px;
       padding: 10px 0 14px;
     }}
+    body.viz-fullscreen .viz-controls {{
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      gap: 8px;
+      padding: 0;
+    }}
+    body.viz-fullscreen .legend-strip {{
+      bottom: 10px;
+      width: calc(100vw - 20px);
+      border-radius: var(--radius-md);
+    }}
+    body.viz-fullscreen #stats {{
+      top: 112px;
+      right: 10px;
+    }}
     .viz-intro {{
       padding: 20px 0;
     }}
@@ -670,6 +754,13 @@ def _build_html(nodes: list, edges: list, d3_js: str) -> str:
     #person-panel {{
       max-height: 52vh;
       padding: 24px;
+    }}
+    body.viz-fullscreen #person-panel {{
+      top: auto;
+      left: 10px;
+      right: 10px;
+      bottom: 58px;
+      max-height: min(48vh, 360px);
     }}
     #stats {{
       max-width: calc(100vw - 24px);
@@ -941,6 +1032,12 @@ function visibleEdges(vids) {{
 }}
 
 // ── D3 setup ───────────────────────────────────────────────────────────────
+const VIEW_PARAMS = new URLSearchParams(window.location.search);
+const IS_IMMERSIVE_VIEW = VIEW_PARAMS.has('fullscreen')
+  || VIEW_PARAMS.has('embed')
+  || VIEW_PARAMS.get('view') === 'fullscreen';
+document.body.classList.toggle('viz-fullscreen', IS_IMMERSIVE_VIEW);
+
 const svg = d3.select('#graph');
 const g   = svg.append('g');
 const vizShellEl = document.getElementById('viz-shell');
@@ -999,6 +1096,16 @@ function edgeEndpointId(endpoint) {{
 }}
 
 function syncShellHeight() {{
+  if (IS_IMMERSIVE_VIEW) {{
+    const availableWidth = Math.max(320, window.innerWidth || document.documentElement.clientWidth || 0);
+    const availableHeight = Math.max(320, window.innerHeight || document.documentElement.clientHeight || 0);
+    vizShellEl.style.height = availableHeight + 'px';
+    return {{
+      width: availableWidth,
+      height: availableHeight,
+    }};
+  }}
+
   const shellTop = vizShellEl.getBoundingClientRect().top;
   const footerHeight = footerEl ? footerEl.getBoundingClientRect().height : 0;
   const availableHeight = Math.max(420, Math.floor(window.innerHeight - shellTop - footerHeight));
