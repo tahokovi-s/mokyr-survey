@@ -23,6 +23,11 @@ from photo_assets import (
 )
 
 
+EXCLUDED_HEADSHOT_NODE_IDS = {
+    "R-R_7AQMF8MYsyfXCtc": "submitted HEIC converted to a black image",
+}
+
+
 def _project_path(raw: str | None, default: Path) -> Path:
     if not raw:
         return default
@@ -85,6 +90,14 @@ def build_assets(
             continue
         if node_id not in live_node_ids:
             skipped.append({"source_name": source.name, "node_id": node_id, "reason": "unmatched_node"})
+            continue
+        if node_id in EXCLUDED_HEADSHOT_NODE_IDS:
+            skipped.append({
+                "source_name": source.name,
+                "node_id": node_id,
+                "reason": "excluded_bad_source",
+                "detail": EXCLUDED_HEADSHOT_NODE_IDS[node_id],
+            })
             continue
         if ext in PDF_EXTS:
             skipped.append({"source_name": source.name, "node_id": node_id, "reason": "unsupported_pdf"})
@@ -181,4 +194,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

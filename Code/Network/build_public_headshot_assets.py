@@ -45,7 +45,8 @@ SOURCE_OVERRIDES = {
     "R-R_8tszxcMbwpusLHJ": {
         "image_url": "https://lh3.googleusercontent.com/sitesv/AA5AbUDpMeV3Twy4MjOWxg2cGHY3k3vJg0en_KtpYVjCBTixFO60Tg1bqUGEn_m76yqKfnE5slaIy7QseI-JxAmX0tu0ZRd0dliPmSsl1lHjPEfchmoVtA4keJaxZ-_A37jjnK1Ww7zMJEhYzpMrDM5auP2DIk7__g0VOyjjx8OOffNF1_VDh6fgr_u4ZfDOWRW7-c1nN6EsohGZvUFW6TwMXyi2AMFD1_el4IOGf4w=w1280",
         "image_size": "914x1080",
-        "source_override_note": "Recovered current image URL from the public Google Sites page metadata.",
+        "local_source_path": "Code/Network/public_headshot_source_assets/R-R_8tszxcMbwpusLHJ.jpg",
+        "source_override_note": "Google Sites now blocks scripted downloads; local normalized source retained from the previous verified import.",
     },
     "S-R_9fffypos5QJL0th-0001": {
         "local_source_path": "Code/Network/public_headshot_source_assets/S-R_9fffypos5QJL0th-0001.png",
@@ -62,7 +63,8 @@ SOURCE_OVERRIDES = {
         "source_page": "https://sites.google.com/view/benjonomics",
         "image_url": "https://lh3.googleusercontent.com/sitesv/AA5AbUDrH63O0Ub2r2-kpxxy31z_kiSWz4KhJ9jqlkKP_q0q_gQDLNF7c9EXbOIBT5qOYhERQZIANZw4K8htFXhNkytfsNo9HM6Al2kWV62uOUpmAPgeAPpj2zrjH9L3BKqMKtXy3lnFqaRVpt7zij5lTz3ERTq4ZLaf2rL-qaEoHrUdx1esTdGyXnER5fA-rdpfZtbhxcSYW8I4v7IXp5bsJQ2qisN_iFuX6nUpB7Q=w1280",
         "image_size": "1000x997",
-        "source_override_note": "Original Google Sites image URL was stale; recovered from the current public site.",
+        "local_source_path": "Code/Network/public_headshot_source_assets/S-R_3uvEz6kA5E8QDAt-0002.jpg",
+        "source_override_note": "Google Sites now blocks scripted downloads; local normalized source retained from the previous verified import.",
     },
     "S-R_7vrtdVnraeOr681-0013": {
         "image_url": "https://economics.ucdavis.edu/sites/g/files/dgvnsk13091/files/styles/sf_profile/public/media/images/gilberto%20jose-nogueira.png?h=55541bb6&itok=EEPbVn6D",
@@ -84,6 +86,10 @@ SOURCE_OVERRIDES = {
         "image_size": "unknown",
         "source_override_note": "Original IFPRI image URL was stale; recovered current IFPRI profile image URL.",
     },
+}
+
+EXCLUDED_PUBLIC_CANDIDATES = {
+    "S-R_6ys8blQKVUqoEfL-0002": "reported mismatch: source image is not Reid Dickerson",
 }
 
 
@@ -252,6 +258,19 @@ def build_public_assets(
 
     selected, held_out = _read_candidates(source_paths, confidences)
     selected = [_apply_source_overrides(row) for row in selected]
+    excluded = []
+    kept_selected = []
+    for row in selected:
+        reason = EXCLUDED_PUBLIC_CANDIDATES.get(row.get("node_id", ""))
+        if reason:
+            excluded_row = dict(row)
+            excluded_row["reason"] = "excluded_bad_candidate"
+            excluded_row["detail"] = reason
+            excluded.append(excluded_row)
+        else:
+            kept_selected.append(row)
+    selected = kept_selected
+    held_out.extend(excluded)
     _fail_on_duplicate_selected_rows(selected)
 
     missing_ids = [row for row in selected if row.get("node_id") not in live_node_ids]
@@ -363,6 +382,7 @@ def build_public_assets(
     manifest.setdefault("counts", {})
     manifest["counts"].update({
         "public_candidate_selected": len(selected),
+        "public_candidate_excluded": len(excluded),
         "public_candidate_imported": len(imported),
         "public_candidate_preserved_existing": len(preserved_existing),
         "public_candidate_held_out": len(held_out),
@@ -373,6 +393,16 @@ def build_public_assets(
         "source_csvs": [relative_to_project(path) for path in source_paths],
         "confidence_threshold": sorted(confidences),
         "selected": len(selected),
+        "excluded": [
+            {
+                "node_id": row.get("node_id", ""),
+                "name": row.get("name", ""),
+                "reason": row.get("reason", ""),
+                "detail": row.get("detail", ""),
+                "source_csv": row.get("source_csv", ""),
+            }
+            for row in excluded
+        ],
         "imported": len(imported),
         "preserved_existing": preserved_existing,
         "held_out": len(held_out),
