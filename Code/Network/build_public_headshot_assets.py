@@ -91,6 +91,34 @@ SOURCE_OVERRIDES = {
 EXCLUDED_PUBLIC_CANDIDATES = {
     "S-R_6ys8blQKVUqoEfL-0002": "reported mismatch: source image is not Reid Dickerson",
 }
+ADDITIONAL_PUBLIC_CANDIDATES = [
+    {
+        "node_id": "R-R_6NWz12rEzj1VjP2",
+        "name": "Don Williams",
+        "status": "candidate_image",
+        "confidence": "high",
+        "source_page": "https://www.kent.edu/business/donald-r-williams-phd",
+        "image_url": "https://www-s3-live.kent.edu/s3fs-root/s3fs-public/styles/profile_photo_internal/public/Williams%252C%2520Donald.jpg?VersionId=EYKljxFaLm55SYKyAjbCLuYnck_g9aJn&h=8a019425&itok=h9gBZmBe",
+        "image_alt": "Don Williams",
+        "image_size": "480x720",
+        "local_source_path": "Code/Network/public_headshot_source_assets/R-R_6NWz12rEzj1VjP2.jpg",
+        "source_csv": "Code/Network/build_public_headshot_assets.py:ADDITIONAL_PUBLIC_CANDIDATES",
+        "source_override_note": "Official Kent State profile headshot found in a follow-up first-generation search.",
+    },
+    {
+        "node_id": "R-R_7AQMF8MYsyfXCtc",
+        "name": "Nicole Saito",
+        "status": "candidate_image",
+        "confidence": "high",
+        "source_page": "https://economics.northwestern.edu/centers/center-for-economic-history/people-center-for-economic-history/graduate-students/",
+        "image_url": "https://economics.northwestern.edu/centers/center-for-economic-history/people-center-for-economic-history/graduate-students/nicole-saito-265x265.png",
+        "image_alt": "Nicole Saito",
+        "image_size": "265x265",
+        "local_source_path": "Code/Network/public_headshot_source_assets/R-R_7AQMF8MYsyfXCtc.png",
+        "source_csv": "Code/Network/build_public_headshot_assets.py:ADDITIONAL_PUBLIC_CANDIDATES",
+        "source_override_note": "Official Northwestern Economics graduate-student headshot replaces the unusable private upload.",
+    },
+]
 
 
 def _project_path(raw: str | None, default: Path) -> Path:
@@ -257,6 +285,9 @@ def build_public_assets(
         sys.exit(f"ERROR: no public headshot source CSVs matched: {', '.join(source_patterns)}")
 
     selected, held_out = _read_candidates(source_paths, confidences)
+    additional_node_ids = {row["node_id"] for row in ADDITIONAL_PUBLIC_CANDIDATES}
+    selected = [row for row in selected if row.get("node_id") not in additional_node_ids]
+    selected.extend(dict(row) for row in ADDITIONAL_PUBLIC_CANDIDATES)
     selected = [_apply_source_overrides(row) for row in selected]
     excluded = []
     kept_selected = []
