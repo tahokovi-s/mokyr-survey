@@ -243,6 +243,7 @@ def main() -> None:
         PROJECT_ROOT / "Code" / "Network" / "build_master_list.py",
         PROJECT_ROOT / "Code" / "Network" / "build_outstanding_lists.py",
         PROJECT_ROOT / "Code" / "Network" / "build_headshot_assets.py",
+        PROJECT_ROOT / "Code" / "Network" / "build_public_headshot_assets.py",
         PROJECT_ROOT / "Code" / "Network" / "build_genealogy_data_asset.py",
         PROJECT_ROOT / "Code" / "Network" / "viz_network.py",
     ]
@@ -385,6 +386,20 @@ def main() -> None:
         "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
     ]
     run_step("build_headshot_assets", headshot_cmd)
+
+    public_headshot_sources = sorted((PROJECT_ROOT / "tmp").glob("headshot_candidate_sources*.csv"))
+    if public_headshot_sources:
+        public_headshot_cmd = [
+            sys.executable,
+            "Code/Network/build_public_headshot_assets.py",
+            "--date", date_token,
+            "--nodes", str(nodes.relative_to(PROJECT_ROOT)),
+            "--manifest", str(headshot_manifest.relative_to(PROJECT_ROOT)),
+        ]
+        run_step("build_public_headshot_assets", public_headshot_cmd)
+    else:
+        print("\n=== build_public_headshot_assets ===")
+        print("Skipping: no tmp/headshot_candidate_sources*.csv files found.")
 
     d3_path = resolve_project_path(args.d3_path) if args.d3_path else extract_d3_from_existing_html(date_token)
     viz_cmd = [
