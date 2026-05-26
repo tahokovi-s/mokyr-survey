@@ -7,7 +7,7 @@
   <meta name="description" content="A narrative portrait of Joel Mokyr's academic family in numbers.">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, notranslate">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="../assets/styles.css?v=20260525k">
   <noscript>
     <style>[data-reveal], [data-reveal-group] > * { opacity: 1 !important; transform: none !important; }</style>
   </noscript>
@@ -27,7 +27,6 @@
       </a>
       <a class="back-link" href="../">Back to welcome</a>
     </header>
-
     <main class="shape-layout">
       <aside class="shape-progress" data-reveal>
         <p class="shape-progress-label">Story</p>
@@ -38,11 +37,11 @@
               <span class="shape-progress-chapter-title">The Tree</span>
             </a>
             <div class="shape-progress-panels">
-              <a class="shape-progress-item" href="#overview" data-story-nav-item="overview">Overview</a>
-              <a class="shape-progress-item" href="#structure" data-story-nav-item="structure">Structure</a>
-              <a class="shape-progress-item" href="#reach" data-story-nav-item="reach">Reach</a>
-              <a class="shape-progress-item" href="#jobs" data-story-nav-item="jobs">Careers</a>
-              <a class="shape-progress-item" href="#cohorts" data-story-nav-item="cohorts">Cohorts</a>
+              <a class="shape-progress-item" href="#overview" data-story-nav-item="overview">At a glance</a>
+              <a class="shape-progress-item" href="#structure" data-story-nav-item="structure">Generation sizes</a>
+              <a class="shape-progress-item" href="#reach" data-story-nav-item="reach">Current countries</a>
+              <a class="shape-progress-item" href="#jobs" data-story-nav-item="jobs">Current roles</a>
+              <a class="shape-progress-item" href="#cohorts" data-story-nav-item="cohorts">PhD timing</a>
             </div>
           </div>
           <div class="shape-progress-chapter">
@@ -51,9 +50,9 @@
               <span class="shape-progress-chapter-title">The Work</span>
             </a>
             <div class="shape-progress-panels">
-              <a class="shape-progress-item" href="#impact" data-story-nav-item="impact">Impact</a>
-              <a class="shape-progress-item" href="#generations" data-story-nav-item="generations">Generations</a>
-              <a class="shape-progress-item" href="#syllabi" data-story-nav-item="syllabi">Syllabi</a>
+              <a class="shape-progress-item" href="#impact" data-story-nav-item="impact">Citation reach</a>
+              <a class="shape-progress-item" href="#generations" data-story-nav-item="generations">Citation momentum</a>
+              <a class="shape-progress-item" href="#syllabi" data-story-nav-item="syllabi">Teaching reach</a>
             </div>
           </div>
           <div class="shape-progress-chapter">
@@ -62,7 +61,7 @@
               <span class="shape-progress-chapter-title">The Lineage</span>
             </a>
             <div class="shape-progress-panels">
-              <a class="shape-progress-item" href="#lineage" data-story-nav-item="lineage">Lineage</a>
+              <a class="shape-progress-item" href="#lineage" data-story-nav-item="lineage">Example paths</a>
             </div>
           </div>
         </nav>
@@ -78,30 +77,32 @@
             </p>
           </div>
 
-          <div class="story-visual shape-stat-grid shape-stat-grid-overview" data-reveal>
-            <article class="story-stat-card shape-stat-card">
-              <p class="story-stat-label">Mapped scholars</p>
-              <strong class="story-stat-value" data-count-to="380" data-lineage-stat="scholarCount">380</strong>
-            </article>
-            <article class="story-stat-card shape-stat-card">
-              <p class="story-stat-label">Generations</p>
-              <strong class="story-stat-value" data-count-to="4" data-lineage-stat="generationCount">4</strong>
-            </article>
-            <article class="story-stat-card shape-stat-card">
-              <p class="story-stat-label">Direct students</p>
-              <strong class="story-stat-value" data-count-to="76" data-lineage-stat="directStudentCount">76</strong>
-            </article>
-            <article class="story-stat-card shape-stat-card shape-stat-card-citation">
-              <p class="story-stat-label shape-stat-label-wide">Citations (Google Scholar)</p>
-              <strong class="story-stat-value" data-count-to="201607">201,607</strong>
-              <p class="shape-source-note">Across 154/<span data-lineage-stat="scholarCount">380</span> scholars indexed on Google Scholar.</p>
-            </article>
+          <div class="story-visual shape-overview-panel" data-reveal>
+            <div class="shape-stat-grid shape-stat-grid-overview">
+              <article class="story-stat-card shape-stat-card">
+                <p class="story-stat-label">Mapped scholars</p>
+                <strong class="story-stat-value" data-count-to="380" data-lineage-stat="scholarCount">380</strong>
+              </article>
+              <article class="story-stat-card shape-stat-card">
+                <p class="story-stat-label">Generations</p>
+                <strong class="story-stat-value" data-count-to="4" data-lineage-stat="generationCount">4</strong>
+              </article>
+              <article class="story-stat-card shape-stat-card">
+                <p class="story-stat-label">Direct students</p>
+                <strong class="story-stat-value" data-count-to="76" data-lineage-stat="directStudentCount">76</strong>
+              </article>
+              <article class="story-stat-card shape-stat-card shape-stat-card-citation">
+                <p class="story-stat-label shape-stat-label-wide">Google Scholar citations</p>
+                <strong class="story-stat-value" data-count-to="201607">201,607</strong>
+              </article>
+            </div>
+            <p class="shape-kicker-strip shape-overview-note">Citation totals reflect available Google Scholar matches.</p>
           </div>
         </section>
 
         <section class="story-panel story-panel-backdrop story-panel-backdrop-structure" id="structure" data-story-step="structure">
           <div class="story-copy" data-reveal>
-            <p class="eyebrow">Structure</p>
+            <p class="eyebrow">Generation sizes</p>
             <h2>Number of students by generation</h2>
             <p class="lead section-lead">
               How the <span data-lineage-stat="scholarCount">380</span> scholars distribute across four generations.
@@ -109,281 +110,190 @@
           </div>
 
           <div class="story-visual" data-reveal>
-            <div class="generation-bars" aria-label="Generation sizes">
-              <article class="generation-bar">
-                <div class="generation-bar-track">
-                  <div class="generation-bar-fill" style="--bar-scale: 0.41;"></div>
-                </div>
-                <strong class="generation-bar-value" data-count-to="76" data-lineage-stat="generation1Count">76</strong>
-                <p class="generation-bar-label">Gen 1</p>
-              </article>
-              <article class="generation-bar">
-                <div class="generation-bar-track">
-                  <div class="generation-bar-fill" style="--bar-scale: 1;"></div>
-                </div>
-                <strong class="generation-bar-value" data-count-to="184" data-lineage-stat="generation2Count">184</strong>
-                <p class="generation-bar-label">Gen 2</p>
-              </article>
-              <article class="generation-bar">
-                <div class="generation-bar-track">
-                  <div class="generation-bar-fill" style="--bar-scale: 0.62;"></div>
-                </div>
-                <strong class="generation-bar-value" data-count-to="115" data-lineage-stat="generation3Count">115</strong>
-                <p class="generation-bar-label">Gen 3</p>
-              </article>
-              <article class="generation-bar">
-                <div class="generation-bar-track">
-                  <div class="generation-bar-fill" style="--bar-scale: 0.03;"></div>
-                </div>
-                <strong class="generation-bar-value" data-count-to="5" data-lineage-stat="generation4Count">5</strong>
-                <p class="generation-bar-label">Gen 4</p>
-              </article>
+            <div class="generation-distribution" aria-label="Generation sizes">
+              <div class="generation-stack" role="img" aria-label="Generation distribution: Gen 1 has 76 scholars, Gen 2 has 184, Gen 3 has 115, and Gen 4 has 5.">
+                <span class="generation-segment generation-segment-1" title="Gen 1: 76 scholars">
+                  <span class="generation-segment-label"><span>Gen 1</span><strong data-count-to="76" data-lineage-stat="generation1Count">76</strong></span>
+                </span>
+                <span class="generation-segment generation-segment-2" title="Gen 2: 184 scholars">
+                  <span class="generation-segment-label"><span>Gen 2</span><strong data-count-to="184" data-lineage-stat="generation2Count">184</strong></span>
+                </span>
+                <span class="generation-segment generation-segment-3" title="Gen 3: 115 scholars">
+                  <span class="generation-segment-label"><span>Gen 3</span><strong data-count-to="115" data-lineage-stat="generation3Count">115</strong></span>
+                </span>
+                <span class="generation-segment generation-segment-4" title="Gen 4: 5 scholars">
+                  <span class="generation-segment-label"><span>Gen 4</span><strong data-count-to="5" data-lineage-stat="generation4Count">5</strong></span>
+                </span>
+              </div>
             </div>
           </div>
         </section>
 
         <section class="story-panel story-panel--full-bleed story-panel-backdrop story-panel-backdrop-reach" id="reach" data-story-step="reach">
           <div class="story-copy" data-reveal>
-            <p class="eyebrow">Reach</p>
+            <p class="eyebrow">Current countries</p>
             <h2>And the map keeps widening.</h2>
-            <p class="lead section-lead">
-              29 countries, led by the United States.
-            </p>
 
-            <div class="reach-anchor" data-reveal>
-              <strong class="reach-anchor-number">29</strong>
-              <p class="reach-anchor-caption">countries<br>represented</p>
+            <div class="reach-anchor reach-anchor--sentence" data-reveal>
+              <p>Joel&rsquo;s academic family lives across <strong>29</strong> countries.</p>
             </div>
           </div>
 
-          <div class="story-visual country-panel" data-reveal>
-            <div class="country-list country-list--expanded" aria-label="Countries represented across four generations">
-              <article class="country-row">
-                <span class="country-name">United States</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 1;"></div></div>
-                <strong class="country-value" data-count-to="212">212</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">United Kingdom</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.094;"></div></div>
-                <strong class="country-value" data-count-to="20">20</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">China</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.071;"></div></div>
-                <strong class="country-value" data-count-to="15">15</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Italy</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.061;"></div></div>
-                <strong class="country-value" data-count-to="13">13</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Israel</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.057;"></div></div>
-                <strong class="country-value" data-count-to="12">12</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">India</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.052;"></div></div>
-                <strong class="country-value" data-count-to="11">11</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Spain</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.047;"></div></div>
-                <strong class="country-value" data-count-to="10">10</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Canada</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.047;"></div></div>
-                <strong class="country-value" data-count-to="10">10</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Australia</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.033;"></div></div>
-                <strong class="country-value" data-count-to="7">7</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Germany</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.028;"></div></div>
-                <strong class="country-value" data-count-to="6">6</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">New Zealand</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.028;"></div></div>
-                <strong class="country-value" data-count-to="6">6</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Singapore</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.024;"></div></div>
-                <strong class="country-value" data-count-to="5">5</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Netherlands</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.024;"></div></div>
-                <strong class="country-value" data-count-to="5">5</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Japan</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.019;"></div></div>
-                <strong class="country-value" data-count-to="4">4</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Sweden</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.019;"></div></div>
-                <strong class="country-value" data-count-to="4">4</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Belgium</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.014;"></div></div>
-                <strong class="country-value" data-count-to="3">3</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Denmark</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.009;"></div></div>
-                <strong class="country-value" data-count-to="2">2</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Norway</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.009;"></div></div>
-                <strong class="country-value" data-count-to="2">2</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Mexico</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.009;"></div></div>
-                <strong class="country-value" data-count-to="2">2</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">France</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.009;"></div></div>
-                <strong class="country-value" data-count-to="2">2</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Slovakia</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.005;"></div></div>
-                <strong class="country-value" data-count-to="1">1</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Portugal</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.005;"></div></div>
-                <strong class="country-value" data-count-to="1">1</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">United Arab Emirates</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.005;"></div></div>
-                <strong class="country-value" data-count-to="1">1</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Turkey</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.005;"></div></div>
-                <strong class="country-value" data-count-to="1">1</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Chile</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.005;"></div></div>
-                <strong class="country-value" data-count-to="1">1</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Ecuador</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.005;"></div></div>
-                <strong class="country-value" data-count-to="1">1</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Ireland</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.005;"></div></div>
-                <strong class="country-value" data-count-to="1">1</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">South Korea</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.005;"></div></div>
-                <strong class="country-value" data-count-to="1">1</strong>
-              </article>
-              <article class="country-row">
-                <span class="country-name">Brazil</span>
-                <div class="country-bar"><div class="country-bar-fill" style="--bar-scale: 0.005;"></div></div>
-                <strong class="country-value" data-count-to="1">1</strong>
-              </article>
+          <div class="story-visual country-panel global-country-panel" data-country-view-root data-reveal>
+            <div class="country-view-toggle" role="tablist" aria-label="Current residence view">
+              <button class="country-view-toggle-button is-active" type="button" role="tab" id="country-map-tab" aria-selected="true" aria-controls="country-map-view" data-country-view-button="map">Map</button>
+              <button class="country-view-toggle-button" type="button" role="tab" id="country-list-tab" aria-selected="false" aria-controls="country-list-view" data-country-view-button="list">List</button>
             </div>
 
+            <div class="country-view country-view-map is-active" id="country-map-view" role="tabpanel" aria-labelledby="country-map-tab" data-country-view-panel="map">
+              <div class="global-map-stage" role="img" aria-label="Heatmap of current countries of residence across Joel Mokyr's academic family. Countries with descendants are shaded; larger darker points indicate more descendants.">
+                <img class="global-map-base" src="../assets/images/world-map-equal-earth.svg?v=20260515b" alt="" aria-hidden="true" loading="lazy" decoding="async">
+
+              <span class="map-point map-point-labeled" style="--x: 22.8%; --y: 31%; --size: 76px; --heat: 0.72;" aria-label="United States: 212 descendants" title="United States: 212">
+                <span class="map-point-label">United States <b>212</b></span>
+              </span>
+              <span class="map-point map-point-labeled" style="--x: 49.2%; --y: 20%; --size: 34px; --heat: 0.46;" aria-label="United Kingdom: 20 descendants" title="United Kingdom: 20">
+                <span class="map-point-label">UK <b>20</b></span>
+              </span>
+              <span class="map-point map-point-labeled" style="--x: 78.9%; --y: 31%; --size: 31px; --heat: 0.42;" aria-label="China: 15 descendants" title="China: 15">
+                <span class="map-point-label">China <b>15</b></span>
+              </span>
+              <span class="map-point" style="--x: 53.3%; --y: 27%; --size: 29px; --heat: 0.4;" aria-label="Italy: 13 descendants" title="Italy: 13"></span>
+              <span class="map-point" style="--x: 59.7%; --y: 33%; --size: 28px; --heat: 0.38;" aria-label="Israel: 12 descendants" title="Israel: 12"></span>
+              <span class="map-point map-point-labeled" style="--x: 71.7%; --y: 38%; --size: 27px; --heat: 0.37;" aria-label="India: 11 descendants" title="India: 11">
+                <span class="map-point-label">India <b>11</b></span>
+              </span>
+              <span class="map-point" style="--x: 48.9%; --y: 28%; --size: 26px; --heat: 0.35;" aria-label="Spain: 10 descendants" title="Spain: 10"></span>
+              <span class="map-point" style="--x: 20.6%; --y: 19%; --size: 26px; --heat: 0.35;" aria-label="Canada: 10 descendants" title="Canada: 10"></span>
+              <span class="map-point" style="--x: 87.2%; --y: 64%; --size: 22px; --heat: 0.3;" aria-label="Australia: 7 descendants" title="Australia: 7"></span>
+              <span class="map-point" style="--x: 52.8%; --y: 22%; --size: 21px; --heat: 0.28;" aria-label="Germany: 6 descendants" title="Germany: 6"></span>
+              <span class="map-point" style="--x: 94%; --y: 73%; --size: 21px; --heat: 0.28;" aria-label="New Zealand: 6 descendants" title="New Zealand: 6"></span>
+              <span class="map-point" style="--x: 78.9%; --y: 49%; --size: 19px; --heat: 0.26;" aria-label="Singapore: 5 descendants" title="Singapore: 5"></span>
+              <span class="map-point" style="--x: 51.4%; --y: 21%; --size: 19px; --heat: 0.26;" aria-label="Netherlands: 5 descendants" title="Netherlands: 5"></span>
+              <span class="map-point" style="--x: 88.3%; --y: 30%; --size: 18px; --heat: 0.24;" aria-label="Japan: 4 descendants" title="Japan: 4"></span>
+              <span class="map-point" style="--x: 55%; --y: 17%; --size: 18px; --heat: 0.24;" aria-label="Sweden: 4 descendants" title="Sweden: 4"></span>
+              <span class="map-point" style="--x: 51.1%; --y: 22%; --size: 16px; --heat: 0.22;" aria-label="Belgium: 3 descendants" title="Belgium: 3"></span>
+              <span class="map-point" style="--x: 52.8%; --y: 19%; --size: 14px; --heat: 0.2;" aria-label="Denmark: 2 descendants" title="Denmark: 2"></span>
+              <span class="map-point" style="--x: 52.2%; --y: 16%; --size: 14px; --heat: 0.2;" aria-label="Norway: 2 descendants" title="Norway: 2"></span>
+              <span class="map-point" style="--x: 21.7%; --y: 37%; --size: 14px; --heat: 0.2;" aria-label="Mexico: 2 descendants" title="Mexico: 2"></span>
+              <span class="map-point" style="--x: 50.6%; --y: 24%; --size: 14px; --heat: 0.2;" aria-label="France: 2 descendants" title="France: 2"></span>
+              <span class="map-point" style="--x: 55.5%; --y: 23%; --size: 10px; --heat: 0.18;" aria-label="Slovakia: 1 descendant" title="Slovakia: 1"></span>
+              <span class="map-point" style="--x: 47.8%; --y: 28%; --size: 10px; --heat: 0.18;" aria-label="Portugal: 1 descendant" title="Portugal: 1"></span>
+              <span class="map-point" style="--x: 65%; --y: 37%; --size: 10px; --heat: 0.18;" aria-label="United Arab Emirates: 1 descendant" title="United Arab Emirates: 1"></span>
+              <span class="map-point" style="--x: 59.7%; --y: 28%; --size: 10px; --heat: 0.18;" aria-label="Turkey: 1 descendant" title="Turkey: 1"></span>
+              <span class="map-point" style="--x: 30.3%; --y: 67%; --size: 10px; --heat: 0.18;" aria-label="Chile: 1 descendant" title="Chile: 1"></span>
+              <span class="map-point" style="--x: 28.3%; --y: 51%; --size: 10px; --heat: 0.18;" aria-label="Ecuador: 1 descendant" title="Ecuador: 1"></span>
+              <span class="map-point" style="--x: 47.8%; --y: 21%; --size: 10px; --heat: 0.18;" aria-label="Ireland: 1 descendant" title="Ireland: 1"></span>
+              <span class="map-point" style="--x: 85.6%; --y: 30%; --size: 10px; --heat: 0.18;" aria-label="South Korea: 1 descendant" title="South Korea: 1"></span>
+                <span class="map-point" style="--x: 34.7%; --y: 56%; --size: 10px; --heat: 0.18;" aria-label="Brazil: 1 descendant" title="Brazil: 1"></span>
+              </div>
+            </div>
+
+            <div class="country-view country-view-list" id="country-list-view" role="tabpanel" aria-labelledby="country-list-tab" data-country-view-panel="list" hidden>
+              <ol class="country-pill-list" aria-label="All current countries of residence by descendant count">
+                <li><span>United States of America</span><b>(212)</b></li>
+                <li><span>United Kingdom</span><b>(20)</b></li>
+                <li><span>China</span><b>(15)</b></li>
+                <li><span>Italy</span><b>(13)</b></li>
+                <li><span>Israel</span><b>(12)</b></li>
+                <li><span>India</span><b>(11)</b></li>
+                <li><span>Spain</span><b>(10)</b></li>
+                <li><span>Canada</span><b>(10)</b></li>
+                <li><span>Australia</span><b>(7)</b></li>
+                <li><span>Germany</span><b>(6)</b></li>
+                <li><span>New Zealand</span><b>(6)</b></li>
+                <li><span>Singapore</span><b>(5)</b></li>
+                <li><span>Netherlands</span><b>(5)</b></li>
+                <li><span>Japan</span><b>(4)</b></li>
+                <li><span>Sweden</span><b>(4)</b></li>
+                <li><span>Belgium</span><b>(3)</b></li>
+                <li><span>Denmark</span><b>(2)</b></li>
+                <li><span>Norway</span><b>(2)</b></li>
+                <li><span>Mexico</span><b>(2)</b></li>
+                <li><span>France</span><b>(2)</b></li>
+                <li><span>Slovakia</span><b>(1)</b></li>
+                <li><span>Portugal</span><b>(1)</b></li>
+                <li><span>United Arab Emirates</span><b>(1)</b></li>
+                <li><span>Turkey</span><b>(1)</b></li>
+                <li><span>Chile</span><b>(1)</b></li>
+                <li><span>Ecuador</span><b>(1)</b></li>
+                <li><span>Ireland</span><b>(1)</b></li>
+                <li><span>South Korea</span><b>(1)</b></li>
+                <li><span>Brazil</span><b>(1)</b></li>
+              </ol>
+            </div>
           </div>
         </section>
 
         <section class="story-panel story-panel-backdrop story-panel-backdrop-jobs" id="jobs" data-story-step="jobs">
           <div class="story-copy" data-reveal>
-            <p class="eyebrow">Careers</p>
+            <p class="eyebrow">Current roles</p>
             <h2>Where the family works today.</h2>
             <p class="lead section-lead">
-              Among 248 of Joel&rsquo;s descendants with a known current role, the split spans faculty, trainees, industry, and public-sector work.
+              Among descendants with a known or strongly verified current role, the split spans faculty, trainees, industry, and public-sector work.
             </p>
           </div>
 
           <div class="story-visual story-rank-panel" data-reveal>
-            <div class="rank-list" aria-label="Current roles reported by respondents">
+            <div class="rank-list" aria-label="Known or strongly verified current roles">
               <article class="rank-row">
                 <div class="rank-copy">
                   <strong>Tenured / tenure-track faculty</strong>
-                  <span>Current role</span>
                 </div>
                 <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 1;"></div></div>
-                <strong class="rank-value" data-count-to="125">125</strong>
+                <strong class="rank-value" data-count-to="160">160</strong>
               </article>
               <article class="rank-row">
                 <div class="rank-copy">
                   <strong>PhD student</strong>
-                  <span>Current role</span>
                 </div>
-                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.392;"></div></div>
-                <strong class="rank-value" data-count-to="49">49</strong>
+                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.544;"></div></div>
+                <strong class="rank-value" data-count-to="87">87</strong>
               </article>
               <article class="rank-row">
                 <div class="rank-copy">
                   <strong>Industry / private sector</strong>
-                  <span>Current role</span>
                 </div>
-                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.232;"></div></div>
-                <strong class="rank-value" data-count-to="29">29</strong>
+                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.231;"></div></div>
+                <strong class="rank-value" data-count-to="37">37</strong>
               </article>
               <article class="rank-row">
                 <div class="rank-copy">
                   <strong>Government / policy / nonprofit</strong>
-                  <span>Current role</span>
                 </div>
-                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.168;"></div></div>
-                <strong class="rank-value" data-count-to="21">21</strong>
+                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.194;"></div></div>
+                <strong class="rank-value" data-count-to="31">31</strong>
               </article>
               <article class="rank-row">
                 <div class="rank-copy">
                   <strong>Other</strong>
-                  <span>Current role</span>
                 </div>
-                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.088;"></div></div>
-                <strong class="rank-value" data-count-to="11">11</strong>
+                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.1;"></div></div>
+                <strong class="rank-value" data-count-to="16">16</strong>
               </article>
               <article class="rank-row">
                 <div class="rank-copy">
                   <strong>Postdoc</strong>
-                  <span>Current role</span>
                 </div>
-                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.08;"></div></div>
-                <strong class="rank-value" data-count-to="10">10</strong>
+                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.088;"></div></div>
+                <strong class="rank-value" data-count-to="14">14</strong>
               </article>
               <article class="rank-row">
                 <div class="rank-copy">
                   <strong>Non-tenure-track faculty (incl. teaching faculty)</strong>
-                  <span>Current role</span>
                 </div>
-                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.024;"></div></div>
-                <strong class="rank-value" data-count-to="3">3</strong>
+                <div class="rank-bar"><div class="rank-bar-fill" style="--bar-scale: 0.038;"></div></div>
+                <strong class="rank-value" data-count-to="6">6</strong>
               </article>
             </div>
-            <p class="shape-source-note">Based on 248 of Joel&rsquo;s descendants with a known current role; roles we could not verify are not shown.</p>
+            <p class="shape-source-note">Based on respondent-reported roles and conservative public verification; roles we could not verify are not shown.</p>
           </div>
         </section>
 
         <section class="story-panel story-panel-backdrop story-panel-backdrop-timeline" id="cohorts" data-story-step="cohorts">
           <div class="story-copy" data-reveal>
-            <p class="eyebrow">Cohorts</p>
-            <h2>Median PhD year</h2>
+            <p class="eyebrow">PhD timing</p>
+            <h2>Median PhD year by generation</h2>
           </div>
 
           <div class="story-visual" data-reveal>
@@ -413,10 +323,10 @@
 
         <section class="story-panel story-panel--full-bleed story-panel-backdrop story-panel-backdrop-impact" id="impact" data-story-step="impact">
           <div class="story-copy" data-reveal>
-            <p class="eyebrow">Impact</p>
-            <h2>The tree isn't just growing — it's still being read.</h2>
+            <p class="eyebrow">Citation reach</p>
+            <h2>The work is still being read.</h2>
             <p class="lead section-lead">
-              Across 154 scholars matched on Google Scholar: 201,607 citations, more than half of them in the last five years.
+              Across the Google Scholar matches, the citation record shows durable reach and recent momentum.
             </p>
           </div>
 
@@ -427,7 +337,7 @@
                 <strong class="story-stat-value" data-count-to="201607">201,607</strong>
               </article>
               <article class="story-stat-card shape-stat-card">
-                <p class="story-stat-label">Last-5-yr citations</p>
+                <p class="story-stat-label">Citations in the last 5 years</p>
                 <strong class="story-stat-value" data-count-to="111103">111,103</strong>
               </article>
               <article class="story-stat-card shape-stat-card">
@@ -445,7 +355,7 @@
 
         <section class="story-panel story-panel-backdrop story-panel-backdrop-generations" id="generations" data-story-step="generations">
           <div class="story-copy" data-reveal>
-            <p class="eyebrow">Generations</p>
+            <p class="eyebrow">Citation momentum</p>
             <h2>The academic family continues to be productive.</h2>
           </div>
 
@@ -509,12 +419,12 @@
 
         <section class="story-panel story-panel-backdrop story-panel-backdrop-syllabi" id="syllabi" data-story-step="syllabi">
           <div class="story-copy" data-reveal>
-            <p class="eyebrow">Syllabi</p>
+            <p class="eyebrow">Teaching reach</p>
             <h2>Assigned, generation after generation.</h2>
             <p class="lead section-lead">
               Citation is one channel; teaching is another. Open Syllabus finds Joel on 2,638 course pages; his students together on 5,319.
             </p>
-            <p class="shape-source-note">Source: Open Syllabus Analytics. 93 of <span data-lineage-stat="generationOneToThreeScholarCount">375</span> scholars evaluated (Gens 1–3 only; Gen 4 is not yet in the OS source base). Figures are lower bounds.</p>
+            <p class="shape-source-note">Source: Open Syllabus Analytics. Totals reflect available matches and should be read as lower bounds.</p>
           </div>
 
           <div class="story-visual shape-syllabi-panel" data-reveal>
@@ -530,17 +440,13 @@
                 <p class="shape-source-note">Syllabus appearances, Gens 1&ndash;3 combined</p>
               </article>
             </div>
-            <p class="shape-kicker-strip shape-syllabi-kicker">Joel alone accounts for roughly one in every three syllabus appearances across the family.</p>
           </div>
         </section>
 
         <section class="story-panel story-panel--centered story-panel-backdrop story-panel-backdrop-lineage" id="lineage" data-story-step="lineage">
           <div class="story-copy" data-reveal>
-            <p class="eyebrow">Lineage</p>
+            <p class="eyebrow">Example paths</p>
             <h2>Ideas carried four generations forward.</h2>
-            <p class="lead section-lead">
-              Mokyr → Abramitzky → Santiago Perez → Reem Zaiour.
-            </p>
 
             <div class="story-actions" data-reveal-group>
               <a class="action-card action-primary" href="../family/">
@@ -554,62 +460,222 @@
 
           <div class="story-visual shape-lineage-panel" data-reveal>
             <section id="lineage-panel-zaiour"
-                     class="shape-lineage-view"
-                     aria-label="Joel Mokyr to Reem Zaiour lineage chain">
-              <div class="chain-rail" aria-label="Joel Mokyr to Reem Zaiour lineage chain">
-                <div class="chain-node chain-node-root">
-                  <span class="chain-gen">Joel Mokyr</span>
-                  <strong class="chain-name">The Lever of Riches</strong>
+                     class="shape-lineage-view lineage-tree-view"
+                     aria-label="Lineage examples branching from Joel Mokyr">
+              <div class="lineage-tree" aria-label="Three lineage examples branching from Joel Mokyr">
+                <div class="lineage-tree-node lineage-tree-root">
+                  <div class="lineage-node-head">
+                    <span class="lineage-portrait">
+                      <img src="../assets/images/joel-mokyr-168x210.jpg" alt="Portrait of Joel Mokyr" loading="lazy" decoding="async">
+                    </span>
+                    <span class="lineage-node-id">
+                      <span class="chain-gen">Root</span>
+                      <strong class="chain-name">Joel Mokyr</strong>
+                    </span>
+                  </div>
+                  <span class="lineage-work">The Lever of Riches</span>
                   <span class="chain-meta">Oxford University Press, 1990</span>
-                  <div class="chain-counts">
-                    <span class="chain-count">Syllabus appearances — 2,638</span>
-                    <span class="chain-count">Citations (Google Scholar) — 33,207</span>
+                  <div class="lineage-node-stats" aria-label="Joel Mokyr syllabus appearance and Google Scholar citation counts">
+                    <span><b>Syllabus Appearances</b><span>2,638</span></span>
+                    <span><b>Google Scholar Citations</b><span>33,207</span></span>
                   </div>
                 </div>
-                <div class="chain-arrow" aria-hidden="true"></div>
-                <p class="chain-glue">Mokyr → Abramitzky</p>
-                <div class="chain-node">
-                  <span class="chain-gen">Gen 1 · Ran Abramitzky</span>
-                  <strong class="chain-name">Europe&rsquo;s Tired, Poor, Huddled Masses: Self-Selection and Economic Outcomes in the Age of Mass Migration</strong>
-                  <span class="chain-meta">American Economic Review, 2012</span>
-                  <div class="chain-counts">
-                    <span class="chain-count">Syllabus appearances — 284</span>
-                    <span class="chain-count">Citations (Google Scholar) — 6,605</span>
-                  </div>
-                </div>
-                <div class="chain-arrow" aria-hidden="true"></div>
-                <p class="chain-glue">Abramitzky → Perez</p>
-                <div class="chain-node">
-                  <span class="chain-gen">Gen 2 · Santiago Perez</span>
-                  <strong class="chain-name">Intergenerational Occupational Mobility Across Three Continents</strong>
-                  <span class="chain-meta">Journal of Economic History, 2017</span>
-                  <div class="chain-counts">
-                    <span class="chain-count">Syllabus appearances — 31</span>
-                    <span class="chain-count">Citations (Google Scholar) — 1,520</span>
-                  </div>
-                </div>
-                <div class="chain-arrow" aria-hidden="true"></div>
-                <p class="chain-glue">Perez → Zaiour</p>
-                <div class="chain-node">
-                  <span class="chain-gen">Gen 3 · Reem Zaiour</span>
-                  <strong class="chain-name">Changes in International Immigration and Internal Native Mobility after COVID-19 in the USA</strong>
-                  <span class="chain-meta">Journal of Population Economics, 2023</span>
-                  <div class="chain-counts">
-                    <span class="chain-count">Syllabus appearances — —</span>
-                    <span class="chain-count">Citations (Google Scholar) — 91</span>
-                  </div>
+
+                <div class="lineage-tree-spine" aria-hidden="true"></div>
+
+                <div class="lineage-tree-branches">
+                  <article class="lineage-tree-branch" aria-label="Avner Greif to Saumitra Jha to Katrina Kosec path">
+                    <ol class="lineage-branch-list">
+                      <li class="lineage-tree-node">
+                        <div class="lineage-node-head">
+                          <span class="lineage-portrait">
+                            <img src="../assets/images/headshots/R-R_1vcYK98Jytjuqqp.jpg" alt="Portrait of Avner Greif" loading="lazy" decoding="async">
+                          </span>
+                          <span class="lineage-node-id">
+                            <span class="chain-gen">Gen 1</span>
+                            <strong class="chain-name">Avner Greif</strong>
+                          </span>
+                        </div>
+                        <span class="lineage-work">Institutions and the Path to the Modern Economy</span>
+                        <span class="chain-meta">Cambridge University Press, 2006</span>
+                        <div class="lineage-node-stats" aria-label="Avner Greif syllabus appearance and Google Scholar citation counts">
+                          <span><b>Syllabus Appearances</b><span>1,627</span></span>
+                          <span><b>Google Scholar Citations</b><span>30,436</span></span>
+                        </div>
+                      </li>
+                      <li class="lineage-tree-node">
+                        <div class="lineage-node-head">
+                          <span class="lineage-portrait">
+                            <img src="../assets/images/headshots/R-R_5HlkntYyP2MGbpD.jpg" alt="Portrait of Saumitra Jha" loading="lazy" decoding="async">
+                          </span>
+                          <span class="lineage-node-id">
+                            <span class="chain-gen">Gen 2</span>
+                            <strong class="chain-name">Saumitra Jha</strong>
+                          </span>
+                        </div>
+                        <span class="lineage-work">Trade, Institutions, and Ethnic Tolerance: Evidence from South Asia</span>
+                        <span class="chain-meta">American Political Science Review, 2013</span>
+                        <div class="lineage-node-stats" aria-label="Saumitra Jha syllabus appearance and Google Scholar citation counts">
+                          <span><b>Syllabus Appearances</b><span>248</span></span>
+                          <span><b>Google Scholar Citations</b><span>2,122</span></span>
+                        </div>
+                      </li>
+                      <li class="lineage-tree-node lineage-tree-leaf">
+                        <div class="lineage-node-head">
+                          <span class="lineage-portrait">
+                            <img src="../assets/images/headshots/S-R_5HlkntYyP2MGbpD-0004.jpg" alt="Portrait of Katrina Kosec" loading="lazy" decoding="async">
+                          </span>
+                          <span class="lineage-node-id">
+                            <span class="chain-gen">Gen 3</span>
+                            <strong class="chain-name">Katrina Kosec</strong>
+                          </span>
+                        </div>
+                        <span class="lineage-work">Heat Stress Increases Long-Term Human Migration in Rural Pakistan</span>
+                        <span class="chain-meta">Nature Climate Change, 2014</span>
+                        <div class="lineage-node-stats" aria-label="Katrina Kosec syllabus appearance and Google Scholar citation counts">
+                          <span><b>Syllabus Appearances</b><span>30</span></span>
+                          <span><b>Google Scholar Citations</b><span>3,547</span></span>
+                        </div>
+                      </li>
+                    </ol>
+                  </article>
+
+                  <article class="lineage-tree-branch" aria-label="Ran Abramitzky to Santiago Perez to Reem Zaiour path">
+                    <ol class="lineage-branch-list">
+                      <li class="lineage-tree-node">
+                        <div class="lineage-node-head">
+                          <span class="lineage-portrait">
+                            <img src="../assets/images/headshots/R-R_3n3jnhqix5yw73C.jpg" alt="Portrait of Ran Abramitzky" loading="lazy" decoding="async">
+                          </span>
+                          <span class="lineage-node-id">
+                            <span class="chain-gen">Gen 1</span>
+                            <strong class="chain-name">Ran Abramitzky</strong>
+                          </span>
+                        </div>
+                        <span class="lineage-work">Europe's Tired, Poor, Huddled Masses: Self-Selection and Economic Outcomes in the Age of Mass Migration</span>
+                        <span class="chain-meta">American Economic Review, 2012</span>
+                        <div class="lineage-node-stats" aria-label="Ran Abramitzky syllabus appearance and Google Scholar citation counts">
+                          <span><b>Syllabus Appearances</b><span>284</span></span>
+                          <span><b>Google Scholar Citations</b><span>6,605</span></span>
+                        </div>
+                      </li>
+                      <li class="lineage-tree-node">
+                        <div class="lineage-node-head">
+                          <span class="lineage-portrait">
+                            <img src="../assets/images/headshots/R-R_7vrtdVnraeOr681.jpg" alt="Portrait of Santiago Perez" loading="lazy" decoding="async">
+                          </span>
+                          <span class="lineage-node-id">
+                            <span class="chain-gen">Gen 2</span>
+                            <strong class="chain-name">Santiago Perez</strong>
+                          </span>
+                        </div>
+                        <span class="lineage-work">Intergenerational Occupational Mobility Across Three Continents</span>
+                        <span class="chain-meta">Journal of Economic History, 2017</span>
+                        <div class="lineage-node-stats" aria-label="Santiago Perez syllabus appearance and Google Scholar citation counts">
+                          <span><b>Syllabus Appearances</b><span>31</span></span>
+                          <span><b>Google Scholar Citations</b><span>1,520</span></span>
+                        </div>
+                      </li>
+                      <li class="lineage-tree-node lineage-tree-leaf">
+                        <div class="lineage-node-head">
+                          <span class="lineage-portrait">
+                            <img src="../assets/images/headshots/S-R_7vrtdVnraeOr681-0004.jpg" alt="Portrait of Reem Zaiour" loading="lazy" decoding="async">
+                          </span>
+                          <span class="lineage-node-id">
+                            <span class="chain-gen">Gen 3</span>
+                            <strong class="chain-name">Reem Zaiour</strong>
+                          </span>
+                        </div>
+                        <span class="lineage-work">Changes in International Immigration and Internal Native Mobility after COVID-19 in the USA</span>
+                        <span class="chain-meta">Journal of Population Economics, 2023</span>
+                        <div class="lineage-node-stats" aria-label="Reem Zaiour syllabus appearance and Google Scholar citation counts">
+                          <span><b>Syllabus Appearances</b><span>&mdash;</span></span>
+                          <span><b>Google Scholar Citations</b><span>91</span></span>
+                        </div>
+                      </li>
+                    </ol>
+                  </article>
+
+                  <article class="lineage-tree-branch" aria-label="John Nye to Noel Johnson to Megan Teague path">
+                    <ol class="lineage-branch-list">
+                      <li class="lineage-tree-node">
+                        <div class="lineage-node-head">
+                          <span class="lineage-portrait">
+                            <img src="../assets/images/headshots/R-R_3ZQuPNPNkATw1Yq.jpg" alt="Portrait of John Nye" loading="lazy" decoding="async">
+                          </span>
+                          <span class="lineage-node-id">
+                            <span class="chain-gen">Gen 1</span>
+                            <strong class="chain-name">John Nye</strong>
+                          </span>
+                        </div>
+                        <span class="lineage-work">The Myth of Free-Trade Britain and Fortress France: Tariffs and Trade in the Nineteenth Century</span>
+                        <span class="chain-meta">The Journal of Economic History, 1991</span>
+                        <div class="lineage-node-stats" aria-label="John Nye syllabus appearance and Google Scholar citation counts">
+                          <span><b>Syllabus Appearances</b><span>&mdash;</span></span>
+                          <span><b>Google Scholar Citations</b><span>2,563</span></span>
+                        </div>
+                      </li>
+                      <li class="lineage-tree-node">
+                        <div class="lineage-node-head">
+                          <span class="lineage-portrait">
+                            <img src="../assets/images/headshots/R-R_3J1KEWYwi7MlWAr.jpg" alt="Portrait of Noel Johnson" loading="lazy" decoding="async">
+                          </span>
+                          <span class="lineage-node-id">
+                            <span class="chain-gen">Gen 2</span>
+                            <strong class="chain-name">Noel Johnson</strong>
+                          </span>
+                        </div>
+                        <span class="lineage-work">Trust Games: A Meta-Analysis</span>
+                        <span class="chain-meta">Journal of Economic Psychology, 2011</span>
+                        <div class="lineage-node-stats" aria-label="Noel Johnson syllabus appearance and Google Scholar citation counts">
+                          <span><b>Syllabus Appearances</b><span>&mdash;</span></span>
+                          <span><b>Google Scholar Citations</b><span>&mdash;</span></span>
+                        </div>
+                      </li>
+                      <li class="lineage-tree-node lineage-tree-leaf">
+                        <div class="lineage-node-head">
+                          <span class="lineage-portrait">
+                            <img src="../assets/images/headshots/S-R_3J1KEWYwi7MlWAr-0002.jpg" alt="Portrait of Megan Teague" loading="lazy" decoding="async">
+                          </span>
+                          <span class="lineage-node-id">
+                            <span class="chain-gen">Gen 3</span>
+                            <strong class="chain-name">Megan Teague</strong>
+                          </span>
+                        </div>
+                        <span class="lineage-work">Economic Freedom and Materialism: An Empirical Analysis</span>
+                        <span class="chain-meta">Constitutional Political Economy, 2020</span>
+                        <div class="lineage-node-stats" aria-label="Megan Teague syllabus appearance and Google Scholar citation counts">
+                          <span><b>Syllabus Appearances</b><span>&mdash;</span></span>
+                          <span><b>Google Scholar Citations</b><span>84</span></span>
+                        </div>
+                      </li>
+                    </ol>
+                  </article>
                 </div>
               </div>
-              <p class="shape-source-note">Counts are per-scholar totals from Open Syllabus (syllabus appearances) and Google Scholar (citations). Early-career scholars may not yet appear in one or both.</p>
+              <p class="shape-source-note">Counts are per-scholar totals from Open Syllabus and Google Scholar. Dashes indicate scholars not yet indexed in that source.</p>
             </section>
           </div>
         </section>
 
       </div>
     </main>
+
+    <footer class="site-footer">
+      <p class="footer-credit">For Joel's 80th. Project led by Ran Abramitzky. I thank Jensen Ahokovi for his superb assistance.</p>
+    </footer>
+  </div>
+
+  <button class="presentation-launch" type="button" data-presentation-start aria-label="Start fullscreen presentation">Present</button>
+
+  <div class="presentation-controls" data-presentation-controls hidden aria-label="Presentation controls">
+    <button class="presentation-control" type="button" data-presentation-prev>Prev</button>
+    <span class="presentation-counter" data-presentation-counter aria-live="polite">1 / 1</span>
+    <button class="presentation-control" type="button" data-presentation-next>Next</button>
+    <button class="presentation-control presentation-exit" type="button" data-presentation-exit>Exit</button>
   </div>
 
   <script src="../assets/lineage-stats.js?v=20260430b"></script>
-  <script src="../assets/site.js"></script>
+  <script src="../assets/site.js?v=20260525e"></script>
 </body>
 </html>

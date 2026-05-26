@@ -7,7 +7,7 @@
   <meta name="description" content="Interactive genealogy visualization for Joel Mokyr's academic family.">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, notranslate">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="../assets/styles.css?v=20260525h">
   <noscript>
     <style>[data-reveal], [data-reveal-group] > * { opacity: 1 !important; transform: none !important; }</style>
   </noscript>
@@ -55,7 +55,7 @@
                 data-ft-mode="network"
                 tabindex="0">
           <span class="ft-tab-label">Network Map</span>
-          <span class="ft-tab-desc">Force-directed view of the full graph.</span>
+          <span class="ft-tab-desc">Each dot is a scholar; lines show advisor-student links.</span>
         </button>
         <button id="ft-tab-tree"
                 class="ft-tab ft-tab--primary"
@@ -66,7 +66,7 @@
                 data-ft-mode="tree"
                 tabindex="-1">
           <span class="ft-tab-label">Family Tree</span>
-          <span class="ft-tab-desc">Browse the lineage branch by branch &mdash; open Joel, then each student, generation by generation.</span>
+          <span class="ft-tab-desc">Trace advisor-student links one branch at a time, from Joel to later generations.</span>
         </button>
       </div>
 
@@ -110,7 +110,7 @@
         <header class="ft-tree-header">
           <div class="ft-tree-heading">
             <p class="ft-tree-eyebrow">Network Map</p>
-            <p class="ft-tree-note">An interactive force-directed view of Joel Mokyr&rsquo;s academic descendants. Pan, zoom, and hover on desktop to explore the full graph.</p>
+            <p class="ft-tree-note">Each dot is a scholar in Joel&rsquo;s academic family. Lines connect advisors to students; pan, zoom, and hover to explore the relationships.</p>
           </div>
         </header>
         <div id="ft-network-frame-shell" class="ft-network-frame-shell" data-ft-desktop-only>
@@ -131,22 +131,26 @@
           <p class="ft-network-fallback-copy">
             The network map is designed for larger screens. Open it full-screen for the complete graph with pinch-to-zoom panning.
           </p>
-          <a class="ft-network-fallback-cta" href="../network/mokyr-genealogy.html?fullscreen=1" target="_blank" rel="noopener noreferrer">
-            Open full map
-            <span aria-hidden="true">&rarr;</span>
-          </a>
+          <button class="ft-network-fallback-cta" type="button" data-ft-network-fullscreen>
+            View full screen
+          </button>
         </div>
         <div class="ft-network-toolbar">
-          <a class="secondary-link" href="../network/mokyr-genealogy.html?fullscreen=1" target="_blank" rel="noopener noreferrer">Open full screen</a>
+          <button class="secondary-link" type="button" data-ft-network-fullscreen aria-expanded="false">View full screen</button>
+          <button class="secondary-link ft-network-exit" type="button" data-ft-network-exit hidden>Exit full screen</button>
         </div>
       </section>
 
     </main>
+
+    <footer class="site-footer">
+      <p class="footer-credit">For Joel's 80th. Project led by Ran Abramitzky. I thank Jensen Ahokovi for his superb assistance.</p>
+    </footer>
   </div>
 
   <script src="../assets/lineage-stats.js?v=20260430b"></script>
   <script src="../assets/site.js?v=20260417a"></script>
   <script src="../assets/genealogy-data.js?v=20260430a"></script>
-  <script src="../assets/family-tree.js?v=20260504a"></script>
+  <script src="../assets/family-tree.js?v=20260525k"></script>
 </body>
 </html>

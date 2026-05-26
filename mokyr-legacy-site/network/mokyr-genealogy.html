@@ -525,6 +525,14 @@
       stroke 220ms var(--ease-out);
   }
   .link.highlighted { stroke: rgba(214, 188, 123, 0.55); stroke-width: 1.5; }
+  .link.branch-focused {
+    stroke: rgba(214, 188, 123, 0.68);
+    stroke-width: 1.7;
+    opacity: 0.9;
+  }
+  .link.branch-muted {
+    opacity: 0.045;
+  }
   /* Fainter stroke for edges sourced from Q12a free-text listings (edge_type='q12a'); 0.5 * 0.12 base alpha = ~0.06 effective. */
   .link.q12a { stroke-dasharray: none; stroke-opacity: 0.5; }
   .node circle {
@@ -545,6 +553,14 @@
   .node.dimmed circle { opacity: 0.2; }
   .node.dimmed image { opacity: 0.2; }
   .node.dimmed text { opacity: 0.15; }
+  .node.branch-muted circle { opacity: 0.12; }
+  .node.branch-muted image { opacity: 0.12; }
+  .node.branch-muted text { opacity: 0.1; }
+  .node.branch-focused circle.node-fill,
+  .node.branch-focused circle.node-photo-border {
+    stroke: rgba(214, 188, 123, 0.68) !important;
+    stroke-width: 2.4px !important;
+  }
   .node text {
     font-family: "Neue Haas Grotesk Text Pro", "Avenir Next", "Helvetica Neue", sans-serif;
     font-size: 11px; fill: var(--text); pointer-events: none;
@@ -562,7 +578,7 @@
   .site-footer {
     padding: 16px 0 24px;
     border-top: 1px solid var(--line);
-    font-size: 0.8rem;
+    font-size: 1.2rem;
     color: var(--soft);
   }
   .footer-credit { margin: 0; }
@@ -693,16 +709,16 @@
   </div>
   <div class="viz-controls-right">
     <label class="privacy-pill">
-      <input type="checkbox" id="showLabels">
-      <span class="pill-label">Labels</span>
+      <input type="checkbox" id="showLabels" aria-label="Show scholar names on the map.">
+      <span class="pill-label">Names</span>
     </label>
     <label class="privacy-pill">
       <input type="checkbox" id="showPhotos">
       <span class="pill-label">Photos</span>
     </label>
     <label class="privacy-pill">
-      <input type="checkbox" id="layoutConcentric" checked aria-label="Concentric layout active. Press Enter to switch to force layout.">
-      <span class="pill-label">Concentric</span>
+      <input type="checkbox" id="layoutConcentric" checked aria-label="Grouped by generation. Press Enter to switch to free map layout.">
+      <span class="pill-label">By generation</span>
     </label>
   </div>
 </div>
@@ -740,7 +756,7 @@
       <div class="panel-heading">
         <div class="eyebrow">Person Details</div>
         <h3 id="person-title">Select a person</h3>
-        <div id="person-subtitle">Click a node to inspect the latest details and direct relationships.</div>
+        <div id="person-subtitle">Click any dot to see that scholar's place in the family.</div>
       </div>
       <div class="panel-actions">
         <button id="panel-minimize" type="button" aria-controls="person-panel" aria-expanded="true">Minimize</button>
@@ -748,7 +764,7 @@
       </div>
     </div>
     <div id="person-empty">
-      The panel will show person-level metadata from the node file plus direct advisors and direct students from the current network edges.
+      After you select a dot, this panel lists the scholar's generation, institution or role when available, advisor, and direct students.
     </div>
     <div id="person-content" hidden></div>
   </aside>
@@ -867,7 +883,7 @@ function buildRelationshipMaps(nodes, edges) {
     studentsByNode.get(parentId).add(nodeId);
   });
 
-  return { advisorsByNode, studentsByNode };
+  return { advisorsByNode, studentsByNode, primaryParentByNode };
 }
 
 const RELATIONSHIPS = buildRelationshipMaps(NETWORK_NODES, NETWORK_EDGES);
@@ -908,6 +924,10 @@ let currentSimNodes = [];
 let currentSimEdges = [];
 let currentShellWidth = 0;
 let currentShellHeight = 0;
+let currentPosterTargets = new Map();
+let hasAutoFitViewport = false;
+let userAdjustedViewport = false;
+let autoFittingViewport = false;
 
 function hasDisplayPhoto(d) {
   return Boolean(showPhotos && d.photo_url && !brokenPhotoNodeIds.has(d.id));
@@ -974,7 +994,12 @@ defs.append('marker')
 // Zoom + pan
 const zoom = d3.zoom()
   .scaleExtent([0.05, 4])
-  .on('zoom', (event) => { g.attr('transform', event.transform); });
+  .on('zoom', (event) => {
+    g.attr('transform', event.transform);
+    if (event.sourceEvent && !autoFittingViewport) {
+      userAdjustedViewport = true;
+    }
+  });
 svg.call(zoom);
 
 const linkG = g.append('g').attr('class', 'links');
@@ -996,8 +1021,36 @@ function buildNeighborIds(edges) {
   return neighborIds;
 }
 
+function buildDescendantNodeIds(nodeId) {
+  const descendants = new Set();
+  if (!nodeId) return descendants;
+
+  descendants.add(nodeId);
+  const stack = Array.from(RELATIONSHIPS.studentsByNode.get(nodeId) || []);
+  while (stack.length) {
+    const current = stack.pop();
+    if (descendants.has(current)) continue;
+    descendants.add(current);
+    (RELATIONSHIPS.studentsByNode.get(current) || []).forEach(childId => {
+      if (!descendants.has(childId)) stack.push(childId);
+    });
+  }
+
+  return descendants;
+}
+
 function edgeEndpointId(endpoint) {
   return typeof endpoint === 'object' ? endpoint.id : endpoint;
+}
+
+function isPrimaryBranchEdge(edge, branchNodeIds) {
+  if (!branchNodeIds || !branchNodeIds.size) return false;
+
+  const sourceId = edgeEndpointId(edge.source);
+  const targetId = edgeEndpointId(edge.target);
+  return branchNodeIds.has(sourceId)
+    && branchNodeIds.has(targetId)
+    && RELATIONSHIPS.primaryParentByNode.get(targetId) === sourceId;
 }
 
 function syncShellHeight() {
@@ -1021,17 +1074,497 @@ function syncShellHeight() {
   };
 }
 
+const POSTER_ROOT_ID = 'JM-ROOT';
+const POSTER_OUTER_RADIUS_MAX = 620;
+const POSTER_BRANCH_GAP_RADIANS = 0.0055;
+const POSTER_BRANCH_DEMAND_EXPONENT = 0.70;
+const POSTER_SUBTREE_DEMAND_EXPONENT = 0.58;
+const POSTER_BRANCH_MIN_ANGULAR_DEMAND = 0.070;
+const POSTER_SUBTREE_MIN_DEMAND = 0.045;
+const POSTER_SUBTREE_BASE_GAP_FRACTION = 0.0065;
+const POSTER_SUBTREE_GAP_SPAN_CAP = 0.24;
+const POSTER_SUBTREE_MAJOR_DESCENDANT_THRESHOLD = 8;
+const POSTER_GENERATION_WEDGE_UTILIZATION = {
+  1: 1.00,
+  2: 0.74,
+  3: 0.92,
+  4: 0.98,
+};
+const POSTER_CURVE_TANGENT_SCALE_BY_GENERATION = {
+  1: 0.100,
+  2: 0.145,
+  3: 0.135,
+  4: 0.125,
+};
+const POSTER_SECONDARY_CURVE_TANGENT_SCALE = 0.070;
+const POSTER_CURVE_MIN_OFFSET = 18;
+const POSTER_CURVE_MAX_OFFSET = 82;
+const POSTER_SECONDARY_CURVE_MAX_OFFSET = 48;
+const POSTER_CURVE_RADIAL_BOOST = 0.30;
+const POSTER_MIN_ARC_SPACING_BY_GENERATION = {
+  1: 32,
+  2: 26,
+  3: 21,
+  4: 20,
+};
+const POSTER_GENERATION_MAX_LANES = {
+  1: 3,
+  2: 3,
+  3: 3,
+  4: 2,
+};
+const POSTER_RADIAL_JITTER_BY_GENERATION = {
+  1: 4,
+  2: 18,
+  3: 24,
+  4: 28,
+};
+const POSTER_RING_RATIOS = {
+  1: 450 / 1430,
+  2: 900 / 1430,
+  3: 1215 / 1430,
+  4: 1,
+};
+const primaryDescendantCountCache = new Map();
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function generationValue(generation, fallback = 4) {
+  const value = Number(generation);
+  if (!Number.isFinite(value) || value < 0) return fallback;
+  return Math.max(0, Math.min(4, Math.round(value)));
+}
+
+function displayNameForId(nodeId) {
+  const node = NODE_BY_ID.get(nodeId);
+  return (node && node.label) || nodeId;
+}
+
+function surnameKey(label) {
+  const parts = String(label || '').trim().split(/\s+/).filter(Boolean);
+  return (parts[parts.length - 1] || label || '').toLocaleLowerCase();
+}
+
+function compareBySurnameThenName(leftId, rightId) {
+  const leftLabel = displayNameForId(leftId);
+  const rightLabel = displayNameForId(rightId);
+  const surnameCompare = surnameKey(leftLabel).localeCompare(surnameKey(rightLabel));
+  if (surnameCompare) return surnameCompare;
+  return leftLabel.localeCompare(rightLabel);
+}
+
+function primaryDescendantCount(nodeId) {
+  if (primaryDescendantCountCache.has(nodeId)) return primaryDescendantCountCache.get(nodeId);
+
+  const visited = new Set();
+  const stack = Array.from(RELATIONSHIPS.studentsByNode.get(nodeId) || []);
+  while (stack.length) {
+    const current = stack.pop();
+    if (visited.has(current)) continue;
+    visited.add(current);
+    (RELATIONSHIPS.studentsByNode.get(current) || []).forEach(childId => {
+      if (!visited.has(childId)) stack.push(childId);
+    });
+  }
+
+  primaryDescendantCountCache.set(nodeId, visited.size);
+  return visited.size;
+}
+
+function compareByTreeWeight(leftId, rightId) {
+  const countDelta = primaryDescendantCount(rightId) - primaryDescendantCount(leftId);
+  if (countDelta) return countDelta;
+  return displayNameForId(leftId).localeCompare(displayNameForId(rightId));
+}
+
+function primaryChildren(nodeId, visibleIds) {
+  return Array
+    .from(RELATIONSHIPS.studentsByNode.get(nodeId) || [])
+    .filter(childId => !visibleIds || visibleIds.has(childId))
+    .sort(compareByTreeWeight);
+}
+
+function stableFraction(...parts) {
+  const text = parts.join('|');
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
+}
+
+function polarPoint(angle, radius, width, height) {
+  return {
+    x: width / 2 + Math.cos(angle) * radius,
+    y: height / 2 + Math.sin(angle) * radius,
+  };
+}
+
+function circularAngleDelta(start, end) {
+  let delta = (end - start) % (Math.PI * 2);
+  if (delta > Math.PI) delta -= Math.PI * 2;
+  if (delta < -Math.PI) delta += Math.PI * 2;
+  return delta;
+}
+
+function circularMidpointAngle(start, end) {
+  return start + circularAngleDelta(start, end) / 2;
+}
+
 function ringRadius(generation, width, height) {
-  const radii = [0, 180, 320, 460, 580];
-  const normalizedGeneration = Math.max(0, Math.min(4, Number(generation) || 0));
+  const normalizedGeneration = generationValue(generation, 0);
   if (normalizedGeneration === 0) return 0;
 
-  const viewportMin = Math.min(window.innerWidth || width, window.innerHeight || height);
-  const scale = Math.min(1, viewportMin / 900);
-  return radii[normalizedGeneration] * scale;
+  const viewportMin = Math.max(320, Math.min(width, height));
+  const outerRadius = Math.min(POSTER_OUTER_RADIUS_MAX, Math.max(360, viewportMin * 0.64));
+  return outerRadius * (POSTER_RING_RATIOS[normalizedGeneration] || POSTER_RING_RATIOS[4]);
+}
+
+function subtreeGenerationCounts(nodeId, visibleIds, cache) {
+  if (cache.has(nodeId)) return cache.get(nodeId);
+
+  const counts = new Map();
+  const visited = new Set();
+  const stack = [nodeId];
+  while (stack.length) {
+    const current = stack.pop();
+    if (visited.has(current) || !visibleIds.has(current)) continue;
+    visited.add(current);
+
+    const node = NODE_BY_ID.get(current) || {};
+    const generation = generationValue(node.generation, 4);
+    counts.set(generation, (counts.get(generation) || 0) + 1);
+
+    primaryChildren(current, visibleIds).forEach(childId => {
+      if (!visited.has(childId)) stack.push(childId);
+    });
+  }
+
+  cache.set(nodeId, counts);
+  return counts;
+}
+
+function branchAngularDemand(branchId, visibleIds, cache, width, height) {
+  const counts = subtreeGenerationCounts(branchId, visibleIds, cache);
+  let demand = POSTER_BRANCH_MIN_ANGULAR_DEMAND;
+
+  counts.forEach((count, generation) => {
+    const radius = ringRadius(generation, width, height);
+    if (!radius) return;
+    const spacing = POSTER_MIN_ARC_SPACING_BY_GENERATION[generation] || 20;
+    demand = Math.max(demand, (count * spacing) / radius);
+  });
+
+  const descendants = primaryDescendantCount(branchId);
+  if (descendants >= 8) demand += 0.040;
+  if (descendants >= 31) demand += 0.040;
+  if (descendants >= 60) demand += 0.060;
+  return demand;
+}
+
+function subtreeWeight(nodeId, visibleIds, cache, width, height) {
+  const counts = subtreeGenerationCounts(nodeId, visibleIds, cache);
+  let demand = POSTER_SUBTREE_MIN_DEMAND;
+
+  counts.forEach((count, generation) => {
+    const radius = ringRadius(generation, width, height);
+    if (!radius) return;
+    const spacing = POSTER_MIN_ARC_SPACING_BY_GENERATION[generation] || 20;
+    demand = Math.max(demand, (count * spacing) / radius);
+  });
+
+  return Math.pow(demand, POSTER_SUBTREE_DEMAND_EXPONENT);
+}
+
+function generationWedgeUtilization(generation) {
+  return POSTER_GENERATION_WEDGE_UTILIZATION[generation] || POSTER_GENERATION_WEDGE_UTILIZATION[4];
+}
+
+function angleForPosterPosition(branchWedge, generation, normalized) {
+  const branchStart = branchWedge[0];
+  const branchEnd = branchWedge[1];
+  const branchSpan = Math.max(0.0001, branchEnd - branchStart);
+  if (generation <= 1) return (branchStart + branchEnd) / 2;
+
+  const utilization = clamp(generationWedgeUtilization(generation), 0.45, 0.99);
+  const usableStart = branchStart + branchSpan * ((1 - utilization) / 2);
+  const usableEnd = branchEnd - branchSpan * ((1 - utilization) / 2);
+  return usableStart + clamp(normalized, 0, 1) * (usableEnd - usableStart);
+}
+
+function childGapUnits(children) {
+  const units = [];
+  for (let index = 0; index < children.length - 1; index += 1) {
+    const leftDescendants = primaryDescendantCount(children[index]);
+    const rightDescendants = primaryDescendantCount(children[index + 1]);
+    units.push(Math.max(leftDescendants, rightDescendants) >= POSTER_SUBTREE_MAJOR_DESCENDANT_THRESHOLD ? 2 : 1);
+  }
+  return units;
+}
+
+function assignPosterSubtree(nodeId, start, end, depth, branchId, branchWedges, targets, visibleIds, cache, width, height) {
+  if (!visibleIds.has(nodeId)) return;
+
+  const node = NODE_BY_ID.get(nodeId) || {};
+  const generation = generationValue(node.generation, depth);
+  const branchWedge = branchWedges.get(branchId);
+  if (!branchWedge) return;
+
+  const center = clamp((start + end) / 2, 0, 1);
+  const angle = angleForPosterPosition(branchWedge, generation, center);
+  const radiusScale = ringRadius(4, width, height) / 1430;
+  const jitterRange = (POSTER_RADIAL_JITTER_BY_GENERATION[generation] || 28) * radiusScale;
+  const radialJitter = (stableFraction(nodeId, 'radius') - 0.5) * jitterRange;
+  const radius = ringRadius(generation, width, height) + radialJitter;
+  targets.set(nodeId, {
+    angle,
+    radius,
+    generation,
+    ...polarPoint(angle, radius, width, height),
+  });
+
+  const children = primaryChildren(nodeId, visibleIds);
+  if (!children.length) return;
+
+  const span = Math.max(0.0001, end - start);
+  const weights = new Map(children.map(childId => [
+    childId,
+    subtreeWeight(childId, visibleIds, cache, width, height),
+  ]));
+  const gaps = childGapUnits(children);
+  const totalGap = Math.min(
+    span * POSTER_SUBTREE_GAP_SPAN_CAP,
+    gaps.reduce((sum, unit) => sum + unit, 0) * POSTER_SUBTREE_BASE_GAP_FRACTION
+  );
+  const usableSpan = Math.max(0.0001, span - totalGap);
+  const totalWeight = Array.from(weights.values()).reduce((sum, weight) => sum + weight, 0) || 1;
+  const totalGapUnits = gaps.reduce((sum, unit) => sum + unit, 0) || 1;
+  let cursor = start;
+
+  children.forEach((childId, index) => {
+    const childSpan = usableSpan * ((weights.get(childId) || 1) / totalWeight);
+    assignPosterSubtree(childId, cursor, cursor + childSpan, depth + 1, branchId, branchWedges, targets, visibleIds, cache, width, height);
+    cursor += childSpan;
+    if (index < gaps.length) cursor += totalGap * (gaps[index] / totalGapUnits);
+  });
+}
+
+function generationLaneStep(width, height) {
+  const scale = ringRadius(4, width, height) / 1430;
+  return (showPhotos ? 90 : 70) * scale;
+}
+
+function generationLaneCount(generation, nodeCount, radius, width, height) {
+  if (nodeCount < 2) return 1;
+  const targetGap = showPhotos ? 42 : 24;
+  const singleRingGap = (Math.PI * 2 * Math.max(1, radius)) / nodeCount;
+  const needed = Math.ceil(targetGap / Math.max(1, singleRingGap));
+  const maxLanes = POSTER_GENERATION_MAX_LANES[generation] || needed;
+  const laneCount = Math.min(Math.max(1, needed), maxLanes);
+  if (nodeCount > laneCount && nodeCount % laneCount === 1 && laneCount < maxLanes) return laneCount + 1;
+  return laneCount;
+}
+
+function laneOffsets(laneCount, width, height) {
+  if (laneCount <= 1) return [0];
+
+  const step = generationLaneStep(width, height);
+  if (laneCount % 2 === 0) {
+    return Array.from({ length: laneCount }, (_, index) => (index - (laneCount - 1) / 2) * step);
+  }
+
+  const offsets = [0];
+  let multiplier = 1;
+  while (offsets.length < laneCount) {
+    offsets.push(-step * multiplier);
+    if (offsets.length < laneCount) offsets.push(step * multiplier);
+    multiplier += 1;
+  }
+  return offsets;
+}
+
+function laneSequence(nodeCount, laneCount) {
+  if (laneCount <= 1) return Array(nodeCount).fill(0);
+
+  const lanes = Array.from({ length: nodeCount }, (_, index) => index % laneCount);
+  if (nodeCount > 2 && lanes[lanes.length - 1] === lanes[0]) {
+    for (let candidate = 0; candidate < laneCount; candidate += 1) {
+      if (candidate !== lanes[0] && candidate !== lanes[lanes.length - 2]) {
+        lanes[lanes.length - 1] = candidate;
+        break;
+      }
+    }
+  }
+  return lanes;
+}
+
+function equalizePosterGenerationSpacing(targets, width, height) {
+  [1, 2, 3, 4].forEach(generation => {
+    const nodeIds = Array
+      .from(targets.entries())
+      .filter(([nodeId, target]) => nodeId !== POSTER_ROOT_ID && target.generation === generation)
+      .sort((left, right) => left[1].angle - right[1].angle)
+      .map(([nodeId]) => nodeId);
+
+    if (!nodeIds.length) return;
+
+    const radius = ringRadius(generation, width, height);
+    const laneCount = generationLaneCount(generation, nodeIds.length, radius, width, height);
+    const offsets = laneOffsets(laneCount, width, height);
+    const lanes = laneSequence(nodeIds.length, laneCount);
+    const angleStep = (Math.PI * 2) / nodeIds.length;
+    const startAngle = -Math.PI / 2;
+
+    nodeIds.forEach((nodeId, index) => {
+      const angle = startAngle + index * angleStep;
+      const lane = lanes[index];
+      const laneRadius = radius + offsets[lane];
+      targets.set(nodeId, {
+        angle,
+        radius: laneRadius,
+        generation,
+        lane,
+        ...polarPoint(angle, laneRadius, width, height),
+      });
+    });
+  });
+}
+
+function buildPosterTargets(nodes, width, height) {
+  const targets = new Map();
+  const visibleIds = new Set(nodes.map(node => node.id));
+
+  if (visibleIds.has(POSTER_ROOT_ID)) {
+    targets.set(POSTER_ROOT_ID, {
+      angle: -Math.PI / 2,
+      radius: 0,
+      generation: 0,
+      x: width / 2,
+      y: height / 2,
+    });
+  }
+
+  const branchIds = primaryChildren(POSTER_ROOT_ID, visibleIds).sort(compareBySurnameThenName);
+  if (!branchIds.length) return targets;
+
+  const countCache = new Map();
+  const branchInfos = branchIds.map(branchId => {
+    const demand = branchAngularDemand(branchId, visibleIds, countCache, width, height);
+    return {
+      id: branchId,
+      weight: Math.max(0.001, Math.pow(demand, POSTER_BRANCH_DEMAND_EXPONENT)),
+    };
+  });
+  const totalGap = POSTER_BRANCH_GAP_RADIANS * branchInfos.length;
+  const available = Math.max(Math.PI, (Math.PI * 2) - totalGap);
+  const totalWeight = branchInfos.reduce((sum, branch) => sum + branch.weight, 0) || 1;
+  const branchWedges = new Map();
+  let angle = -Math.PI / 2;
+
+  branchInfos.forEach(branch => {
+    const span = available * (branch.weight / totalWeight);
+    branchWedges.set(branch.id, [angle, angle + span]);
+    angle += span + POSTER_BRANCH_GAP_RADIANS;
+  });
+
+  branchIds.forEach(branchId => {
+    assignPosterSubtree(branchId, 0, 1, 1, branchId, branchWedges, targets, visibleIds, countCache, width, height);
+  });
+
+  equalizePosterGenerationSpacing(targets, width, height);
+  return targets;
+}
+
+function applyPosterTargetsToNodes(width, height) {
+  currentPosterTargets = buildPosterTargets(currentSimNodes, width, height);
+
+  currentSimNodes.forEach(node => {
+    const target = currentPosterTargets.get(node.id);
+    if (!target) return;
+
+    node.posterAngle = target.angle;
+    node.posterRadius = target.radius;
+    node.posterLane = target.lane || 0;
+
+    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) {
+      node.x = target.x;
+      node.y = target.y;
+    }
+  });
+}
+
+function nodeAngleFromCenter(node, width, height) {
+  if (Number.isFinite(node.posterAngle)) return node.posterAngle;
+  return Math.atan2((node.y || 0) - height / 2, (node.x || 0) - width / 2);
+}
+
+function nodeRadiusFromCenter(node, width, height) {
+  if (Number.isFinite(node.posterRadius)) return node.posterRadius;
+  return Math.hypot((node.x || 0) - width / 2, (node.y || 0) - height / 2);
+}
+
+function curvedLinkPath(edge) {
+  const source = edge.source;
+  const target = edge.target;
+  if (!source || !target) return '';
+
+  const x1 = Number(source.x);
+  const y1 = Number(source.y);
+  const x2 = Number(target.x);
+  const y2 = Number(target.y);
+  if (![x1, y1, x2, y2].every(Number.isFinite)) return '';
+  if (layoutMode !== 'concentric') return `M${x1},${y1}L${x2},${y2}`;
+
+  const sourceId = edgeEndpointId(source);
+  const targetId = edgeEndpointId(target);
+  const sourceTarget = currentPosterTargets.get(sourceId);
+  const targetTarget = currentPosterTargets.get(targetId);
+  const sourceAngle = sourceTarget ? sourceTarget.angle : nodeAngleFromCenter(source, currentShellWidth, currentShellHeight);
+  const targetAngle = targetTarget ? targetTarget.angle : nodeAngleFromCenter(target, currentShellWidth, currentShellHeight);
+  const sourceRadius = sourceTarget ? sourceTarget.radius : nodeRadiusFromCenter(source, currentShellWidth, currentShellHeight);
+  const targetRadius = targetTarget ? targetTarget.radius : nodeRadiusFromCenter(target, currentShellWidth, currentShellHeight);
+  const generation = generationValue(target.generation, 4) || 1;
+  const midAngle = sourceRadius < 1
+    ? targetAngle
+    : circularMidpointAngle(sourceAngle, targetAngle);
+  const midRadius = (sourceRadius + targetRadius) / 2;
+  const control = polarPoint(midAngle, midRadius * 0.92, currentShellWidth, currentShellHeight);
+  const distance = Math.hypot(x2 - x1, y2 - y1);
+  const angularDelta = sourceRadius < 1 ? 0 : Math.abs(circularAngleDelta(sourceAngle, targetAngle));
+  const radialAlignment = Math.max(0, 1 - angularDelta / (Math.PI / 4));
+  const isSecondary = edge.edge_type === 'q12a';
+  const tangentScale = isSecondary
+    ? POSTER_SECONDARY_CURVE_TANGENT_SCALE
+    : (POSTER_CURVE_TANGENT_SCALE_BY_GENERATION[generation] || POSTER_CURVE_TANGENT_SCALE_BY_GENERATION[4]);
+  const maxOffset = isSecondary ? POSTER_SECONDARY_CURVE_MAX_OFFSET : POSTER_CURVE_MAX_OFFSET;
+  const offset = clamp(
+    distance * tangentScale * (1 + POSTER_CURVE_RADIAL_BOOST * radialAlignment),
+    POSTER_CURVE_MIN_OFFSET,
+    maxOffset
+  );
+  const tangentX = -Math.sin(midAngle);
+  const tangentY = Math.cos(midAngle);
+  const cx = control.x + tangentX * offset;
+  const cy = control.y + tangentY * offset;
+
+  return `M${x1},${y1}Q${cx},${cy} ${x2},${y2}`;
 }
 
 function fitGraphToViewport(width, height) {
+  function applyFitTransform(transform) {
+    autoFittingViewport = true;
+    svg.transition()
+      .duration(240)
+      .ease(d3.easeCubicOut)
+      .call(zoom.transform, transform)
+      .on('end interrupt', () => {
+        autoFittingViewport = false;
+      });
+  }
+
   if (layoutMode === 'concentric') {
     const rootNode = currentSimNodes.find(node => node.id === 'JM-ROOT');
     if (rootNode) {
@@ -1047,10 +1580,7 @@ function fitGraphToViewport(width, height) {
       const tx = targetCenterX - scale * rootNode.x;
       const ty = targetCenterY - scale * rootNode.y;
 
-      svg.transition()
-        .duration(240)
-        .ease(d3.easeCubicOut)
-        .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+      applyFitTransform(d3.zoomIdentity.translate(tx, ty).scale(scale));
       return;
     }
   }
@@ -1062,10 +1592,7 @@ function fitGraphToViewport(width, height) {
   const tx = (width - scale * (bbox.x * 2 + bbox.width)) / 2;
   const ty = (height - scale * (bbox.y * 2 + bbox.height)) / 2;
 
-  svg.transition()
-    .duration(240)
-    .ease(d3.easeCubicOut)
-    .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+  applyFitTransform(d3.zoomIdentity.translate(tx, ty).scale(scale));
 }
 
 function applyLayoutForces(width, height) {
@@ -1073,9 +1600,13 @@ function applyLayoutForces(width, height) {
   currentShellHeight = height;
   if (!simulation) return;
 
-  const linkStrength = layoutMode === 'concentric' ? 0.1 : 0.5;
-  const chargeStrength = layoutMode === 'concentric' ? -60 : -220;
-  const collidePadding = layoutMode === 'concentric' ? 6 : 8;
+  svg
+    .attr('data-layout-mode', layoutMode)
+    .attr('data-poster-layout', layoutMode === 'concentric' ? 'curved' : 'free');
+
+  const linkStrength = layoutMode === 'concentric' ? 0.035 : 0.5;
+  const chargeStrength = layoutMode === 'concentric' ? (showPhotos ? -34 : -48) : -220;
+  const collidePadding = layoutMode === 'concentric' ? (showPhotos ? 10 : 6) : 8;
 
   simulation
     .force('link', d3.forceLink(currentSimEdges).id(d => d.id).distance(80).strength(linkStrength))
@@ -1083,14 +1614,26 @@ function applyLayoutForces(width, height) {
     .force('collide', d3.forceCollide().radius(d => displayRadius(d) + collidePadding));
 
   if (layoutMode === 'concentric') {
-    simulation.force('center', null);
-    simulation.force(
-      'radial',
-      d3.forceRadial(d => ringRadius(d.generation, width, height), width / 2, height / 2).strength(0.8)
-    );
+    applyPosterTargetsToNodes(width, height);
+    simulation
+      .alphaDecay(showPhotos ? 0.055 : 0.048)
+      .force('center', null)
+      .force('radial', null)
+      .force('x', d3.forceX(d => (currentPosterTargets.get(d.id) || {}).x || width / 2).strength(showPhotos ? 0.76 : 0.62))
+      .force('y', d3.forceY(d => (currentPosterTargets.get(d.id) || {}).y || height / 2).strength(showPhotos ? 0.76 : 0.62));
   } else {
-    simulation.force('radial', null);
-    simulation.force('center', d3.forceCenter(width / 2, height / 2));
+    currentPosterTargets = new Map();
+    currentSimNodes.forEach(node => {
+      delete node.posterAngle;
+      delete node.posterRadius;
+      delete node.posterLane;
+    });
+    simulation
+      .alphaDecay(0.03)
+      .force('radial', null)
+      .force('x', null)
+      .force('y', null)
+      .force('center', d3.forceCenter(width / 2, height / 2));
   }
 }
 
@@ -1141,9 +1684,9 @@ function render() {
   applyLayoutForces(W, H);
 
   // ── links ──────────────────────────────────────────────────────────────
-  const link = linkG.selectAll('line')
-    .data(simEdges, e => e.source + '->' + e.target)
-    .join('line')
+  const link = linkG.selectAll('path')
+    .data(simEdges, e => `${edgeEndpointId(e.source)}->${edgeEndpointId(e.target)}:${e.edge_type || 'primary'}`)
+    .join('path')
       .attr('class', e => 'link' + (e.edge_type === 'q12a' ? ' q12a' : ''))
       .attr('marker-end', 'url(#arrow)');
   currentLinkSelection = link;
@@ -1198,17 +1741,15 @@ function render() {
   renderPersonPanel();
 
   simulation.on('tick', () => {
-    link
-      .attr('x1', d => d.source.x)
-      .attr('y1', d => d.source.y)
-      .attr('x2', d => d.target.x)
-      .attr('y2', d => d.target.y);
+    link.attr('d', curvedLinkPath);
     node.attr('transform', d => `translate(${d.x},${d.y})`);
     updateLabelVisibility();
   });
 
-  // Fit to viewport after initial settle
+  // Frame the map once on first load, then keep the viewer's zoom/pan stable.
   simulation.on('end', () => {
+    if (hasAutoFitViewport || userAdjustedViewport) return;
+    hasAutoFitViewport = true;
     fitGraphToViewport(W, H);
   });
 }
@@ -1287,22 +1828,30 @@ function updateGraphState() {
   if (!currentNodeSelection) return;
 
   const q = searchTerm.trim().toLowerCase();
-  const focusedNodeIds = new Set([hoveredNodeId, selectedNodeId].filter(Boolean));
+  const hoverNodeIds = new Set([hoveredNodeId].filter(Boolean));
+  const selectedBranchNodeIds = selectedNodeId ? buildDescendantNodeIds(selectedNodeId) : null;
+  const hasSelectedBranch = Boolean(selectedBranchNodeIds && selectedBranchNodeIds.size);
 
   currentNodeSelection.each(function(d) {
     const match = q ? matchesSearch(d, q) : false;
+    const inSelectedBranch = hasSelectedBranch && selectedBranchNodeIds.has(d.id);
     d3.select(this)
       .classed('highlighted', q ? match : false)
       .classed('dimmed', q ? !match : false)
+      .classed('branch-focused', inSelectedBranch)
+      .classed('branch-muted', hasSelectedBranch && !inSelectedBranch)
       .classed('selected', d.id === selectedNodeId);
   });
 
   if (currentLinkSelection) {
-    currentLinkSelection.classed('highlighted', d => {
-      if (!focusedNodeIds.size) return false;
+    currentLinkSelection
+      .classed('branch-focused', d => isPrimaryBranchEdge(d, selectedBranchNodeIds))
+      .classed('branch-muted', d => hasSelectedBranch && !isPrimaryBranchEdge(d, selectedBranchNodeIds))
+      .classed('highlighted', d => {
+      if (!hoverNodeIds.size || hasSelectedBranch) return false;
       const sourceId = edgeEndpointId(d.source);
       const targetId = edgeEndpointId(d.target);
-      return focusedNodeIds.has(sourceId) || focusedNodeIds.has(targetId);
+      return hoverNodeIds.has(sourceId) || hoverNodeIds.has(targetId);
     });
   }
 
@@ -1310,6 +1859,11 @@ function updateGraphState() {
 }
 
 function selectNode(nodeId) {
+  if (selectedNodeId === nodeId) {
+    clearSelection();
+    return;
+  }
+
   selectedNodeId = nodeId;
   updateGraphState();
   renderPersonPanel();
@@ -1432,7 +1986,7 @@ function renderPersonPanel() {
 
   if (!node) {
     panelTitleEl.textContent = 'Select a person';
-    panelSubtitleEl.textContent = 'Click a node to inspect the latest details and direct relationships.';
+    panelSubtitleEl.textContent = "Click any dot to see that scholar's place in the family.";
     panelEmptyEl.hidden = false;
     panelContentEl.hidden = true;
     panelCloseEl.disabled = true;
@@ -1553,8 +2107,8 @@ function syncControlPills() {
     layoutToggleEl.setAttribute(
       'aria-label',
       layoutToggleEl.checked
-        ? 'Concentric layout active. Press Enter to switch to force layout.'
-        : 'Force layout active. Press Enter to switch to concentric layout.'
+        ? 'Grouped by generation. Press Enter to switch to free map layout.'
+        : 'Free map layout active. Press Enter to group scholars by generation.'
     );
   }
 }
@@ -1595,7 +2149,11 @@ panelMinimizeEl.addEventListener('click', () => {
 });
 panelCloseEl.addEventListener('click', clearSelection);
 window.addEventListener('keydown', event => {
-  if (event.key === 'Escape') clearSelection();
+  if (event.key !== 'Escape') return;
+  if (IS_IMMERSIVE_VIEW && window.parent && window.parent !== window) {
+    window.parent.postMessage('mokyr-network-exit-fullscreen', window.location.origin);
+  }
+  clearSelection();
 });
 
 window.addEventListener('resize', render);

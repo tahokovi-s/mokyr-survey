@@ -17,6 +17,8 @@
   const networkPanel    = document.getElementById("ft-network-panel");
   const networkShell    = document.getElementById("ft-network-frame-shell");
   const networkFallback = document.getElementById("ft-network-fallback");
+  const networkFullscreenButtons = Array.from(document.querySelectorAll("[data-ft-network-fullscreen]"));
+  const networkExitButton = document.querySelector("[data-ft-network-exit]");
   const treeRoot        = document.getElementById("ft-tree-root");
   const searchInput     = document.getElementById("ft-search");
   const searchStatus    = document.getElementById("ft-search-status");
@@ -29,6 +31,8 @@
   let searchTimer        = null;
   let lastAnnouncedCount = -1;
   let rootAutoExpanded   = false;
+  let networkFullscreen  = false;
+  let networkFullscreenFocus = null;
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -456,6 +460,12 @@
 
   function syncNetworkPanelView() {
     if (!networkPanel) return;
+    if (networkFullscreen) {
+      if (networkShell) networkShell.hidden = false;
+      if (networkFallback) networkFallback.hidden = true;
+      return;
+    }
+
     const mobile = isMobile();
     if (networkShell)    networkShell.hidden    = mobile;
     if (networkFallback) networkFallback.hidden = !mobile;
@@ -467,11 +477,61 @@
   function injectNetworkIframe() {
     if (networkInjected || !networkShell) return;
     const iframe = document.createElement("iframe");
-    iframe.src   = "../network/mokyr-genealogy.html?embed=1";
+    iframe.src   = "../network/mokyr-genealogy.html?embed=1&v=20260525j";
     iframe.title = "Joel Mokyr academic genealogy visualization";
     iframe.setAttribute("loading", "lazy");
     networkShell.appendChild(iframe);
     networkInjected = true;
+  }
+
+  function enterNetworkFullscreen() {
+    if (!networkPanel || !networkShell) return;
+
+    networkFullscreenFocus = document.activeElement;
+    injectNetworkIframe();
+    networkFullscreen = true;
+
+    networkPanel.removeAttribute("hidden");
+    treePanel.setAttribute("hidden", "");
+    networkShell.hidden = false;
+    if (networkFallback) networkFallback.hidden = true;
+
+    document.documentElement.classList.add("ft-network-fullscreen-root");
+    document.body.classList.add("ft-network-fullscreen");
+    networkPanel.classList.add("is-network-fullscreen");
+    networkFullscreenButtons.forEach(function (button) {
+      button.setAttribute("aria-expanded", "true");
+    });
+    if (networkExitButton) {
+      networkExitButton.hidden = false;
+      window.requestAnimationFrame(function () {
+        networkExitButton.focus({ preventScroll: true });
+      });
+    }
+  }
+
+  function exitNetworkFullscreen() {
+    if (!networkFullscreen) return;
+
+    networkFullscreen = false;
+    document.documentElement.classList.remove("ft-network-fullscreen-root");
+    document.body.classList.remove("ft-network-fullscreen");
+    if (networkPanel) networkPanel.classList.remove("is-network-fullscreen");
+    networkFullscreenButtons.forEach(function (button) {
+      button.setAttribute("aria-expanded", "false");
+    });
+    if (networkExitButton) networkExitButton.hidden = true;
+
+    syncNetworkPanelView();
+
+    if (
+      networkFullscreenFocus &&
+      typeof networkFullscreenFocus.focus === "function" &&
+      document.contains(networkFullscreenFocus)
+    ) {
+      networkFullscreenFocus.focus({ preventScroll: true });
+    }
+    networkFullscreenFocus = null;
   }
 
   function activateMode(mode, options) {
@@ -541,6 +601,29 @@
         activateMode(tab.getAttribute("data-ft-mode"), { focusPanel: true });
       }
     });
+  });
+
+  networkFullscreenButtons.forEach(function (button) {
+    button.addEventListener("click", enterNetworkFullscreen);
+  });
+
+  if (networkExitButton) {
+    networkExitButton.addEventListener("click", exitNetworkFullscreen);
+  }
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && networkFullscreen) {
+      event.preventDefault();
+      exitNetworkFullscreen();
+    }
+  });
+
+  window.addEventListener("message", function (event) {
+    if (event.data !== "mokyr-network-exit-fullscreen") return;
+    const iframe = networkShell ? networkShell.querySelector("iframe") : null;
+    if (iframe && event.source === iframe.contentWindow) {
+      exitNetworkFullscreen();
+    }
   });
 
   // React to viewport crossing the mobile breakpoint while network panel is open.
