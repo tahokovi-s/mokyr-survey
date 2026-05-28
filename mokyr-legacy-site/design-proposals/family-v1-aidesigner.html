@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joel's Academic Family</title>
+
+    <!--
+    AIDesigner proposal for /family/ (run 6afaeab8-6f1c-4afb-ad90-0e64d05178dd,
+    desktop viewport, 2026-04-17). Applies the approved v3 home aesthetic to the
+    genealogy page (light cream, serif display, 4px gold top accent on primary,
+    white pathway cards, terse copy, Joel portrait in header).
+
+    Local edits after generation:
+    - Removed onerror fallback pointing to Unsplash (no external dependencies).
+    - Collapsed two stray class="..." attrs into one per element.
+    - Dropped leftover utility classes (flex flex-col, delay-*).
+    - V2 iterations: left-aligned hero (matching home v3, not centered);
+      hero shows section-specific signal "4 generations · 76 first-gen students";
+      full-width gold top accent on primary tab (was inset); secondary tab is
+      opaque white (was semi-transparent, looked non-interactive); empty
+      tree-root-area shows a muted "Tree populates at runtime" placeholder so
+      the preview doesn't read as a broken box.
+    - Preview-only <script> at bottom: remove before integration. Production uses
+      assets/family-tree.js (tabs + tree + search) and assets/site.js (reveals).
+    -->
+
+    <style>
+        :root {
+            --bg: #fbfbf8;
+            --text: #101216;
+            --muted: rgba(16, 18, 22, 0.64);
+            --soft: rgba(16, 18, 22, 0.44);
+            --accent: #d6bc7b;
+            --line: rgba(16, 18, 22, 0.08);
+            --line-strong: rgba(16, 18, 22, 0.15);
+            --card-shadow: 0 16px 40px rgba(16, 18, 22, 0.06);
+            --max-width: 1240px;
+            --radius-xl: 32px;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+            --font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+            --font-sans: "Neue Haas Grotesk Text Pro", "Avenir Next", "Helvetica Neue", sans-serif;
+            --focus-ring: 3px solid rgba(214, 188, 123, 0.65);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-sans);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        button, input { font-family: inherit; }
+
+        button:focus-visible, input:focus-visible, a:focus-visible {
+            outline: var(--focus-ring);
+            outline-offset: 3px;
+            border-radius: 4px;
+        }
+
+        img { max-width: 100%; display: block; }
+        a { color: inherit; text-decoration: none; }
+
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0, 0, 0, 0);
+            white-space: nowrap; border: 0;
+        }
+
+        .font-serif { font-family: var(--font-serif); }
+        .text-muted { color: var(--muted); }
+        .text-soft { color: var(--soft); }
+        .small-caps {
+            font-size: 0.6875rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .container {
+            width: 100%;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .site-header {
+            padding: 1.5rem 0;
+            position: relative;
+            z-index: 50;
+        }
+
+        .site-header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-lockup { display: flex; align-items: center; gap: 1rem; }
+
+        .brand-portrait {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--line);
+        }
+
+        .brand-text { display: flex; flex-direction: column; gap: 0.125rem; }
+        .brand-name { font-size: 1.125rem; font-weight: 500; line-height: 1; }
+
+        .nav-back-link {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.875rem; font-weight: 500; color: var(--muted);
+            transition: color 0.2s ease;
+        }
+        .nav-back-link:hover { color: var(--text); }
+
+        .hero {
+            position: relative;
+            padding: 5rem 0 4rem;
+            text-align: left;
+            overflow: hidden;
+        }
+
+        .hero-backdrop {
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            background-image:
+                linear-gradient(to bottom, rgba(251, 251, 248, 0.6), var(--bg)),
+                url('../assets/images/joel-welcome-backdrop.jpg');
+            background-size: cover;
+            background-position: center 20%;
+            background-repeat: no-repeat;
+            opacity: 0.5;
+            mix-blend-mode: multiply;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            line-height: 1.05;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.75rem;
+            color: var(--text);
+            max-width: 20ch;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.125rem, 2vw, 1.375rem);
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+            max-width: 42ch;
+        }
+
+        .hero-stats {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--soft);
+        }
+
+        .stat-dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background-color: var(--soft);
+        }
+
+        .mode-chooser-container {
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .tablist-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+            gap: 1.25rem;
+            align-items: stretch;
+        }
+
+        @media (max-width: 768px) {
+            .tablist-grid { grid-template-columns: 1fr; }
+        }
+
+        .pathway-card {
+            background-color: #ffffff;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--card-shadow);
+            padding: clamp(1.5rem, 3vw, 2.5rem);
+            text-align: left;
+            position: relative;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                        box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            appearance: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .pathway-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 48px rgba(16, 18, 22, 0.08);
+        }
+
+        .tab-card[aria-selected="true"] {
+            border-color: rgba(16, 18, 22, 0.12);
+            cursor: default;
+        }
+        .tab-card[aria-selected="true"]:hover {
+            transform: translateY(0);
+            box-shadow: var(--card-shadow);
+        }
+        .tab-card[aria-selected="false"] {
+            background-color: #ffffff;
+            box-shadow: var(--card-shadow);
+        }
+        .tab-card[aria-selected="false"]:hover {
+            background-color: #ffffff;
+            box-shadow: 0 12px 30px rgba(16, 18, 22, 0.04);
+            transform: translateY(-1px);
+        }
+
+        .tab-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background-color: var(--accent);
+            border-top-left-radius: var(--radius-xl);
+            border-top-right-radius: var(--radius-xl);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .tab-primary[aria-selected="true"]::before { opacity: 0.8; }
+
+        .tab-eyebrow {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .tab-title {
+            font-size: clamp(1.75rem, 3vw, 2.5rem);
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
+        }
+
+        .tab-desc {
+            font-size: clamp(1rem, 1.5vw, 1.125rem);
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+            max-width: 85%;
+        }
+
+        .tab-stats {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8125rem;
+            color: var(--soft);
+        }
+
+        .tab-panel {
+            background-color: #ffffff;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 4rem;
+        }
+        .tab-panel[hidden] { display: none; }
+
+        .panel-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--line);
+            padding: clamp(1.25rem, 2vw, 2rem) clamp(1.5rem, 3vw, 2.5rem);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 1.5rem;
+        }
+
+        .panel-header-copy { max-width: 600px; }
+        .panel-eyebrow {
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .panel-note { font-size: 0.875rem; color: var(--muted); }
+
+        .search-wrapper {
+            position: relative;
+            flex-shrink: 0;
+            width: 100%;
+            max-width: 260px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius-md);
+            padding: 0.625rem 1rem 0.625rem 2.5rem;
+            font-size: 0.875rem;
+            color: var(--text);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .search-input::placeholder { color: var(--soft); }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(214, 188, 123, 0.15);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--soft);
+            pointer-events: none;
+        }
+
+        .tree-root-area {
+            padding: clamp(1.5rem, 3vw, 2.5rem);
+            min-height: 320px;
+        }
+
+        .tree-placeholder {
+            color: var(--soft);
+            font-size: 0.875rem;
+            text-align: center;
+            padding: 4rem 1rem;
+            border: 1px dashed var(--line-strong);
+            border-radius: var(--radius-lg);
+        }
+
+        .network-shell-area {
+            width: 100%;
+            height: clamp(500px, 70vh, 800px);
+            background: var(--bg);
+            position: relative;
+        }
+
+        .network-mobile-fallback {
+            padding: 4rem 1.5rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            background: var(--bg);
+        }
+
+        .fallback-illustration { margin-bottom: 1.5rem; color: var(--soft); }
+        .fallback-copy {
+            font-size: 1rem;
+            color: var(--text);
+            max-width: 320px;
+            margin-bottom: 2rem;
+            line-height: 1.4;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--text);
+            color: #ffffff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .cta-button:hover {
+            background: #000000;
+            transform: translateY(-1px);
+        }
+
+        .panel-footer-link {
+            display: block;
+            text-align: center;
+            padding: 1rem;
+            font-size: 0.875rem;
+            color: var(--muted);
+            border-top: 1px solid var(--line);
+            background: rgba(251, 251, 248, 0.5);
+            transition: color 0.2s ease, background-color 0.2s ease;
+        }
+        .panel-footer-link:hover {
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        .site-footer {
+            margin-top: auto;
+            padding: 3rem 0;
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--soft);
+        }
+
+        [data-reveal] {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        [data-reveal].is-revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            [data-reveal] {
+                transition: none !important;
+                opacity: 1 !important;
+                transform: none !important;
+            }
+            .pathway-card:hover { transform: none; }
+        }
+
+        @media (min-width: 769px) {
+            .mobile-only { display: none !important; }
+        }
+        @media (max-width: 768px) {
+            .desktop-only { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="container">
+            <div class="brand-lockup">
+                <img src="../assets/images/joel-mokyr-168x210.jpg" alt="Portrait of Joel Mokyr" class="brand-portrait">
+                <div class="brand-text">
+                    <span class="brand-name font-serif">Joel Mokyr</span>
+                    <span class="small-caps text-soft">An 80th Birthday Celebration</span>
+                </div>
+            </div>
+            <a href="../" class="nav-back-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Back</span>
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero" data-reveal>
+            <div class="hero-backdrop"></div>
+            <div class="container">
+                <h1 class="font-serif">Joel's Academic Family.</h1>
+                <p class="hero-subtitle">Four generations. 380 scholars.</p>
+                <div class="hero-stats small-caps" role="note" aria-label="Section signals">
+                    <span>76 first-gen students</span>
+                    <span class="stat-dot"></span>
+                    <span>Search + branch view</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="mode-chooser-container container">
+            <div class="tablist-grid" role="tablist" aria-label="Genealogy View Modes" data-reveal>
+
+                <button type="button" id="tab-tree" role="tab" aria-selected="true" aria-controls="ft-tree-panel" tabindex="0" class="pathway-card tab-card tab-primary">
+                    <span class="tab-eyebrow small-caps">Featured view</span>
+                    <h2 class="tab-title font-serif">Family Tree</h2>
+                    <p class="tab-desc">Open Joel, then each student, generation by generation.</p>
+                    <div class="tab-stats small-caps">
+                        <span>380 people</span>
+                        <span class="stat-dot"></span>
+                        <span>4 generations</span>
+                        <span class="stat-dot"></span>
+                        <span>Search + branch view</span>
+                    </div>
+                </button>
+
+                <button type="button" id="tab-network" role="tab" aria-selected="false" aria-controls="ft-network-panel" tabindex="-1" class="pathway-card tab-card tab-secondary">
+                    <span class="tab-eyebrow small-caps text-muted">Exploratory view</span>
+                    <h2 class="tab-title font-serif">Network Map</h2>
+                    <p class="tab-desc">Force-directed view of the full graph.</p>
+                    <div class="tab-stats small-caps">
+                        <span>Desktop only</span>
+                        <span class="stat-dot"></span>
+                        <span>Pan + zoom</span>
+                    </div>
+                </button>
+
+            </div>
+        </div>
+
+        <div class="container">
+            <section id="ft-tree-panel" role="tabpanel" aria-labelledby="tab-tree" class="tab-panel" data-reveal>
+                <div class="panel-header">
+                    <div class="panel-header-copy">
+                        <span class="panel-eyebrow small-caps">Family Tree</span>
+                        <p class="panel-note">People with descendants appear first, ranked by descendant count; those without follow alphabetically.</p>
+                    </div>
+
+                    <div class="search-wrapper">
+                        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <label for="ft-search" class="sr-only">Search academic family</label>
+                        <input type="search" id="ft-search" class="search-input" placeholder="Search people&hellip;" aria-describedby="ft-search-status">
+                        <p id="ft-search-status" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></p>
+                    </div>
+                </div>
+
+                <div id="ft-tree-root" class="tree-root-area">
+                    <!-- assets/family-tree.js injects tree DOM here in production -->
+                    <div class="tree-placeholder">
+                        Tree populates at runtime from assets/family-tree.js
+                    </div>
+                </div>
+            </section>
+
+            <section id="ft-network-panel" role="tabpanel" aria-labelledby="tab-network" class="tab-panel" hidden data-reveal>
+                <div class="panel-header">
+                    <div class="panel-header-copy">
+                        <span class="panel-eyebrow small-caps">Network Map</span>
+                        <p class="panel-note">An interactive force-directed view. Pan, zoom, and hover on desktop to explore the full graph.</p>
+                    </div>
+                </div>
+
+                <div id="ft-network-frame-shell" data-ft-desktop-only class="network-shell-area desktop-only">
+                    <!-- iframe injected by JS lazily on desktop -->
+                </div>
+
+                <div id="ft-network-fallback" data-ft-mobile-only class="network-mobile-fallback mobile-only">
+                    <svg class="fallback-illustration" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <path d="M32 20 L32 26" stroke-dasharray="2 2" />
+                        <path d="M29 36 L19 45" />
+                        <path d="M35 36 L45 45" />
+                        <circle cx="32" cy="16" r="4" fill="#fbfbf8" />
+                        <circle cx="16" cy="48" r="4" fill="#fbfbf8" />
+                        <circle cx="48" cy="48" r="4" fill="#fbfbf8" />
+                        <circle cx="32" cy="32" r="6" fill="#fbfbf8" stroke="rgba(16,18,22,0.44)" />
+                    </svg>
+                    <p class="fallback-copy">The network map is designed for larger screens. Open it full-screen for the complete graph.</p>
+                    <a href="../network/mokyr-genealogy.html" target="_blank" rel="noopener noreferrer" class="cta-button">
+                        Open full map
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                </div>
+
+                <a href="../network/mokyr-genealogy.html" target="_blank" rel="noopener noreferrer" class="panel-footer-link desktop-only">
+                    Open full screen &#8594;
+                </a>
+            </section>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>For Joel's 80th. Survey led by Ran Abramitzky.</p>
+        </div>
+    </footer>
+
+    <!--
+    Preview-only script. Remove before integration.
+    Production uses assets/family-tree.js for tab/keyboard/tree/search logic
+    and assets/site.js for reveals (toggles .is-visible, not .is-revealed).
+    -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const reveals = document.querySelectorAll('[data-reveal]');
+            setTimeout(() => {
+                reveals.forEach(el => el.classList.add('is-revealed'));
+            }, 100);
+
+            const tabs = document.querySelectorAll('button[role="tab"]');
+            const panels = document.querySelectorAll('[role="tabpanel"]');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetId = tab.getAttribute('aria-controls');
+                    tabs.forEach(t => {
+                        t.setAttribute('aria-selected', 'false');
+                        t.setAttribute('tabindex', '-1');
+                    });
+                    panels.forEach(p => p.setAttribute('hidden', ''));
+                    tab.setAttribute('aria-selected', 'true');
+                    tab.setAttribute('tabindex', '0');
+                    document.getElementById(targetId).removeAttribute('hidden');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

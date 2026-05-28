@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joel Mokyr — By the Numbers</title>
+
+    <!--
+    AIDesigner proposal for /shape/ hero + chapter index (run ce9eaf1c-06b3-4be7-9269-7954a6bf6306,
+    desktop viewport, 2026-04-17). Applies v3 home aesthetic to the opening of the
+    9-chapter scroll narrative. The 9-chapter structural redesign is OUT OF SCOPE —
+    this proposal only refreshes the hero, chapter index, and chapter 01 preview.
+
+    Local edits after generation:
+    - Fixed viewport meta typo (initial-width -> initial-scale).
+    - Removed stray utility classes (eyebrow small-caps "text", "group;" in CSS).
+    - V2 iterations: left-aligned hero; section-specific stat strip; outer
+      anchor removed from preview card so only the CTA is clickable.
+    - V3 RESTRUCTURE — replaced the AI's invented 9-chapter list with a real
+      3-chapter grouping of the 11 actual panels in /shape/index.html:
+        Ch 1 The Tree — Overview · Structure · Branches · Cohorts · Hubs
+        Ch 2 The Work — Impact · Generations · Works · Syllabi
+        Ch 3 The Reach — Lineage · Reach
+    - V4 SIDEBAR — added the sticky .shape-progress aside with a two-level TOC
+      (3 chapter headers, 11 panel sub-links). First panel under chapter 01 is
+      shown in the pre-scroll "active" state so the highlight is visible in
+      preview. Production active-state logic lives in site.js (IntersectionObserver
+      on [data-story-step]); this file just renders the layout + styles.
+    - Preview-only <script> at bottom: remove before integration. Production uses
+      assets/site.js for reveals (toggles .is-visible, not .is-revealed).
+    -->
+
+    <style>
+        :root {
+            --bg: #fbfbf8;
+            --text: #101216;
+            --muted: rgba(16, 18, 22, 0.64);
+            --soft: rgba(16, 18, 22, 0.44);
+            --accent: #d6bc7b;
+            --line: rgba(16, 18, 22, 0.08);
+            --line-strong: rgba(16, 18, 22, 0.15);
+            --card-shadow: 0 16px 40px rgba(16, 18, 22, 0.06);
+            --max-width: 1240px;
+            --content-width: 720px;
+            --radius-xl: 32px;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+            --font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+            --font-sans: "Neue Haas Grotesk Text Pro", "Avenir Next", "Helvetica Neue", sans-serif;
+            --focus-ring: 3px solid rgba(214, 188, 123, 0.65);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-sans);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        :focus-visible {
+            outline: var(--focus-ring);
+            outline-offset: 3px;
+            border-radius: 4px;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0, 0, 0, 0);
+            white-space: nowrap; border-width: 0;
+        }
+
+        .serif { font-family: var(--font-serif); }
+        .sans { font-family: var(--font-sans); }
+        .muted { color: var(--muted); }
+        .soft { color: var(--soft); }
+
+        .small-caps {
+            font-size: 0.6875rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .container {
+            width: min(100% - 2rem, var(--max-width));
+            margin-inline: auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .content-col {
+            width: min(100%, var(--content-width));
+            margin-inline: auto;
+        }
+
+        /* Two-column shape layout: sticky sidebar + content */
+        .shape-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 3rem;
+            align-items: start;
+        }
+        @media (min-width: 900px) {
+            .shape-layout {
+                grid-template-columns: 220px minmax(0, 1fr);
+                gap: 4rem;
+            }
+        }
+
+        .shape-progress {
+            position: relative;
+        }
+        @media (min-width: 900px) {
+            .shape-progress {
+                position: sticky;
+                top: 2rem;
+                max-height: calc(100vh - 4rem);
+                overflow-y: auto;
+                padding-right: 0.5rem;
+            }
+        }
+
+        .shape-progress-label {
+            font-size: 0.6875rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--soft);
+            font-weight: 500;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .shape-progress-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .shape-progress-chapter {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .shape-progress-chapter-head {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: var(--text);
+            padding-bottom: 0.375rem;
+        }
+
+        .shape-progress-chapter-num {
+            font-family: var(--font-serif);
+            font-size: 0.75rem;
+            color: var(--muted);
+            min-width: 1.25rem;
+        }
+
+        .shape-progress-chapter-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            line-height: 1.2;
+            color: var(--text);
+        }
+
+        .shape-progress-chapter-head:hover .shape-progress-chapter-title {
+            color: var(--accent-deep, #9b7f42);
+        }
+
+        .shape-progress-panels {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+            padding-left: 1.75rem;
+            list-style: none;
+        }
+
+        .shape-progress-panel {
+            font-size: 0.8125rem;
+            color: var(--muted);
+            padding: 0.25rem 0.5rem;
+            margin-left: -0.5rem;
+            border-left: 1px solid transparent;
+            padding-left: 0.75rem;
+            text-decoration: none;
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .shape-progress-panel:hover {
+            color: var(--text);
+        }
+
+        .shape-progress-panel.is-active {
+            color: var(--text);
+            border-left-color: var(--accent);
+            font-weight: 500;
+        }
+
+        .hero-wash {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 90vh;
+            background-image:
+                linear-gradient(180deg,
+                    rgba(251, 251, 248, 0.8) 0%,
+                    rgba(251, 251, 248, 0.34) 40%,
+                    rgba(251, 251, 248, 0.66) 80%,
+                    var(--bg) 100%),
+                url('../assets/images/joel-numbers-backdrop.jpg');
+            background-size: cover;
+            background-position: center top;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2rem 0;
+            margin-bottom: 4rem;
+        }
+
+        .header-identity {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .header-portrait {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: var(--line);
+        }
+
+        .header-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+
+        .header-title {
+            font-size: 1rem;
+            line-height: 1.1;
+        }
+
+        .header-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: var(--muted);
+            font-size: 0.875rem;
+            transition: color 0.2s ease;
+        }
+        .header-back:hover { color: var(--text); }
+
+        .hero {
+            text-align: left;
+            padding: 4rem 0 5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 400;
+            line-height: 1.1;
+            margin-bottom: 0.75rem;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            max-width: 20ch;
+        }
+
+        .hero-subtitle {
+            font-size: 1.125rem;
+            color: var(--muted);
+            margin-bottom: 2.5rem;
+            max-width: 42ch;
+        }
+
+        .stat-strip {
+            display: flex;
+            justify-content: flex-start;
+            border-top: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            flex: 1;
+            padding: 1.25rem 1rem;
+            font-size: 0.875rem;
+            color: var(--text);
+            position: relative;
+        }
+
+        .stat-item:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            right: 0;
+            top: 25%;
+            height: 50%;
+            width: 1px;
+            background-color: var(--line);
+        }
+
+        .chapter-section { margin-bottom: 8rem; }
+
+        .eyebrow {
+            margin-bottom: 2.5rem;
+            display: inline-block;
+            border-bottom: 1px solid var(--text);
+            padding-bottom: 0.5rem;
+        }
+
+        .chapter-index {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .chapter-link {
+            display: grid;
+            grid-template-columns: 2.5rem 1fr;
+            gap: 0.25rem 1.25rem;
+            text-decoration: none;
+            padding: 1.25rem 0;
+            color: inherit;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .chapter-index > li:last-child .chapter-link {
+            border-bottom: none;
+        }
+
+        .chapter-num {
+            font-family: var(--font-serif);
+            font-size: 0.875rem;
+            color: var(--muted);
+            padding-top: 0.5rem;
+            grid-row: span 3;
+        }
+
+        .chapter-title {
+            font-family: var(--font-serif);
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            line-height: 1.15;
+            color: var(--text);
+            text-decoration: underline;
+            text-decoration-color: transparent;
+            text-underline-offset: 4px;
+            text-decoration-thickness: 1px;
+            transition: text-decoration-color 0.2s ease, color 0.2s ease;
+        }
+
+        .chapter-link:hover .chapter-title {
+            text-decoration-color: var(--accent);
+        }
+
+        .chapter-teaser {
+            font-size: 1rem;
+            color: var(--muted);
+        }
+
+        .chapter-panels {
+            font-size: 0.75rem;
+            color: var(--soft);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .chapter-link {
+                grid-template-columns: 2rem 1fr;
+                padding: 1.5rem 0;
+            }
+        }
+
+        .preview-section {
+            padding-bottom: 8rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .story-card {
+            background: #ffffff;
+            border: 1px solid var(--line);
+            border-top: 4px solid var(--accent);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--card-shadow);
+            padding: 3rem;
+            width: 100%;
+            max-width: 680px;
+            position: relative;
+            z-index: 20;
+        }
+
+        .story-card-eyebrow {
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .story-card h2 {
+            font-size: clamp(1.75rem, 3vw, 2.25rem);
+            font-weight: 400;
+            line-height: 1.2;
+            margin-bottom: 0.75rem;
+        }
+
+        .story-card-body {
+            font-size: 1.125rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+
+        .card-stat-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text);
+            margin-bottom: 2.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            background-color: var(--bg);
+            border: 1px solid var(--line);
+        }
+        .card-stat-row span:not(:last-child)::after {
+            content: "·";
+            margin-left: 1rem;
+            color: var(--muted);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 999px;
+            border: 1px solid var(--line-strong);
+            color: var(--text);
+            text-decoration: none;
+            font-family: var(--font-sans);
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .btn:hover {
+            background-color: var(--text);
+            color: #ffffff;
+            border-color: var(--text);
+        }
+
+        .site-footer {
+            text-align: center;
+            padding: 3rem 0;
+            border-top: 1px solid var(--line);
+            font-size: 0.875rem;
+        }
+
+        [data-reveal] {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s cubic-bezier(0.2, 0, 0, 1),
+                        transform 0.8s cubic-bezier(0.2, 0, 0, 1);
+        }
+        [data-reveal].is-revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media screen and (prefers-reduced-motion: reduce) {
+            [data-reveal] {
+                transition: none !important;
+                transform: none !important;
+                opacity: 1 !important;
+            }
+            .story-card:hover { transform: none; }
+        }
+
+        @media (max-width: 600px) {
+            .stat-strip { flex-direction: column; }
+            .stat-item {
+                padding: 1rem;
+                border-bottom: 1px solid var(--line);
+            }
+            .stat-item:not(:last-child)::after { display: none; }
+            .stat-item:last-child { border-bottom: none; }
+            .story-card { padding: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="hero-wash" aria-hidden="true"></div>
+
+    <div class="container">
+        <header class="header" data-reveal>
+            <a href="../" class="header-identity">
+                <img src="../assets/images/joel-mokyr-168x210.jpg" alt="Portrait of Joel Mokyr" class="header-portrait" />
+                <div class="header-text">
+                    <span class="header-title serif">Joel Mokyr</span>
+                    <span class="small-caps muted">An 80th Birthday Celebration</span>
+                </div>
+            </a>
+            <a href="../" class="header-back">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Back
+            </a>
+        </header>
+
+        <div class="shape-layout">
+
+            <aside class="shape-progress" aria-label="Story progress">
+                <p class="shape-progress-label">Story</p>
+                <nav class="shape-progress-nav">
+                    <div class="shape-progress-chapter">
+                        <a href="#chap-01" class="shape-progress-chapter-head">
+                            <span class="shape-progress-chapter-num">01</span>
+                            <span class="shape-progress-chapter-title">The Tree</span>
+                        </a>
+                        <div class="shape-progress-panels">
+                            <a href="#overview" class="shape-progress-panel is-active">Overview</a>
+                            <a href="#structure" class="shape-progress-panel">Structure</a>
+                            <a href="#branches" class="shape-progress-panel">Branches</a>
+                            <a href="#cohorts" class="shape-progress-panel">Cohorts</a>
+                            <a href="#hubs" class="shape-progress-panel">Hubs</a>
+                        </div>
+                    </div>
+                    <div class="shape-progress-chapter">
+                        <a href="#chap-02" class="shape-progress-chapter-head">
+                            <span class="shape-progress-chapter-num">02</span>
+                            <span class="shape-progress-chapter-title">The Work</span>
+                        </a>
+                        <div class="shape-progress-panels">
+                            <a href="#impact" class="shape-progress-panel">Impact</a>
+                            <a href="#generations" class="shape-progress-panel">Generations</a>
+                            <a href="#works" class="shape-progress-panel">Works</a>
+                            <a href="#syllabi" class="shape-progress-panel">Syllabi</a>
+                        </div>
+                    </div>
+                    <div class="shape-progress-chapter">
+                        <a href="#chap-03" class="shape-progress-chapter-head">
+                            <span class="shape-progress-chapter-num">03</span>
+                            <span class="shape-progress-chapter-title">The Reach</span>
+                        </a>
+                        <div class="shape-progress-panels">
+                            <a href="#lineage" class="shape-progress-panel">Lineage</a>
+                            <a href="#reach" class="shape-progress-panel">Reach</a>
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+
+            <div class="content-col">
+            <main class="hero">
+                <h1 class="serif" data-reveal>By the Numbers.</h1>
+                <p class="hero-subtitle" data-reveal>The shape of a lineage, in three chapters.</p>
+
+                <section aria-label="Section signals" class="stat-strip" data-reveal>
+                    <div class="stat-item">3 chapters</div>
+                    <div class="stat-item">11 panels</div>
+                    <div class="stat-item">Scroll narrative</div>
+                </section>
+            </main>
+
+            <section class="chapter-section">
+                <span class="eyebrow small-caps muted" data-reveal>The nine chapters</span>
+                <!--
+                    Three chapters mapped to the 11 existing panels in shape/index.html.
+                    Panel anchor IDs are preserved; the chapter anchors group them.
+                -->
+                <ol class="chapter-index" aria-label="Table of contents">
+                    <li data-reveal>
+                        <a href="#chap-01" class="chapter-link">
+                            <span class="chapter-num">01</span>
+                            <span class="chapter-title">The Tree</span>
+                            <span class="chapter-teaser">Size, shape, growth.</span>
+                            <span class="chapter-panels">Overview · Structure · Branches · Cohorts · Hubs</span>
+                        </a>
+                    </li>
+                    <li data-reveal>
+                        <a href="#chap-02" class="chapter-link">
+                            <span class="chapter-num">02</span>
+                            <span class="chapter-title">The Work</span>
+                            <span class="chapter-teaser">Cited, still read, assigned.</span>
+                            <span class="chapter-panels">Impact · Generations · Works · Syllabi</span>
+                        </a>
+                    </li>
+                    <li data-reveal>
+                        <a href="#chap-03" class="chapter-link">
+                            <span class="chapter-num">03</span>
+                            <span class="chapter-title">The Reach</span>
+                            <span class="chapter-teaser">One chain, and the map.</span>
+                            <span class="chapter-panels">Lineage · Reach</span>
+                        </a>
+                    </li>
+                </ol>
+            </section>
+
+            <section id="chap-01" class="preview-section" data-reveal>
+                <div class="story-card">
+                    <span class="story-card-eyebrow small-caps muted">Chapter 01</span>
+                    <h2 class="serif">The Tree</h2>
+                    <p class="story-card-body">A family of 380, weighted to the second generation — 184 scholars trained by Joel's first 76.</p>
+
+                    <div class="card-stat-row">
+                        <span>5 panels</span>
+                        <span>Overview &middot; Structure &middot; Branches &middot; Cohorts &middot; Hubs</span>
+                    </div>
+
+                    <a href="#overview" class="btn">
+                        Begin reading
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                </div>
+            </section>
+            </div>
+
+        </div>
+
+        <footer class="site-footer muted" data-reveal>
+            For Joel's 80th. Survey led by Ran Abramitzky.
+        </footer>
+    </div>
+
+    <!--
+    Preview-only reveal script. Remove before integration.
+    Production uses assets/site.js (toggles .is-visible on [data-reveal]).
+    -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const reveals = document.querySelectorAll('[data-reveal]');
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (prefersReducedMotion) {
+                reveals.forEach(el => el.classList.add('is-revealed'));
+                return;
+            }
+
+            reveals.forEach((el, index) => {
+                setTimeout(() => {
+                    el.classList.add('is-revealed');
+                }, 100 + (index * 60));
+            });
+        });
+    </script>
+</body>
+</html>

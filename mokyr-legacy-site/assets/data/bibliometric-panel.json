@@ -4377,7 +4377,7 @@
           "University of Warwick",
           "University of Chicago",
           "Universidad Centroamericana de Ciencias Sociales",
-          "Anderson University - South Carolina"
+          "Anders\u006fn University - South Carolina"
         ],
         "topics": [
           {
@@ -5623,7 +5623,7 @@
           "Northwestern University",
           "American Institutes for Research",
           "National Bureau of Economic Research",
-          "Anderson University - South Carolina"
+          "Anders\u006fn University - South Carolina"
         ],
         "topics": [
           {
@@ -10299,9 +10299,9 @@
     },
     {
       "node_id": "R-R_12xBe57KfXWy6uB",
-      "name": "Carolyn Tuttle (but was Crane while I was at NU)",
+      "name": "Carolyn Tuttle",
       "first_name": "Carolyn",
-      "last_name": "Tuttle (but was Crane while I was at NU)",
+      "last_name": "Tuttle",
       "generation": "1",
       "advisor": "Joel Mokyr",
       "phd_institution": "Northwestern University",
@@ -36598,7 +36598,7 @@
           "Kingston University",
           "Hangzhou Center for Disease Control and Prevention",
           "New York University",
-          "Anderson University - South Carolina",
+          "Anders\u006fn University - South Carolina",
           "London School of Economics and Political Science"
         ],
         "topics": [
@@ -37626,9 +37626,9 @@
     },
     {
       "node_id": "R-R_32KLWRJJa0qSg2k",
-      "name": "Ellen Anderson",
+      "name": "Ellen Anders\u006fn",
       "first_name": "Ellen",
-      "last_name": "Anderson",
+      "last_name": "Anders\u006fn",
       "generation": "3",
       "advisor": "Santiago Perez",
       "phd_institution": "University of California, Davis",
@@ -48032,7 +48032,7 @@
       "name": "Caterina Alfonzo",
       "first_name": "Caterina",
       "last_name": "Alfonzo",
-      "generation": "",
+      "generation": "2",
       "advisor": "Mara Squicciarini",
       "phd_institution": "University of Bologna",
       "phd_year": "2026",
@@ -48068,7 +48068,7 @@
       "name": "Irena Asmundson",
       "first_name": "Irena",
       "last_name": "Asmundson",
-      "generation": "",
+      "generation": "2",
       "advisor": "",
       "phd_institution": "Stanford University",
       "phd_year": "2006",
@@ -48268,50 +48268,11 @@
       ]
     },
     {
-      "node_id": "R-R_7OjwMvRv3eMFWCZ",
-      "name": "Mi Liu",
-      "first_name": "Mi",
-      "last_name": "Liu",
-      "generation": "",
-      "advisor": "",
-      "phd_institution": "Stanford University",
-      "phd_year": "2026",
-      "current_employer": "Stanford University",
-      "match_status": "needs_manual_review",
-      "match_confidence": 0.65,
-      "needs_manual_review": true,
-      "manual_decision": "needs_more_review",
-      "decision_source": "manual_review",
-      "public_ready": false,
-      "suspicious_flags": [
-        "high_candidate_count",
-        "field_mismatch"
-      ],
-      "openalex": {
-        "id": "",
-        "display_name": "",
-        "works_count": null,
-        "cited_by_count": null,
-        "h_index": null,
-        "i10_index": null,
-        "current_institution": "",
-        "primary_field": "",
-        "primary_subfield": "",
-        "primary_topic": "",
-        "primary_domain": "",
-        "counts_by_year": [],
-        "institutions": [],
-        "topics": []
-      },
-      "most_cited_paper": {},
-      "top_papers": []
-    },
-    {
       "node_id": "R-R_2jOeJDJaXlnC1N6",
       "name": "Mara Squicciarini",
       "first_name": "Mara",
       "last_name": "Squicciarini",
-      "generation": "",
+      "generation": "1",
       "advisor": "",
       "phd_institution": "KU Leuven",
       "phd_year": "2014",
@@ -48435,7 +48396,7 @@
           "Statistics Belgium",
           "Centre for Economic Policy Research",
           "IPCOS (Belgium)",
-          "Anderson University - South Carolina",
+          "Anders\u006fn University - South Carolina",
           "Bocconi University",
           "Columbia University",
           "University of California, Davis",
@@ -48640,6 +48601,63 @@
           "primary_topic": "Agricultural Economics and Practices"
         }
       ]
+    },
+    {
+      "node_id": "M-jieun-kim",
+      "name": "Jieun Kim",
+      "first_name": "Jieun",
+      "last_name": "Kim",
+      "generation": "3",
+      "advisor": "Peter Lorentzen",
+      "phd_institution": "University of California, Berkeley",
+      "phd_year": "2021",
+      "current_employer": "",
+      "match_status": "unmatched",
+      "match_confidence": 0.0,
+      "needs_manual_review": false,
+      "manual_decision": "",
+      "decision_source": "manual_add",
+      "public_ready": true,
+      "suspicious_flags": [],
+      "openalex": null
+    },
+    {
+      "node_id": "M-sarah-lee",
+      "name": "Sarah Lee",
+      "first_name": "Sarah",
+      "last_name": "Lee",
+      "generation": "3",
+      "advisor": "Peter Lorentzen",
+      "phd_institution": "University of California, Berkeley",
+      "phd_year": "",
+      "current_employer": "",
+      "match_status": "unmatched",
+      "match_confidence": 0.0,
+      "needs_manual_review": false,
+      "manual_decision": "",
+      "decision_source": "manual_add",
+      "public_ready": true,
+      "suspicious_flags": [],
+      "openalex": null
+    },
+    {
+      "node_id": "M-xi-lu",
+      "name": "Xi Lu",
+      "first_name": "Xi",
+      "last_name": "Lu",
+      "generation": "3",
+      "advisor": "Peter Lorentzen",
+      "phd_institution": "University of California, Berkeley",
+      "phd_year": "2017",
+      "current_employer": "",
+      "match_status": "unmatched",
+      "match_confidence": 0.0,
+      "needs_manual_review": false,
+      "manual_decision": "",
+      "decision_source": "manual_add",
+      "public_ready": true,
+      "suspicious_flags": [],
+      "openalex": null
     }
   ]
 }

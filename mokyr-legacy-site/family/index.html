@@ -7,7 +7,10 @@
   <meta name="description" content="Interactive genealogy visualization for Joel Mokyr's academic family.">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, notranslate">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="../assets/styles.css?v=20260525h">
+  <noscript>
+    <style>[data-reveal], [data-reveal-group] > * { opacity: 1 !important; transform: none !important; }</style>
+  </noscript>
 </head>
 <body class="page-section page-family">
   <div class="page-shell section-shell">
@@ -27,51 +30,120 @@
 
     <main class="section-main">
 
-      <!-- intro section -->
-      <section class="section-intro" data-reveal>
+      <!-- Intro: data-led hook + lead -->
+      <section class="section-intro ft-intro" data-reveal>
         <p class="eyebrow">Joel's Academic Family</p>
-        <h1>Joel's Academic Family</h1>
-        <p class="lead section-lead">Explore Joel Mokyr's academic lineage — from first-generation students to today.</p>
+        <h1>Four generations.<br><span data-lineage-stat="scholarCount">380</span> scholars.</h1>
+        <p class="lead section-lead">Explore the lineage Joel Mokyr advised &mdash; directly, through his students, and outward to today.</p>
       </section>
 
-      <!-- mode chooser -->
-      <section class="ft-chooser" data-reveal aria-label="Choose a view">
-        <button class="ft-tile is-active" data-mode="tree" aria-pressed="true" type="button">
-          <span class="ft-tile-label">Family Tree</span>
-          <span class="ft-tile-desc">Browse the lineage branch by branch</span>
+      <!-- Mode chooser (real tablist) -->
+      <div class="ft-chooser" role="tablist" aria-label="Choose a view" data-reveal>
+        <button id="ft-tab-network"
+                class="ft-tab ft-tab--secondary is-active"
+                role="tab"
+                type="button"
+                aria-selected="true"
+                aria-controls="ft-network-panel"
+                data-ft-mode="network"
+                tabindex="0">
+          <span class="ft-tab-label">Network Map</span>
+          <span class="ft-tab-desc">Each dot is a scholar; lines show advisor-student links.</span>
         </button>
-        <button class="ft-tile" data-mode="network" aria-pressed="false" type="button">
-          <span class="ft-tile-label">Network Map</span>
-          <span class="ft-tile-desc">Interactive force-directed visualization</span>
+        <button id="ft-tab-tree"
+                class="ft-tab ft-tab--primary"
+                role="tab"
+                type="button"
+                aria-selected="false"
+                aria-controls="ft-tree-panel"
+                data-ft-mode="tree"
+                tabindex="-1">
+          <span class="ft-tab-label">Family Tree</span>
+          <span class="ft-tab-desc">Trace advisor-student links one branch at a time, from Joel to later generations.</span>
         </button>
-      </section>
+      </div>
 
-      <!-- family tree panel (default visible) -->
-      <section class="ft-panel" id="ft-tree-panel" aria-label="Family Tree view">
-        <div class="ft-toolbar">
-          <p class="ft-ordering-note">People with descendants appear first, ranked from most to least; people with no descendants then follow alphabetically.</p>
-          <div class="ft-search-wrap">
-            <input type="search" id="ft-search" class="ft-search" placeholder="Search people…" aria-label="Search people in the family tree">
+      <!-- Family Tree panel -->
+      <section id="ft-tree-panel"
+               class="ft-panel ft-panel-frame"
+               role="tabpanel"
+               aria-labelledby="ft-tab-tree"
+               tabindex="-1"
+               hidden>
+        <header class="ft-tree-header">
+          <div class="ft-tree-heading">
+            <p class="ft-tree-eyebrow">Family Tree</p>
+            <p class="ft-tree-note">People with descendants appear first, ranked by descendant count; those without descendants follow alphabetically.</p>
           </div>
-        </div>
-        <div id="ft-tree-root" class="ft-tree-root" role="tree" aria-label="Joel Mokyr academic genealogy"></div>
+          <div class="ft-search-wrap">
+            <label class="ft-search-label" for="ft-search">Search people</label>
+            <input type="search"
+                   id="ft-search"
+                   class="ft-search"
+                   placeholder="Search people&hellip;"
+                   autocomplete="off"
+                   spellcheck="false"
+                   aria-describedby="ft-search-status">
+            <p id="ft-search-status"
+               class="ft-search-status sr-only"
+               role="status"
+               aria-live="polite"
+               aria-atomic="true"></p>
+          </div>
+        </header>
+        <div id="ft-tree-root" class="ft-tree-root"></div>
       </section>
 
-      <!-- network map panel (hidden until selected) -->
-      <section class="ft-panel ft-network-panel" id="ft-network-panel" aria-label="Network Map view" hidden>
-        <div class="ft-network-frame-shell" id="ft-network-frame-shell">
-          <!-- iframe injected lazily when this panel is shown -->
+      <!-- Network Map panel -->
+      <section id="ft-network-panel"
+               class="ft-panel ft-panel-frame ft-network-panel"
+               role="tabpanel"
+               aria-labelledby="ft-tab-network"
+               tabindex="-1">
+        <header class="ft-tree-header">
+          <div class="ft-tree-heading">
+            <p class="ft-tree-eyebrow">Network Map</p>
+            <p class="ft-tree-note">Each dot is a scholar in Joel&rsquo;s academic family. Lines connect advisors to students; pan, zoom, and hover to explore the relationships.</p>
+          </div>
+        </header>
+        <div id="ft-network-frame-shell" class="ft-network-frame-shell" data-ft-desktop-only>
+          <!-- iframe injected lazily when this tab is shown on desktop -->
+        </div>
+        <div id="ft-network-fallback" class="ft-network-fallback" data-ft-mobile-only hidden>
+          <div class="ft-network-fallback-art" aria-hidden="true">
+            <span class="ft-network-fallback-node ft-network-fallback-node--root"></span>
+            <span class="ft-network-fallback-node ft-network-fallback-node--a"></span>
+            <span class="ft-network-fallback-node ft-network-fallback-node--b"></span>
+            <span class="ft-network-fallback-node ft-network-fallback-node--c"></span>
+            <span class="ft-network-fallback-node ft-network-fallback-node--d"></span>
+            <svg class="ft-network-fallback-edges" viewBox="0 0 220 140" aria-hidden="true">
+              <path d="M110 70 L40 28" /><path d="M110 70 L190 30" />
+              <path d="M110 70 L30 112" /><path d="M110 70 L200 108" />
+            </svg>
+          </div>
+          <p class="ft-network-fallback-copy">
+            The network map is designed for larger screens. Open it full-screen for the complete graph with pinch-to-zoom panning.
+          </p>
+          <button class="ft-network-fallback-cta" type="button" data-ft-network-fullscreen>
+            View full screen
+          </button>
         </div>
         <div class="ft-network-toolbar">
-          <a class="secondary-link" href="../network/mokyr-genealogy.html" target="_blank" rel="noopener noreferrer">Open full screen</a>
+          <button class="secondary-link" type="button" data-ft-network-fullscreen aria-expanded="false">View full screen</button>
+          <button class="secondary-link ft-network-exit" type="button" data-ft-network-exit hidden>Exit full screen</button>
         </div>
       </section>
 
     </main>
+
+    <footer class="site-footer">
+      <p class="footer-credit">For Joel's 80th. Project led by Ran Abramitzky. I thank Jensen Ahokovi for his superb assistance.</p>
+    </footer>
   </div>
 
-  <script src="../assets/site.js?v=20260413b"></script>
-  <script src="../assets/genealogy-data.js?v=20260413b"></script>
-  <script src="../assets/family-tree.js?v=20260413b"></script>
+  <script src="../assets/lineage-stats.js?v=20260430b"></script>
+  <script src="../assets/site.js?v=20260417a"></script>
+  <script src="../assets/genealogy-data.js?v=20260430a"></script>
+  <script src="../assets/family-tree.js?v=20260525k"></script>
 </body>
 </html>

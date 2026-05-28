@@ -1,0 +1,9 @@
+Hi Ran,
+
+The lineage panel is updated. Zaiour is now the third tab, with the chain Mokyr -> Abramitzky -> Perez -> Zaiour. For Reem's featured paper, I used the migration/COVID paper rather than her most-cited gun-violence paper, since it fits the Abramitzky/Perez migration line better.
+
+I also made the metrics consistent across the four chains. Every node now shows both Open Syllabus appearances and Google Scholar citations as per-scholar totals, with "—" where early-career scholars are not yet indexed in one source.
+
+The original four chains were illustrative picks rather than the result of a formal criterion. Going forward, I am using one chain per major Gen-1 branch where public bibliometric data is available, so the current set is Greif -> Jha -> Kosec, Abramitzky -> Cullen -> Townsend, Abramitzky -> Perez -> Zaiour, and Nye -> Johnson -> Teague.
+
+Happy to swap any individual chain — let me know.

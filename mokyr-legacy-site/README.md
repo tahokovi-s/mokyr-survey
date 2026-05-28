@@ -32,7 +32,28 @@ Then open `http://localhost:8000/`.
 
 ## Updating the visualization
 
-When the underlying network changes in the research repo, replace:
+When the underlying network changes in the research repo, rebuild the static
+network, Family Tree data, and normalized headshot assets from the research
+repo root:
+
+```bash
+python3 Code/Network/build_headshot_assets.py --date 040126
+python3 Code/Network/viz_network.py --date 040126
+python3 Code/Network/build_genealogy_data_asset.py --date 040126
+cp Output/mokyr-genealogy-040126.html mokyr-legacy-site/network/mokyr-genealogy.html
+```
+
+The broader downstream refresh command also runs those steps:
+
+```bash
+python3 Code/Orchestration/refresh_downstream.py --date 040126
+```
+
+The browser-facing photo URLs point at normalized JPEGs under
+`assets/images/headshots/`. Do not serve or copy raw files from
+`Data/Photos/Headshots/` into the static site.
+
+After visual changes, refresh:
 
 - `network/mokyr-genealogy.html`
 - `assets/images/network-preview.png`

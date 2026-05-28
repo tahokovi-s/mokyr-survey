@@ -484,3 +484,4 @@ After all steps:
 - 2026-04-16: initial version, drafted from approved plan at
   `/Users/tahokovi/.claude/plans/calm-noodling-wren.md` after two
   rounds of adversarial Codex review.
+- 2026-04-21: Ran 041726 feedback supersedes the earlier 10-panel arc for `/shape/`.
