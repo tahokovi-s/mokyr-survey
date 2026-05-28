@@ -4459,6 +4459,18 @@ body.ft-network-fullscreen .ft-chooser {
   background: transparent;
 }
 
+.page-family .site-footer {
+  position: relative;
+  z-index: 1;
+  width: min(calc(100% - 48px), var(--max-width));
+  margin: 0 auto;
+  padding: 28px 0 42px;
+  border-top: 1px solid var(--family-rule);
+  color: rgba(16, 18, 22, 0.52);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
 @media (max-width: 760px) {
   .page-family .section-intro h1 {
     font-size: clamp(3.2rem, 15vw, 5rem);
