@@ -30,6 +30,19 @@ body.page-section {
   --card-shadow: 0 16px 40px rgba(16, 18, 22, 0.06);
 }
 
+body.page-home {
+  --paper: #f8f6ef;
+  --ink: #111318;
+  --muted: rgba(17, 19, 24, 0.64);
+  --soft: rgba(17, 19, 24, 0.46);
+  --rule: rgba(17, 19, 24, 0.14);
+  --rule-soft: rgba(17, 19, 24, 0.08);
+  --gold: #b48b36;
+  --text: var(--ink);
+  --line: var(--rule);
+  --line-strong: rgba(17, 19, 24, 0.22);
+}
+
 *,
 *::before,
 *::after {
@@ -51,9 +64,45 @@ body {
 }
 
 body.page-home {
-  color: #101216;
-  background: #fbfbf8;
+  color: var(--ink);
+  background: var(--paper);
   font-family: "Neue Haas Grotesk Text Pro", "Avenir Next", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body.page-home::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  background-image:
+    linear-gradient(rgba(17, 19, 24, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 19, 24, 0.026) 1px, transparent 1px);
+  background-size: 72px 72px;
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+body.page-home::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(90deg, rgba(248, 246, 239, 0.94) 0%, rgba(248, 246, 239, 0.83) 38%, rgba(248, 246, 239, 0.5) 66%, rgba(248, 246, 239, 0.84) 100%),
+    linear-gradient(180deg, rgba(248, 246, 239, 0.76) 0%, rgba(248, 246, 239, 0.48) 48%, rgba(248, 246, 239, 0.92) 100%),
+    url("./images/joel-welcome-backdrop.jpg");
+  background-position: center center, center center, 62% 25%;
+  background-repeat: no-repeat;
+  background-size: auto, auto, cover;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1200ms ease;
+}
+
+body.page-home.is-explored::after {
+  opacity: 0.82;
 }
 
 body.page-section {
@@ -76,6 +125,134 @@ a {
   position: relative;
   min-height: 100vh;
   overflow: hidden;
+}
+
+.page-home .page-shell {
+  overflow-x: hidden;
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 900ms ease 220ms,
+    transform 900ms cubic-bezier(0.22, 1, 0.36, 1) 220ms;
+}
+
+body.page-home.is-explored .page-shell {
+  opacity: 1;
+  transform: none;
+}
+
+.entry-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: end start;
+  width: 100%;
+  min-height: 100vh;
+  border: 0;
+  padding: clamp(24px, 5vw, 64px);
+  overflow: hidden;
+  cursor: pointer;
+  background:
+    linear-gradient(90deg, rgba(12, 14, 18, 0.54) 0%, rgba(12, 14, 18, 0.16) 46%, rgba(248, 246, 239, 0.08) 100%),
+    linear-gradient(180deg, rgba(12, 14, 18, 0.08) 0%, rgba(12, 14, 18, 0.38) 100%),
+    url("./images/joel-welcome-backdrop.jpg");
+  background-position: center center, center center, 62% 25%;
+  background-repeat: no-repeat;
+  background-size: auto, auto, cover;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  transition:
+    opacity 950ms ease,
+    visibility 950ms ease,
+    filter 950ms ease,
+    transform 950ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.entry-gate[hidden] {
+  display: none !important;
+}
+
+.entry-gate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+body.page-home.is-explored .entry-gate {
+  opacity: 0;
+  visibility: hidden;
+  filter: blur(8px);
+  transform: scale(1.015);
+  pointer-events: none;
+}
+
+.entry-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 18px;
+  width: min(100%, 640px);
+}
+
+.entry-kicker {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.entry-title {
+  width: max-content;
+  max-width: 100%;
+  margin: 0;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: clamp(2.9rem, 6.3vw, 5.75rem);
+  font-weight: 400;
+  line-height: 1.06;
+  letter-spacing: 0;
+}
+
+.entry-title-line {
+  display: block;
+}
+
+.entry-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.9rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.entry-action::after {
+  content: "";
+  width: 42px;
+  height: 1px;
+  background: currentColor;
+  transition: transform 180ms ease;
+}
+
+.entry-gate:hover .entry-action::after,
+.entry-gate:focus-visible .entry-action::after {
+  transform: translateX(8px);
+}
+
+.entry-gate:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.84);
+  outline-offset: -12px;
 }
 
 .background-wash,
@@ -505,209 +682,251 @@ body.page-section h2 {
   line-height: 1.55;
 }
 
-/* ══ Home v3 editorial layout (light cream + Joel backdrop) ══════════════ */
+/* ══ Home welcome layout (promoted from approved prototype) ═══════════════ */
 
-/* Main container on home mirrors the site-header's centering constraints. */
-.page-home .home-main {
-  position: relative;
-  z-index: 1;
+.page-home .site-header,
+.page-home .home-main,
+.page-home .site-footer {
   width: min(calc(100% - 48px), var(--max-width));
   margin: 0 auto;
 }
 
-/* Left-aligned editorial hero. Serif H1 inherited from Phase 0 override. */
-.home-hero {
-  max-width: 820px;
-  margin: 40px 0 48px;
-}
-
-.page-home .home-hero h1 {
-  font-size: clamp(2.75rem, 6vw + 0.5rem, 5rem);
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  margin: 10px 0 20px;
-  max-width: 16ch;
-}
-
-.home-hero .home-subtitle {
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-  font-weight: 400;
-  font-size: clamp(1.125rem, 2vw + 0.5rem, 1.65rem);
-  line-height: 1.4;
-  color: var(--muted);
-  max-width: 44ch;
-  margin: 0;
-  padding-left: 22px;
-  border-left: 2px solid var(--line);
-}
-
-/* Three-up hairline stat strip. */
-.home-stat-strip {
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  margin: 0 0 56px;
-}
-
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.stat-item {
-  padding: 30px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  border-right: 1px solid var(--line);
-}
-.stat-item:last-child { border-right: none; }
-
-.stat-number {
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-  font-size: clamp(2.25rem, 4vw, 3.25rem);
-  line-height: 1;
-  color: var(--text);
-  font-weight: 400;
-}
-
-.stat-label {
-  font-size: 0.76rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-weight: 500;
-}
-
-/* Peer pathway grid: two equal-width cards. */
-.home-pathways {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px;
-  margin-bottom: 64px;
-}
-
-.pathway-card {
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  padding: 38px;
-  box-shadow: var(--card-shadow);
-  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 240ms ease;
-  text-decoration: none;
-  color: inherit;
-  position: relative;
-  overflow: hidden;
-}
-
-.pathway-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--line-strong);
-  box-shadow: 0 24px 50px rgba(16, 18, 22, 0.08);
-}
-
-.pathway-card:focus-visible {
-  outline: 3px solid rgba(214, 188, 123, 0.6);
-  outline-offset: 3px;
-}
-
-.card-eyebrow {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--accent-deep);
-  font-weight: 600;
-  margin: 0 0 18px;
-}
-
-.card-title {
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-  font-weight: 400;
-  color: var(--text);
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  margin: 0 0 12px;
-  font-size: clamp(1.75rem, 3vw, 2.4rem);
-}
-
-.card-body {
-  color: var(--muted);
-  font-size: clamp(1rem, 1.4vw, 1.15rem);
-  line-height: 1.55;
-  margin: 0 0 28px;
-  flex-grow: 1;
-}
-
-.card-ministat {
-  margin: 0 0 22px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-  font-size: 0.72rem;
-  color: var(--soft);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.card-action {
-  display: inline-flex;
+.page-home .site-header {
   align-items: center;
-  gap: 10px;
-  padding: 12px 22px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  color: var(--text);
-  font-size: 0.88rem;
-  font-weight: 500;
-  transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
-  align-self: flex-start;
+  gap: 24px;
+  padding: 28px 0 18px;
+  border-bottom: 1px solid var(--rule-soft);
 }
 
-.pathway-card:hover .card-action {
-  background: var(--text);
-  color: #ffffff;
-  border-color: var(--text);
+.page-home .wordmark {
+  min-width: 0;
 }
 
-.pathway-card:hover .card-action svg {
-  transform: translateX(3px);
+.page-home .wordmark-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
 }
 
-.card-action svg {
-  transition: transform 180ms ease;
+.page-home .wordmark-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
 }
 
-/* Quiet single-line footer. */
-.site-footer {
+.page-home .wordmark-title {
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.page-home .wordmark-subtitle {
+  color: rgba(17, 19, 24, 0.56);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+}
+
+.page-home .home-main {
+  display: grid;
+  gap: clamp(38px, 5vw, 70px);
+  padding: clamp(64px, 9vw, 118px) 0 clamp(56px, 7vw, 90px);
+}
+
+.page-home .home-main:focus {
+  outline: none;
+}
+
+.page-home .hero {
+  display: grid;
+  gap: clamp(24px, 4vw, 42px);
+  max-width: 980px;
+  min-height: min(620px, calc(100vh - 180px));
+  align-content: center;
+}
+
+.page-home .eyebrow {
+  margin: 0;
+  color: rgba(17, 19, 24, 0.48);
+  font-size: 0.84rem;
+  letter-spacing: 0.23em;
+  text-transform: uppercase;
+}
+
+.page-home h1,
+.page-home h2,
+.page-home .stat-number {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.page-home .hero h1 {
+  max-width: 10.5ch;
+  margin: 0;
+  font-size: clamp(4.7rem, 10vw, 9rem);
+  line-height: 0.96;
+}
+
+.page-home .dek {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  font-size: clamp(1.32rem, 2vw, 1.95rem);
+  line-height: 1.38;
+}
+
+.page-home .stat-strip {
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.page-home .stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.page-home .stat-item {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  min-height: 128px;
+  padding: 24px clamp(18px, 3vw, 42px);
+  border-right: 1px solid var(--rule-soft);
+}
+
+.page-home .stat-item:last-child {
+  border-right: 0;
+}
+
+.page-home .stat-number {
+  color: var(--ink);
+  font-size: clamp(2.7rem, 4.8vw, 4.6rem);
+  line-height: 0.92;
+  font-variant-numeric: lining-nums;
+}
+
+.page-home .stat-label {
+  color: rgba(17, 19, 24, 0.56);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.page-home .routes {
+  display: grid;
+  border-top: 1px solid var(--rule);
+}
+
+.page-home .route {
   position: relative;
-  z-index: 1;
-  width: min(calc(100% - 48px), var(--max-width));
-  margin: 0 auto;
-  padding: 28px 0 40px;
-  border-top: 1px solid var(--line);
-  font-size: 1.2rem;
-  color: var(--soft);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(18px, 4vw, 46px);
+  align-items: center;
+  min-height: 136px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--rule);
+  isolation: isolate;
+}
+
+.page-home .route::before {
+  content: "";
+  position: absolute;
+  inset: 0 -20px;
+  z-index: -1;
+  background: rgba(255, 255, 255, 0);
+  transition: background 180ms ease;
+}
+
+.page-home .route:hover::before {
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.page-home .route:focus-visible {
+  outline: 3px solid rgba(180, 139, 54, 0.55);
+  outline-offset: 8px;
+}
+
+.page-home .route-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(2rem, 4.2vw, 3.8rem);
+  line-height: 1.02;
+}
+
+.page-home .route-meta {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  color: rgba(17, 19, 24, 0.56);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.page-home .site-footer {
+  padding: 28px 0 42px;
+  border-top: 1px solid var(--rule);
+  color: rgba(17, 19, 24, 0.52);
+  font-size: 0.86rem;
+  line-height: 1.6;
 }
 
 .footer-credit { margin: 0; }
 
-/* Responsive: stack pathways and stats under 760px. */
 @media (max-width: 760px) {
-  .home-pathways {
+  .page-home .site-header,
+  .page-home .home-main,
+  .page-home .site-footer {
+    width: min(calc(100% - 32px), var(--max-width));
+  }
+
+  .page-home .site-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .page-home .home-main {
+    padding-top: 48px;
+  }
+
+  .page-home .hero {
+    min-height: auto;
+  }
+
+  .page-home .hero h1 {
+    font-size: clamp(3.8rem, 17vw, 6.1rem);
+    line-height: 1;
+  }
+
+  .page-home .stat-grid {
     grid-template-columns: 1fr;
   }
-  .stat-grid {
+
+  .page-home .stat-item {
+    min-height: 104px;
+    padding-inline: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .page-home .stat-item:last-child {
+    border-bottom: 0;
+  }
+
+  .page-home .route {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
-  .stat-item {
-    border-right: none;
-    border-bottom: 1px solid var(--line);
-  }
-  .stat-item:last-child { border-bottom: none; }
-  .pathway-card {
-    padding: 28px;
+
+  .page-home .route-meta {
+    justify-items: start;
+    text-align: left;
   }
 }
 
@@ -3034,8 +3253,8 @@ body.is-presenting.page-shape #lineage .shape-lineage-panel {
   }
 
   .page-home .site-header {
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .viz-toolbar {
@@ -3186,10 +3405,13 @@ body.is-presenting.page-shape #lineage .shape-lineage-panel {
 }
 
 @media (max-width: 640px) {
-  .page-home .home-main,
   .page-family .section-main,
   .page-shape .shape-layout {
     width: min(calc(100% - 24px), var(--max-width));
+  }
+
+  .page-home .home-main {
+    width: min(calc(100% - 32px), var(--max-width));
   }
 
   .page-home .home-hero h1 {

@@ -5,6 +5,32 @@ const revealTargets = [
 
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+const homeGate = document.querySelector(".page-home .entry-gate");
+const homeMain = document.querySelector(".page-home .home-main");
+
+if (document.body.classList.contains("page-home")) {
+  const exploreHome = () => {
+    document.body.classList.add("is-explored");
+    window.setTimeout(
+      () => {
+        if (homeGate) {
+          homeGate.setAttribute("hidden", "");
+        }
+        if (homeMain) {
+          homeMain.focus({ preventScroll: true });
+        }
+      },
+      prefersReducedMotion ? 0 : 1000
+    );
+  };
+
+  if (homeGate) {
+    homeGate.addEventListener("click", exploreHome, { once: true });
+  } else {
+    document.body.classList.add("is-explored");
+  }
+}
+
 if (prefersReducedMotion) {
   revealTargets.forEach((element) => element.classList.add("is-visible"));
 } else {
