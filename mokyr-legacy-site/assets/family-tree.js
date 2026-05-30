@@ -140,6 +140,13 @@
       info.appendChild(metaEl);
     }
 
+    if (node.relationship_note) {
+      const noteEl = document.createElement("span");
+      noteEl.className = "ft-note";
+      noteEl.textContent = node.relationship_note;
+      info.appendChild(noteEl);
+    }
+
     inner.appendChild(info);
 
     if (desc > 0) {

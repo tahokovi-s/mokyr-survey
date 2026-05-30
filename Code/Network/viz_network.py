@@ -1549,6 +1549,7 @@ function renderPersonPanel() {{
   detailGrid.className = 'detail-grid';
   [
     ['Generation', formatGeneration(node.generation)],
+    ['Advising note', node.relationship_note],
     ['PhD institution', node.institution],
     ['PhD year', node.phd_year],
     ['Current employer', node.employer],

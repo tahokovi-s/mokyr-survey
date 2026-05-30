@@ -1,7 +1,7 @@
 // lineage-stats.js - generated from Network_Nodes_040126.csv and Network_Edges_040126.csv.
 // Provides one site-wide source of truth for public lineage counts.
 
-window.LINEAGE_STATS = {"scholarCount": 380, "descendantCount": 380, "personCount": 381, "generationCount": 4, "directStudentCount": 76, "generation1Count": 76, "generation2Count": 184, "generation3Count": 115, "generation4Count": 5, "generationOneToThreeScholarCount": 375};
+window.LINEAGE_STATS = {"scholarCount": 382, "descendantCount": 382, "personCount": 383, "generationCount": 4, "directStudentCount": 78, "generation1Count": 78, "generation2Count": 179, "generation3Count": 120, "generation4Count": 5, "generationOneToThreeScholarCount": 377};
 
 (function () {
   const stats = window.LINEAGE_STATS || {};

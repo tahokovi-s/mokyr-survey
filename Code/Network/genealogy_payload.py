@@ -19,6 +19,10 @@ _NODES_DATE_RE = re.compile(r"^Network_Nodes_(\d{6})\.csv$")
 _EDGES_DATE_RE = re.compile(r"^Network_Edges_(\d{6})\.csv$")
 _MANIFEST_DATE_RE = re.compile(r"^headshot_manifest_(\d{6})\.json$")
 
+CURATED_RELATIONSHIP_NOTES = {
+    "R-R_3uo0fwgoPEZw3Rv": "Co-advisor: Chris Vickers.",
+}
+
 
 def safe_json(obj) -> str:
     """JSON-serialize and escape script-closing tags."""
@@ -168,6 +172,10 @@ def load_nodes(
                 )
                 if str(value or "").strip()
             )
+            relationship_note = (
+                (row.get("relationship_note") or "").strip()
+                or CURATED_RELATIONSHIP_NOTES.get(row["node_id"], "")
+            )
             nodes.append({
                 "id": row["node_id"],
                 "label": f"{row['first_name']} {row['last_name']}".strip(),
@@ -179,6 +187,7 @@ def load_nodes(
                 "phd_year": row["phd_year"],
                 "country": row["country"],
                 "us_state": row["us_state"],
+                "relationship_note": relationship_note,
                 "nonrespondent_field_count": populated_detail_fields,
                 "show_nonrespondent": populated_detail_fields >= 2,
             })
@@ -207,4 +216,3 @@ def load_edges(edges_csv: Path) -> list[dict]:
 def assert_no_email_fields(nodes: list[dict]) -> None:
     for node in nodes:
         assert "email" not in node, "BUG: email field present in node output"
-

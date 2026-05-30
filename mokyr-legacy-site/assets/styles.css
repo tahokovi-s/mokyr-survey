@@ -3947,6 +3947,12 @@ body.is-presenting.page-shape #lineage .shape-lineage-panel {
   text-overflow: ellipsis;
 }
 
+.ft-note {
+  font-size: 0.74rem;
+  line-height: 1.25;
+  color: rgba(16, 18, 22, 0.66);
+}
+
 /* Badge */
 .ft-badge {
   display: inline-block;

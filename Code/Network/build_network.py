@@ -896,6 +896,11 @@ RESPONDENT_METADATA_OVERRIDES = {
     "R_9i4H75l7IKGKK6n": {
         "q5_text": "Institute of Economics, School of Social Sciences, Tsinghua University",
     },
+    # Q1 captured a typo ("Marui"); respondent confirmed his name is Mario
+    # Cannella (May 30 2026 email to Ran).
+    "R_2NiPcgXpGvZ9qmJ": {
+        "first": "Mario",
+    },
 }
 
 # Q12a student name misspellings.
@@ -948,6 +953,47 @@ _MANUAL_RESPONDENT_DEDUP_RAW = {
 MANUAL_RESPONDENT_DEDUP = {
     person_name_key(first_name, last_name): rid
     for (first_name, last_name), rid in _MANUAL_RESPONDENT_DEDUP_RAW.items()
+}
+
+# Visible tree-edge suppressions for cases where the survey text captured a
+# co-advisor or committee member but the public tree should show one primary
+# advisor link. Suppression runs before generation computation (see main()),
+# so dropping a spurious grandparent edge here also corrects the topological
+# generation of the affected node.
+SUPPRESSED_VISIBLE_EDGES = {
+    ("R-R_3d6RHCeFshAji8p", "R-R_3uo0fwgoPEZw3Rv"): (
+        "Chris Vickers is a co-advisor; show Sharbani Bhattacharjee under "
+        "Nicolas L. Ziebarth only."
+    ),
+    # These five Gen-3 respondents listed their full advisor chain in Q11
+    # (direct advisor + grandadvisor Ran Abramitzky). tokenize_q11 emits one
+    # advisor edge per chain token, so each gained a spurious Ran -> student
+    # edge. Because topo generation is min(parent_gen)+1, the Gen-1 Ran edge
+    # pinned them at Gen 2. Suppressing the Ran edges leaves their true direct
+    # advisor (Adriane Fresh, Gen 2 / Santiago Perez, Gen 2) as the only
+    # parent, restoring Gen 3. The chairs they list publicly (Vanberg, Manion,
+    # Beramendi/Kuran, Peri) are not in Joel's lineage; each respondent's own
+    # Q11 ties their Mokyr connection through Fresh/Perez.
+    ("R-R_3n3jnhqix5yw73C", "R-R_9CfH1G7WcvYnNNH"): (
+        "Pawel Charasz is a Gen-3 student of Adriane Fresh; Ran Abramitzky "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_8zGTOtwLj3D1Fdl"): (
+        "Benjamin Broman is a Gen-3 student of Adriane Fresh; Ran Abramitzky "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_5yS7gvpVsWZFthT"): (
+        "Viola Rothschild is a Gen-3 student of Adriane Fresh; Ran Abramitzky "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_8QJJEkHTXFNEqcR"): (
+        "Giuseppe Ippedico is a Gen-3 student under Santiago Perez (committee); "
+        "Ran Abramitzky appears only as Q11 advisor-chain context."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_8FZYePkvkNZ1ULD"): (
+        "Chris de Mena is a Gen-3 student of Santiago Perez; Ran Abramitzky "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
 }
 
 
@@ -1923,6 +1969,19 @@ def main():
             seen_edges.add(key)
             deduped.append(e)
     raw_edges = deduped
+
+    suppressed_edges = []
+    visible_edges = []
+    for e in raw_edges:
+        s, t, etype, conf = e
+        suppression_note = SUPPRESSED_VISIBLE_EDGES.get((s, t))
+        if suppression_note:
+            suppressed_edges.append((s, t, etype, suppression_note))
+            continue
+        visible_edges.append(e)
+    raw_edges = visible_edges
+    for s, t, etype, note in suppressed_edges:
+        print(f"  INFO suppressed visible edge {s} -> {t} ({etype}): {note}")
 
     # Cycle detection via DFS
     graph = defaultdict(set)
