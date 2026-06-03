@@ -999,6 +999,73 @@ SUPPRESSED_VISIBLE_EDGES = {
         "Abramitzky appears only as Q11 advisor-chain context, not a direct "
         "advisor."
     ),
+    # Generalization of the Victoria Barone / Pawel Charasz fix: each of these
+    # Gen-3 respondents listed their full advisor chain in Q11 (grandadvisor
+    # Ran Abramitzky or John V.C. Nye + their actual Gen-2 advisor). tokenize_q11
+    # emits one advisor edge per chain token, so each gained a spurious Gen-1 ->
+    # student edge that pinned them at Gen 2 via min(parent_gen)+1. Suppressing
+    # the Gen-1 edge leaves their true direct (Gen-2) advisor as the only parent,
+    # restoring Gen 3. Each retains a reachable Gen-2 parent, so none are
+    # orphaned. Verified against Q8/Q11 in Mokyr_Survey_Responses_031126_Cleaned.
+    ("R-R_3n3jnhqix5yw73C", "R-R_14TZrBSRxkN0kAV"): (
+        "Arun Ramesh is a Gen-3 student of Michela Giorcelli; Ran Abramitzky "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_3TnIL3fecgVT4Nn"): (
+        "Yujing Huang is a Gen-3 student of Michela Giorcelli; Ran Abramitzky "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_45xDrdYXpRL1ygx"): (
+        "Boxiao Zhang is a Gen-3 student of Michela Giorcelli; Ran Abramitzky "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_22mhKKhUONcwTLj"): (
+        "Gian Marco Pinna is a Gen-3 student of Jaime Arellano-Bover; Ran "
+        "Abramitzky appears only as Q11 advisor-chain context, not a direct "
+        "advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_9SHOLlPkXmthmWw"): (
+        "Michelle Poland is a Gen-3 student of Isabelle Sin; Ran Abramitzky "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_3eIWqCOCYJodOU4"): (
+        "Juan González is a Gen-3 student of Alejandro Martínez-Marquina; Ran "
+        "Abramitzky appears only as Q11 advisor-chain context, not a direct "
+        "advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_3iw10bvIsr0O69X"): (
+        "Matteo Magnaricotte is a Gen-3 student of Nicola Bianchi; Ran "
+        "Abramitzky appears only as Q11 advisor-chain context, not a direct "
+        "advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_525aqafDBlUUR5b"): (
+        "Hyoungchul Kim is a Gen-3 student of Arthur van Benthem; Ran "
+        "Abramitzky appears only as Q11 advisor-chain context, not a direct "
+        "advisor."
+    ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_20rCZl68g1CGwMr"): (
+        "Guillermo Martinez is a Gen-3 student of Tom Zohar; Ran Abramitzky "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    ("R-R_3ZQuPNPNkATw1Yq", "R-R_72FCam7jeKUrYZ9"): (
+        "Preston Cooper is a Gen-3 student of Noel Johnson; John V.C. Nye "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    ("R-R_3ZQuPNPNkATw1Yq", "R-R_7cSvVNFuYeKaUAC"): (
+        "Andrew Thomas is a Gen-3 student of Noel Johnson; John V.C. Nye "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    # Q8 was "Other/I'm not sure" for the next two, but their Q11 two-name chain
+    # (Gen-1 grandadvisor + Gen-2 advisor) matches the pattern above and each is
+    # corroborated by a Gen-2 advisor edge.
+    ("R-R_3n3jnhqix5yw73C", "R-R_4N5g5PyfNtOTygP"): (
+        "Christopher Paik is a Gen-3 student of Saumitra Jha; Ran Abramitzky "
+        "appears only as Q11 advisor-chain context, not a direct advisor."
+    ),
+    ("R-R_3ZQuPNPNkATw1Yq", "R-R_6YSFclAG9jbod2h"): (
+        "Eric Wilhelm is a Gen-3 student of Noel Johnson; John V.C. Nye appears "
+        "only as Q11 advisor-chain context, not a direct advisor."
+    ),
 }
 
 
