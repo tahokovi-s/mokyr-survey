@@ -1858,7 +1858,7 @@ body.is-presenting.page-shape #lineage .shape-lineage-panel {
 
 .generation-stack {
   display: grid;
-  grid-template-columns: 78fr 166fr 136fr minmax(16px, 5fr);
+  grid-template-columns: 78fr 167fr 137fr minmax(16px, 5fr);
   min-height: 112px;
   overflow: hidden;
   border: 1px solid rgba(16, 18, 22, 0.08);

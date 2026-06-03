@@ -1068,6 +1068,40 @@ SUPPRESSED_VISIBLE_EDGES = {
     ),
 }
 
+# Curated committee-only Q11 cases that should remain visible in the public
+# lineage. These are policy decisions, not inferred primary-advisor claims.
+CURATED_COMMITTEE_Q11_EDGES = {
+    "R_1zObZJ4p5RHRWVZ": (
+        "R-R_1vcYK98Jytjuqqp",
+        "Peter Lorentzen kept connected to Avner Greif by June 3 2026 curation decision.",
+    ),
+    "R_3mEJrsLTzH3BQxa": (
+        "R-R_1vcYK98Jytjuqqp",
+        "Irena Asmundson kept connected to Avner Greif by June 3 2026 curation decision.",
+    ),
+}
+
+# Final generation pins for cases where the public generation should follow a
+# curated/self-reported lineage decision even though the only visible edge is
+# a committee/context edge to an earlier generation.
+CURATED_FINAL_GENERATION_OVERRIDES = {
+    "R-R_6j7NkZayMiXGhwf": (
+        3,
+        "Moramay Lopez-Alonso remains connected through Avner Greif, but is shown as Gen 3 by June 3 2026 curation decision.",
+    ),
+}
+
+CURATED_IGNORED_Q11_TOKENS = {
+    (
+        "R_6j7NkZayMiXGhwf",
+        norm_name("he was in my dissertation committee"),
+    ),
+    (
+        "R_6j7NkZayMiXGhwf",
+        norm_name("I took several courses with him."),
+    ),
+}
+
 
 def _lookup_email_recovery(student_name, node_id, email_recovery):
     """Look up recovered email by (name, node_id) then by name alone."""
@@ -1436,6 +1470,15 @@ def main():
             advisor_by_rid[rid] = [(f"R-{name_lookup[full_norm]}", 'high', note)]
             continue
         if is_committee_only_q11(q11):
+            curated = CURATED_COMMITTEE_Q11_EDGES.get(rid)
+            if curated:
+                src, note = curated
+                advisor_by_rid[rid] = [(src, 'high', note)]
+                print(
+                    f"  INFO curated committee Q11 edge: {r['first']} {r['last']} "
+                    f"({rid}) -> {src}"
+                )
+                continue
             unresolved_edges.append({
                 'source_id': None, 'target_id': f"R-{rid}",
                 'reason': 'unresolved_q11_committee_only', 'raw_q11': q11,
@@ -1447,6 +1490,12 @@ def main():
         # Split into tokens
         tokens = tokenize_q11(q11)
         for tok in tokens:
+            if (rid, norm_name(tok)) in CURATED_IGNORED_Q11_TOKENS:
+                print(
+                    f"  INFO ignored curated Q11 narrative token: "
+                    f"{r['first']} {r['last']} ({rid}) token={tok!r}"
+                )
+                continue
             src = _match_token(tok, rid, r, gen)
             if src is not None:
                 # Re-derive confidence by checking if the normalized token was exact.
@@ -2099,6 +2148,14 @@ def main():
     for s, t, _, _ in clean_edges:
         child_parents[t].append(s)
 
+    for nid, (override_gen, note) in CURATED_FINAL_GENERATION_OVERRIDES.items():
+        if nid in nodes:
+            old_gen = nodes[nid].get('generation')
+            nodes[nid]['generation'] = override_gen
+            if old_gen != override_gen:
+                print(f"  INFO curated generation override: {nid} {old_gen} -> {override_gen}: {note}")
+
+    logged_generation_pins = set()
     changed = True
     while changed:
         changed = False
@@ -2114,6 +2171,20 @@ def main():
             gen_from_topo = min(parent_gen_values) + 1
             old_gen = node['generation']
             q8_gen = node['generation_q8']
+            curated_final = CURATED_FINAL_GENERATION_OVERRIDES.get(nid)
+
+            if curated_final:
+                override_gen, note = curated_final
+                if old_gen != override_gen:
+                    node['generation'] = override_gen
+                    changed = True
+                if gen_from_topo != override_gen and nid not in logged_generation_pins:
+                    print(
+                        f"  INFO kept curated generation: {nid} {node['first_name']} "
+                        f"{node['last_name']}: topo={gen_from_topo}, curated={override_gen}. {note}"
+                    )
+                    logged_generation_pins.add(nid)
+                continue
 
             if old_gen in (None, ''):
                 node['generation'] = gen_from_topo
