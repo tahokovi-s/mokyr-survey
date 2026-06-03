@@ -994,6 +994,11 @@ SUPPRESSED_VISIBLE_EDGES = {
         "Chris de Mena is a Gen-3 student of Santiago Perez; Ran Abramitzky "
         "appears only as Q11 advisor-chain context, not a direct advisor."
     ),
+    ("R-R_3n3jnhqix5yw73C", "R-R_7MZhFwW3zxiZxGe"): (
+        "Victoria Barone is a Gen-3 student of Michela Giorcelli; Ran "
+        "Abramitzky appears only as Q11 advisor-chain context, not a direct "
+        "advisor."
+    ),
 }
 
 
