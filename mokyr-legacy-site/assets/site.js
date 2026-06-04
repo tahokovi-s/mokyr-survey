@@ -184,6 +184,131 @@ countryViewRoots.forEach((root) => {
   activateCountryView(initialButton);
 });
 
+const tierForCountryCount = (count) => {
+  if (count >= 100) return "largest";
+  if (count >= 10) return "large";
+  if (count >= 4) return "medium";
+  return "small";
+};
+
+const countryMapRoots = [...document.querySelectorAll("[data-country-map-root]")];
+
+countryMapRoots.forEach((root) => {
+  const map = root.querySelector("[data-country-map]");
+  const sourceRows = [...root.querySelectorAll("[data-country-map-source] [data-country-iso]")];
+
+  if (!map || !sourceRows.length) {
+    return;
+  }
+
+  const tooltip = map.querySelector(".country-map-tooltip");
+  const loading = map.querySelector("[data-country-map-loading]");
+  const fallback = map.querySelector(".country-map-fallback");
+  const tooltipId = tooltip?.id || "country-map-tooltip";
+  const countryData = sourceRows
+    .map((row) => ({
+      iso: row.dataset.countryIso,
+      name: row.dataset.countryName || row.querySelector("span")?.textContent?.trim() || row.dataset.countryIso,
+      count: Number(row.dataset.countryCount || row.querySelector("b")?.textContent?.replace(/[^\d]/g, "") || 0),
+    }))
+    .filter((country) => country.iso && country.count > 0);
+
+  const hideTooltip = () => {
+    if (tooltip) tooltip.hidden = true;
+  };
+
+  const positionTooltip = (clientX, clientY) => {
+    if (!tooltip) return;
+
+    const mapRect = map.getBoundingClientRect();
+    const tipRect = tooltip.getBoundingClientRect();
+    const x = Math.max(8, Math.min(clientX - mapRect.left + 16, mapRect.width - tipRect.width - 8));
+    const y = Math.max(8, Math.min(clientY - mapRect.top + 16, mapRect.height - tipRect.height - 8));
+    tooltip.style.transform = `translate(${x}px, ${y}px)`;
+  };
+
+  const showTooltip = (country, clientX, clientY) => {
+    if (!tooltip) return;
+
+    const count = Number(country.dataset.count || 0);
+    tooltip.innerHTML = `<strong>${country.dataset.country}</strong><span>${count.toLocaleString()} mapped scholar${count === 1 ? "" : "s"}</span>`;
+    tooltip.hidden = false;
+    positionTooltip(clientX, clientY);
+  };
+
+  const installCountrySvg = (svg) => {
+    if (!svg) {
+      throw new Error("Map SVG missing root element");
+    }
+
+    svg.querySelectorAll("style").forEach((style) => style.remove());
+    svg.classList.add("country-world-map");
+    svg.removeAttribute("width");
+    svg.removeAttribute("height");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Countries with mapped scholars shaded by current residence count.");
+
+    svg.querySelectorAll(".country").forEach((country) => {
+      country.setAttribute("vector-effect", "non-scaling-stroke");
+    });
+
+    countryData.forEach(({ iso, name, count }) => {
+      const country = svg.querySelector(`#${iso}`) || svg.querySelector(`.${iso}`) || svg.querySelector(`#${iso}-circle`);
+      if (!country) return;
+
+      country.classList.add("country-map-country");
+      country.dataset.country = name;
+      country.dataset.count = String(count);
+      country.dataset.tier = tierForCountryCount(count);
+      country.setAttribute("tabindex", "0");
+      country.setAttribute("aria-describedby", tooltipId);
+      country.setAttribute("aria-label", `${name}: ${count.toLocaleString()} mapped scholar${count === 1 ? "" : "s"}`);
+
+      country.addEventListener("pointerenter", (event) => showTooltip(country, event.clientX, event.clientY));
+      country.addEventListener("pointermove", (event) => showTooltip(country, event.clientX, event.clientY));
+      country.addEventListener("pointerleave", hideTooltip);
+      country.addEventListener("click", (event) => {
+        event.preventDefault();
+        showTooltip(country, event.clientX, event.clientY);
+      });
+      country.addEventListener("mouseenter", (event) => showTooltip(country, event.clientX, event.clientY));
+      country.addEventListener("mousemove", (event) => showTooltip(country, event.clientX, event.clientY));
+      country.addEventListener("mouseleave", hideTooltip);
+      country.addEventListener("focus", () => {
+        const rect = country.getBoundingClientRect();
+        showTooltip(country, rect.left + rect.width / 2, rect.top + rect.height / 2);
+      });
+      country.addEventListener("blur", hideTooltip);
+      country.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") hideTooltip();
+      });
+    });
+
+    map.insertBefore(svg, fallback || loading || tooltip);
+    map.classList.add("is-loaded");
+  };
+
+  const embeddedSvg = document.getElementById("country-world-map-template")?.content?.querySelector("svg");
+
+  if (embeddedSvg) {
+    installCountrySvg(embeddedSvg.cloneNode(true));
+    return;
+  }
+
+  fetch(new URL("../assets/images/world-map-equal-earth.svg?v=20260515b", window.location.href))
+    .then((response) => {
+      if (!response.ok) throw new Error(`Map request failed: ${response.status}`);
+      return response.text();
+    })
+    .then((svgText) => {
+      const parsed = new DOMParser().parseFromString(svgText, "image/svg+xml");
+      installCountrySvg(parsed.querySelector("svg"));
+    })
+    .catch(() => {
+      if (loading) loading.textContent = "Interactive map unavailable in this browser context.";
+    });
+});
+
 const storySteps = [...document.querySelectorAll("[data-story-step]")];
 const storyNavItems = [...document.querySelectorAll("[data-story-nav-item]")];
 
